@@ -1,0 +1,16 @@
+build/
+legacy/
+.idea
+.DS_Store
+*.trace
+*.cpp-
+*.h-
+*.c-
+*.dub-
+*.sh-
+*.o
+*.out
+*.xd
+*.patched
+*.img
+*.bin
