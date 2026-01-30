@@ -24,6 +24,7 @@
 #ifndef TILTTI_PROCESSOR_H
 #define TILTTI_PROCESSOR_H
 
+#include <array>
 #include <cstdint>
 #include <string>
 
@@ -35,10 +36,16 @@ class Memory;
 //
 // Internal state of the processor.
 //
+//
+// Visible architectural state (for trace and reset).
+// Decode state (op, mod, reg, rm, ea, queue) is internal to one instruction.
+//
 struct CoreState {
-    unsigned ip;           // instruction pointer
-
-    //TODO: registers
+    Word ax{}, bx{}, cx{}, dx{}; // general (AX = AH:AL, etc.)
+    Word sp{}, bp{}, si{}, di{}; // stack pointer, base, index
+    Word cs{}, ds{}, ss{}, es{}; // segment registers
+    Word ip{};                   // instruction pointer
+    Word flags{};                // CF, PF, AF, ZF, SF, TF, IF, DF, OF
 };
 
 //
@@ -50,13 +57,52 @@ private:
     Memory &memory;          // Physical memory
     struct CoreState core{}; // Current state
     struct CoreState prev{}; // Previous state, for tracing
-    unsigned opcode{};       // Current instruction being executed
+    uint64_t opcode{};       // Up to 6 bytes from prefetch queue for tracing
+
+    // Prefetch queue and decode state (internal to step()).
+    std::array<Byte, 6> queue{};
+    unsigned op{}, d{}, w{}, mod{}, reg{}, rm{};
+    int ea{ -1 };   // effective address cache
+    unsigned rep{}; // 0=none, 1=REP/REPE/REPZ, 2=REPNE/REPNZ
+    Word os{};      // segment override (default DS)
 
     // Intercept divzero/overflow.
     unsigned intercept_count{};     // intercept this many times
     unsigned intercept_addr{ 020 }; // jump to this address
     const std::string MSG_ARITH_OVERFLOW = "Arithmetic overflow";
     const std::string MSG_ARITH_DIVZERO  = "Division by zero";
+
+    // Helpers: effective address, register/memory access, stack, ALU, flags.
+    unsigned getAddr(Word seg, Word off) const;
+    unsigned getEA(unsigned mod_val, unsigned rm_val);
+    int getMem(int width);
+    int getMem(int width, unsigned addr);
+    int getReg(int width, unsigned r) const;
+    int getRM(int width, unsigned mod_val, unsigned rm_val);
+    Word getSegReg(unsigned r) const;
+    void setMem(int width, unsigned addr, int val);
+    void setReg(int width, unsigned r, int val);
+    void setRM(int width, unsigned mod_val, unsigned rm_val, int val);
+    void setSegReg(unsigned r, Word val);
+    void decode();
+    int pop();
+    void push(int val);
+    void callInt(int type);
+    int add(int width, int dst, int src);
+    int adc(int width, int dst, int src);
+    int sub(int width, int dst, int src);
+    int sbb(int width, int dst, int src);
+    int inc(int width, int dst);
+    int dec(int width, int dst);
+    void logic(int width, int res);
+    bool getFlag(unsigned flag) const;
+    void setFlag(unsigned flag, bool set);
+    void setFlags(int width, int res);
+    static int signconv(int width, int x);
+    static bool msb(int width, int x);
+
+    // Execute one opcode (used by step and REP loop). Returns false on HLT.
+    bool exe_one();
 
 public:
     // Exception for unexpected situations.

@@ -53,8 +53,7 @@ Disk::Disk(const std::string &p, Memory &m, bool wp, unsigned offset)
 //
 // Open embedded image as disk.
 //
-Disk::Disk(const unsigned char data[], Memory &m, unsigned ns)
-    : memory(m), num_sectors(ns)
+Disk::Disk(const unsigned char data[], Memory &m, unsigned ns) : memory(m), num_sectors(ns)
 {
     embedded_data = data;
 }
@@ -104,7 +103,7 @@ void Disk::file_to_memory(unsigned sector, unsigned addr, unsigned nbytes)
         throw std::runtime_error("File seek error");
 
     Byte *destination = memory.get_ptr(addr);
-    int nread = read(file_descriptor, destination, nbytes);
+    int nread         = read(file_descriptor, destination, nbytes);
     if (nread != (int)nbytes) {
         throw std::runtime_error("File read error");
     }
@@ -126,7 +125,7 @@ void Disk::memory_to_file(unsigned sector, unsigned addr, unsigned nbytes)
         throw std::runtime_error("File seek error");
 
     const Byte *source = memory.get_ptr(addr);
-    int nwrite = write(file_descriptor, source, nbytes);
+    int nwrite         = write(file_descriptor, source, nbytes);
     if (nwrite != (int)nbytes) {
         throw std::runtime_error("File write error");
     }

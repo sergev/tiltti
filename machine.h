@@ -27,9 +27,9 @@
 #include <array>
 #include <chrono>
 #include <memory>
-#include <vector>
 #include <set>
 #include <unordered_map>
+#include <vector>
 
 #include "disk.h"
 #include "processor.h"
@@ -121,10 +121,16 @@ public:
     // Emit trace to this stream.
     static std::ostream &get_trace_stream();
 
-    // Memory access.
+    // Memory access. Byte-addressed; word ops use little-endian (low at addr, high at addr+1).
+    Byte mem_load_byte(unsigned addr);
+    void mem_store_byte(unsigned addr, Byte val);
     Word mem_fetch(unsigned addr);
     Word mem_load(unsigned addr);
     void mem_store(unsigned addr, Word val);
+
+    // Port I/O (stub: return 0 / no-op until implemented).
+    Word port_in(int w, unsigned port);
+    void port_out(int w, unsigned port, Word val);
 
     // Disk i/o.
     void disk_io(char op, unsigned disk_unit, unsigned sector, unsigned addr, unsigned nbytes);
@@ -160,9 +166,10 @@ public:
             print_memory_access(addr, val, "Read");
     }
 
-    void trace_instruction(unsigned opcode)
+    void trace_instruction(uint64_t opcode)
     {
-        if (debug_instructions || (debug_syscalls && is_syscall(opcode)))
+        if (debug_instructions ||
+            (debug_syscalls && is_syscall(static_cast<unsigned>(opcode & 0xff))))
             cpu.print_instruction();
     }
 

@@ -84,7 +84,8 @@ void Memory::write_words(const Word input[], unsigned nwords, unsigned addr)
 //
 // Dump block of memory to file.
 //
-void Memory::dump(unsigned serial_num, unsigned disk_unit, unsigned sector, unsigned addr, unsigned nbytes)
+void Memory::dump(unsigned serial_num, unsigned disk_unit, unsigned sector, unsigned addr,
+                  unsigned nbytes)
 {
     // Create unique filename.
     std::ostringstream buf;

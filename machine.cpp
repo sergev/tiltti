@@ -33,8 +33,8 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <sstream>
 #include <regex>
+#include <sstream>
 
 // Static fields.
 bool Machine::verbose                    = false;
@@ -43,8 +43,7 @@ uint64_t Machine::simulated_instructions = 0;
 //
 // Initialize the machine.
 //
-Machine::Machine(Memory &m)
-    : memory(m), cpu(*this, m)
+Machine::Machine(Memory &m) : memory(m), cpu(*this, m)
 {
 }
 
@@ -68,7 +67,7 @@ again:
 
     try {
         for (;;) {
-            after_call = false;
+            after_call   = false;
             after_return = false;
 
             cpu.step();
@@ -107,36 +106,92 @@ again:
 }
 
 //
-// Fetch instruction word.
+// Check address is below Upper Memory Area; throw if not.
 //
-Word Machine::mem_fetch(unsigned addr)
+static void check_addr(unsigned addr)
 {
     if (addr >= 0xa0000) {
         throw Processor::Exception("Jump to Upper Memory Area");
     }
+}
 
-    Word val = memory.load(addr);
+//
+// Load one byte from memory (with optional trace).
+//
+Byte Machine::mem_load_byte(unsigned addr)
+{
+    check_addr(addr);
+    Byte val = memory.load(addr);
+    if (debug_memory)
+        print_memory_access(addr, static_cast<Word>(val), "Read");
+    return val;
+}
+
+//
+// Store one byte to memory (with optional trace).
+//
+void Machine::mem_store_byte(unsigned addr, Byte val)
+{
+    check_addr(addr);
+    memory.store(addr, val);
+    if (debug_memory)
+        print_memory_access(addr, static_cast<Word>(val), "Write");
+}
+
+//
+// Fetch 16-bit instruction word at addr (little-endian).
+//
+Word Machine::mem_fetch(unsigned addr)
+{
+    check_addr(addr);
+    if (addr + 1 >= MEMORY_NBYTES)
+        throw Processor::Exception("Fetch out of range");
+    Word val =
+        static_cast<Word>(memory.load(addr)) | (static_cast<Word>(memory.load(addr + 1)) << 8);
     trace_fetch(addr, val);
     return val;
 }
 
 //
-// Write word to memory.
+// Write 16-bit word to memory (little-endian).
 //
 void Machine::mem_store(unsigned addr, Word val)
 {
-    memory.store(addr, val);
+    check_addr(addr);
+    memory.store(addr, static_cast<Byte>(val & 0xff));
+    memory.store(addr + 1, static_cast<Byte>(val >> 8));
     trace_memory_write(addr, val);
 }
 
 //
-// Read word from memory.
+// Read 16-bit word from memory (little-endian).
 //
 Word Machine::mem_load(unsigned addr)
 {
-    Word val = memory.load(addr);
+    check_addr(addr);
+    if (addr + 1 >= MEMORY_NBYTES)
+        throw Processor::Exception("Load out of range");
+    Word val =
+        static_cast<Word>(memory.load(addr)) | (static_cast<Word>(memory.load(addr + 1)) << 8);
     trace_memory_read(addr, val);
     return val;
+}
+
+//
+// Port input (stub: return 0 until implemented).
+//
+Word Machine::port_in(int w, unsigned /*port*/)
+{
+    (void)w;
+    return 0;
+}
+
+//
+// Port output (stub: no-op until implemented).
+//
+void Machine::port_out(int w, unsigned /*port*/, Word /*val*/)
+{
+    (void)w;
 }
 
 //
@@ -173,7 +228,8 @@ void Machine::disk_io(char op, unsigned disk_unit, unsigned sector, unsigned add
 void Machine::disk_mount(unsigned disk_unit, const std::string &path, bool write_permit)
 {
     if (disk_unit >= NDISKS) {
-        throw std::runtime_error("Invalid disk unit " + std::to_string(disk_unit) + " in disk_mount()");
+        throw std::runtime_error("Invalid disk unit " + std::to_string(disk_unit) +
+                                 " in disk_mount()");
     }
     if (disks[disk_unit]) {
         throw std::runtime_error("Disk unit " + std::to_string(disk_unit) + " is already mounted");
@@ -192,12 +248,12 @@ void Machine::disk_mount(unsigned disk_unit, const std::string &path, bool write
 //
 void Machine::boot_disk(const std::string &filename)
 {
-    //TODO: Attach image as disk or floppy.
+    // TODO: Attach image as disk or floppy.
     disk_mount(4, filename, true);
 
     // Start at this address.
     unsigned ip = 0x7c00;
     cpu.set_ip(ip);
 
-    //TODO: load sector #0 from disk.
+    // TODO: load sector #0 from disk.
 }

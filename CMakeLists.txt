@@ -28,6 +28,7 @@ add_compile_options(-Wall -Werror -Wshadow -fcolor-diagnostics)
 
 # Build library
 add_library(simulator STATIC
+    i86_arch.cpp
     machine.cpp
     memory.cpp
     disk.cpp

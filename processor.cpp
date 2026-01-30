@@ -24,6 +24,39 @@
 #include "machine.h"
 
 //
+// 8086 flag bits and size codes (B=byte, W=word).
+//
+static const unsigned CF      = 1;
+static const unsigned PF      = 1 << 2;
+static const unsigned AF      = 1 << 4;
+static const unsigned ZF      = 1 << 6;
+static const unsigned SF      = 1 << 7;
+static const unsigned TF      = 1 << 8;
+static const unsigned IF      = 1 << 9;
+static const unsigned DF      = 1 << 10;
+static const unsigned OF      = 1 << 11;
+static const int B            = 0;
+static const int W            = 1;
+static const int BITS[2]      = { 8, 16 };
+static const unsigned SIGN[2] = { 0x80u, 0x8000u };
+static const unsigned MASK[2] = { 0xffu, 0xffffu };
+static const int PARITY[256]  = {
+    1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+    0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+    0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+    1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+    0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
+    1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+    1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+    0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1
+};
+
+static int shift(int x, int n)
+{
+    return n >= 0 ? x << n : x >> -n;
+}
+
+//
 // Initialize the processor.
 //
 Processor::Processor(Machine &mach, Memory &mem) : machine(mach), memory(mem)
@@ -32,20 +65,29 @@ Processor::Processor(Machine &mach, Memory &mem) : machine(mach), memory(mem)
 }
 
 //
-// Finish the processor
+// Finalize the processor (no-op; state is preserved for trace).
 //
 void Processor::finish()
 {
-    //TODO
 }
 
 //
-// Reset routine
+// Reset routine: all registers and queue to initial 8086 state.
 //
 void Processor::reset()
 {
-    //TODO
-    core    = {};
+    core       = {};
+    core.ip    = 0x0000;
+    core.cs    = 0xffff;
+    core.ds    = 0x0000;
+    core.ss    = 0x0000;
+    core.es    = 0x0000;
+    core.flags = 0;
+    opcode     = 0;
+    queue      = {};
+    rep        = 0;
+    os         = core.ds;
+    ea         = -1;
 
     machine.trace_exception("Reset");
 }
@@ -57,7 +99,7 @@ void Processor::reset()
 //
 bool Processor::intercept(const std::string &message)
 {
-    //TODO
+    // TODO
     if (intercept_count > 0 &&            // interception enabled
         (message == MSG_ARITH_OVERFLOW || // arithmetic overflow
          message == MSG_ARITH_DIVZERO)) { // divide by zero
@@ -73,11 +115,1609 @@ bool Processor::intercept(const std::string &message)
 }
 
 //
-// Execute one instruction.
-// Increment IP register.
-// Emit exception in case of failure.
+// Linear address from segment:offset (8086 real mode).
+//
+unsigned Processor::getAddr(Word seg, Word off) const
+{
+    return ((static_cast<unsigned>(seg) << 4) + off) & 0xfffffu;
+}
+
+//
+// Effective address from ModR/M and displacement; 8086 addressing modes.
+//
+unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
+{
+    int disp = 0;
+    if (mod_val == 0b01) {
+        disp = static_cast<signed char>(queue[2]);
+    } else if (mod_val == 0b10) {
+        disp = static_cast<int>(static_cast<unsigned>(queue[2]) |
+                                (static_cast<unsigned>(queue[3]) << 8));
+    }
+    int ea_val = 0;
+    switch (rm_val) {
+    case 0b000:
+        ea_val = (core.bx + core.si + disp) & 0xffff;
+        break;
+    case 0b001:
+        ea_val = (core.bx + core.di + disp) & 0xffff;
+        break;
+    case 0b010:
+        ea_val = (core.bp + core.si + disp) & 0xffff;
+        break;
+    case 0b011:
+        ea_val = (core.bp + core.di + disp) & 0xffff;
+        break;
+    case 0b100:
+        ea_val = (core.si + disp) & 0xffff;
+        break;
+    case 0b101:
+        ea_val = (core.di + disp) & 0xffff;
+        break;
+    case 0b110:
+        if (mod_val == 0b00)
+            ea_val = static_cast<unsigned>(queue[2]) | (static_cast<unsigned>(queue[3]) << 8);
+        else
+            ea_val = (core.bp + disp) & 0xffff;
+        break;
+    case 0b111:
+        ea_val = (core.bx + disp) & 0xffff;
+        break;
+    default:
+        break;
+    }
+    return getAddr(os, static_cast<Word>(ea_val));
+}
+
+//
+// Fetch 1 or 2 bytes at CS:IP, advance IP.
+//
+int Processor::getMem(int width)
+{
+    unsigned addr = getAddr(core.cs, core.ip);
+    int val       = static_cast<int>(machine.mem_load_byte(addr));
+    if (width == W)
+        val |= static_cast<int>(machine.mem_load_byte(addr + 1)) << 8;
+    core.ip = (core.ip + 1 + width) & 0xffff;
+    return val & (width == W ? 0xffff : 0xff);
+}
+
+//
+// Read byte or word at linear address.
+//
+int Processor::getMem(int width, unsigned addr)
+{
+    if (width == B)
+        return static_cast<int>(machine.mem_load_byte(addr)) & 0xff;
+    return static_cast<int>(machine.mem_load(addr)) & 0xffff;
+}
+
+//
+// Write byte or word at linear address.
+//
+void Processor::setMem(int width, unsigned addr, int val)
+{
+    if (width == B)
+        machine.mem_store_byte(addr, static_cast<Byte>(val & 0xff));
+    else
+        machine.mem_store(addr, static_cast<Word>(val & 0xffff));
+}
+
+//
+// Get general or pointer register (reg encoding: 0=AX/AL, 1=CX/CL, ..., 4=SP, 5=BP, 6=SI, 7=DI).
+//
+int Processor::getReg(int width, unsigned r) const
+{
+    if (width == B) {
+        switch (r) {
+        case 0:
+            return core.ax & 0xff;
+        case 1:
+            return core.cx & 0xff;
+        case 2:
+            return core.dx & 0xff;
+        case 3:
+            return core.bx & 0xff;
+        case 4:
+            return core.ax >> 8;
+        case 5:
+            return core.cx >> 8;
+        case 6:
+            return core.dx >> 8;
+        case 7:
+            return core.bx >> 8;
+        default:
+            return 0;
+        }
+    } else {
+        switch (r) {
+        case 0:
+            return core.ax & 0xffff;
+        case 1:
+            return core.cx & 0xffff;
+        case 2:
+            return core.dx & 0xffff;
+        case 3:
+            return core.bx & 0xffff;
+        case 4:
+            return core.sp & 0xffff;
+        case 5:
+            return core.bp & 0xffff;
+        case 6:
+            return core.si & 0xffff;
+        case 7:
+            return core.di & 0xffff;
+        default:
+            return 0;
+        }
+    }
+}
+
+//
+// Set general or pointer register.
+//
+void Processor::setReg(int width, unsigned r, int val)
+{
+    if (width == B) {
+        val &= 0xff;
+        switch (r) {
+        case 0:
+            core.ax = (core.ax & 0xff00) | val;
+            break;
+        case 1:
+            core.cx = (core.cx & 0xff00) | val;
+            break;
+        case 2:
+            core.dx = (core.dx & 0xff00) | val;
+            break;
+        case 3:
+            core.bx = (core.bx & 0xff00) | val;
+            break;
+        case 4:
+            core.ax = (core.ax & 0x00ff) | (val << 8);
+            break;
+        case 5:
+            core.cx = (core.cx & 0x00ff) | (val << 8);
+            break;
+        case 6:
+            core.dx = (core.dx & 0x00ff) | (val << 8);
+            break;
+        case 7:
+            core.bx = (core.bx & 0x00ff) | (val << 8);
+            break;
+        default:
+            break;
+        }
+    } else {
+        val &= 0xffff;
+        switch (r) {
+        case 0:
+            core.ax = static_cast<Word>(val);
+            break;
+        case 1:
+            core.cx = static_cast<Word>(val);
+            break;
+        case 2:
+            core.dx = static_cast<Word>(val);
+            break;
+        case 3:
+            core.bx = static_cast<Word>(val);
+            break;
+        case 4:
+            core.sp = static_cast<Word>(val);
+            break;
+        case 5:
+            core.bp = static_cast<Word>(val);
+            break;
+        case 6:
+            core.si = static_cast<Word>(val);
+            break;
+        case 7:
+            core.di = static_cast<Word>(val);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+//
+// Get R/M operand (register or memory from mod/rm). Effective address from ModR/M and displacement.
+//
+int Processor::getRM(int width, unsigned mod_val, unsigned rm_val)
+{
+    if (mod_val == 0b11)
+        return getReg(width, rm_val);
+    return getMem(width, getEA(mod_val, rm_val));
+}
+
+//
+// Set R/M operand.
+//
+void Processor::setRM(int width, unsigned mod_val, unsigned rm_val, int val)
+{
+    if (mod_val == 0b11)
+        setReg(width, rm_val, val);
+    else
+        setMem(width, getEA(mod_val, rm_val), val);
+}
+
+//
+// Get segment register (encoding 0=ES, 1=CS, 2=SS, 3=DS).
+//
+Word Processor::getSegReg(unsigned r) const
+{
+    switch (r & 3) {
+    case 0:
+        return core.es;
+    case 1:
+        return core.cs;
+    case 2:
+        return core.ss;
+    case 3:
+        return core.ds;
+    default:
+        return 0;
+    }
+}
+
+//
+// Set segment register.
+//
+void Processor::setSegReg(unsigned r, Word val)
+{
+    val &= 0xffff;
+    switch (r & 3) {
+    case 0:
+        core.es = val;
+        break;
+    case 1:
+        core.cs = val;
+        break;
+    case 2:
+        core.ss = val;
+        break;
+    case 3:
+        core.ds = val;
+        break;
+    default:
+        break;
+    }
+}
+
+//
+// Decode ModR/M byte from queue; advance IP by 1, 2, or 3.
+//
+void Processor::decode()
+{
+    mod = (queue[1] >> 6) & 0b11;
+    reg = (queue[1] >> 3) & 0b111;
+    rm  = queue[1] & 0b111;
+    if (mod == 0b01)
+        core.ip = (core.ip + 2) & 0xffff;
+    else if ((mod == 0b00 && rm == 0b110) || mod == 0b10)
+        core.ip = (core.ip + 3) & 0xffff;
+    else
+        core.ip = (core.ip + 1) & 0xffff;
+}
+
+//
+// Stack is SS:SP; 16-bit little-endian. Pop word.
+//
+int Processor::pop()
+{
+    unsigned addr = getAddr(core.ss, core.sp);
+    int val       = getMem(W, addr);
+    core.sp       = (core.sp + 2) & 0xffff;
+    return val;
+}
+
+//
+// Push word onto stack.
+//
+void Processor::push(int val)
+{
+    core.sp = (core.sp - 2) & 0xffff;
+    setMem(W, getAddr(core.ss, core.sp), val & 0xffff);
+}
+
+//
+// Software interrupt: push FLAGS, CS, IP; jump to vector. Division/overflow can be intercepted by
+// the machine.
+//
+void Processor::callInt(int type)
+{
+    push(static_cast<int>(core.flags));
+    setFlag(IF, false);
+    setFlag(TF, false);
+    push(static_cast<int>(core.cs));
+    push(static_cast<int>(core.ip));
+    core.ip = static_cast<Word>(getMem(W, type * 4) & 0xffff);
+    core.cs = static_cast<Word>(getMem(W, type * 4 + 2) & 0xffff);
+}
+
+//
+// ALU helpers (set CF, AF, OF, PF, ZF, SF).
+//
+int Processor::add(int width, int dst, int src)
+{
+    int res = (dst + src) & MASK[width];
+    setFlag(CF, res < dst);
+    setFlag(AF, ((res ^ dst ^ src) & AF) != 0);
+    setFlag(OF, (shift((dst ^ src ^ -1) & (dst ^ res), 12 - BITS[width]) & OF) != 0);
+    setFlags(width, res);
+    return res;
+}
+
+int Processor::adc(int width, int dst, int src)
+{
+    int carry = (core.flags & CF) ? 1 : 0;
+    int res   = (dst + src + carry) & MASK[width];
+    setFlag(CF, carry ? (res <= dst) : (res < dst));
+    setFlag(AF, ((res ^ dst ^ src) & AF) != 0);
+    setFlag(OF, (shift((dst ^ src ^ -1) & (dst ^ res), 12 - BITS[width]) & OF) != 0);
+    setFlags(width, res);
+    return res;
+}
+
+int Processor::sub(int width, int dst, int src)
+{
+    int res = (dst - src) & MASK[width];
+    setFlag(CF, dst < src);
+    setFlag(AF, ((res ^ dst ^ src) & AF) != 0);
+    setFlag(OF, (shift((dst ^ src) & (dst ^ res), 12 - BITS[width]) & OF) != 0);
+    setFlags(width, res);
+    return res;
+}
+
+int Processor::sbb(int width, int dst, int src)
+{
+    int carry = (core.flags & CF) ? 1 : 0;
+    int res   = (dst - src - carry) & MASK[width];
+    setFlag(CF, carry ? (dst <= src) : (dst < src));
+    setFlag(AF, ((res ^ dst ^ src) & AF) != 0);
+    setFlag(OF, (shift((dst ^ src) & (dst ^ res), 12 - BITS[width]) & OF) != 0);
+    setFlags(width, res);
+    return res;
+}
+
+int Processor::inc(int width, int dst)
+{
+    int res = (dst + 1) & MASK[width];
+    setFlag(AF, ((res ^ dst ^ 1) & AF) != 0);
+    setFlag(OF, res == static_cast<int>(SIGN[width]));
+    setFlags(width, res);
+    return res;
+}
+
+int Processor::dec(int width, int dst)
+{
+    int res = (dst - 1) & MASK[width];
+    setFlag(AF, ((res ^ dst ^ 1) & AF) != 0);
+    setFlag(OF, res == static_cast<int>(SIGN[width]) - 1);
+    setFlags(width, res);
+    return res;
+}
+
+void Processor::logic(int width, int res)
+{
+    setFlag(CF, false);
+    setFlag(OF, false);
+    setFlags(width, res);
+}
+
+bool Processor::getFlag(unsigned flag) const
+{
+    return (core.flags & flag) != 0;
+}
+
+void Processor::setFlag(unsigned flag, bool set)
+{
+    if (set)
+        core.flags |= flag;
+    else
+        core.flags &= ~flag;
+}
+
+void Processor::setFlags(int width, int res)
+{
+    setFlag(PF, PARITY[res & 0xff] != 0);
+    setFlag(ZF, res == 0);
+    setFlag(SF, (shift(res, 8 - BITS[width]) & SF) != 0);
+}
+
+int Processor::signconv(int width, int x)
+{
+    return static_cast<int>(static_cast<unsigned>(x) << (32 - BITS[width]) >> (32 - BITS[width]));
+}
+
+bool Processor::msb(int width, int x)
+{
+    return (static_cast<unsigned>(x) & SIGN[width]) == SIGN[width];
+}
+
+//
+// Execute one instruction. One call = one instruction (prefixes consumed, then one opcode
+// executed). Increment IP register. Emit exception in case of failure.
 //
 void Processor::step()
 {
-    //TODO
+    prev = core;
+
+    // Consume segment override and REP prefix bytes; set default segment and repetition mode.
+    os  = core.ds;
+    rep = 0;
+    for (;;) {
+        unsigned addr = getAddr(core.cs, core.ip);
+        int b         = static_cast<int>(machine.mem_load_byte(addr));
+        core.ip       = (core.ip + 1) & 0xffff;
+        switch (b) {
+        case 0x26:
+            os = core.es;
+            break;
+        case 0x2e:
+            os = core.cs;
+            break;
+        case 0x36:
+            os = core.ss;
+            break;
+        case 0x3e:
+            os = core.ds;
+            break;
+        case 0xf2:
+            rep = 2;
+            break;
+        case 0xf3:
+            rep = 1;
+            break;
+        default:
+            core.ip = (core.ip - 1) & 0xffff;
+            goto done_prefix;
+        }
+    }
+done_prefix:
+
+    // Prefetch 6 bytes at CS:IP into queue for decode.
+    for (int i = 0; i < 6; ++i)
+        queue[static_cast<size_t>(i)] =
+            machine.mem_load_byte(getAddr(core.cs, (core.ip + i) & 0xffff));
+
+    opcode = static_cast<uint64_t>(queue[0]) | (static_cast<uint64_t>(queue[1]) << 8) |
+             (static_cast<uint64_t>(queue[2]) << 16) | (static_cast<uint64_t>(queue[3]) << 24) |
+             (static_cast<uint64_t>(queue[4]) << 32) | (static_cast<uint64_t>(queue[5]) << 40);
+
+    op      = queue[0];
+    d       = (op >> 1) & 1;
+    w       = op & 1;
+    core.ip = (core.ip + 1) & 0xffff;
+
+    machine.trace_instruction(opcode);
+
+    // For REP string instructions: full REP loop in one step (match legacy cycle_opcode).
+    if (rep != 0 && (op == 0xa4 || op == 0xa5 || op == 0xa6 || op == 0xa7 || op == 0xaa ||
+                     op == 0xab || op == 0xac || op == 0xad || op == 0xae || op == 0xaf)) {
+        do {
+            if (getReg(W, 1) == 0) // CX
+                break;
+            if (rep)
+                setReg(W, 1, getReg(W, 1) - 1);
+            if (!exe_one())
+                throw Exception("");
+            if (rep && ((rep == 1 && !getFlag(ZF)) || (rep == 2 && getFlag(ZF))))
+                break;
+        } while (rep != 0);
+    } else {
+        if (!exe_one())
+            throw Exception("");
+    }
+}
+
+//
+// Decode op, d, w and optional ModR/M; then execute the matching 8086 instruction.
+// Returns false on HLT.
+//
+bool Processor::exe_one()
+{
+    int dst, src, res;
+    const int AX = 0; // accumulator index for getReg/setReg
+
+    switch (op) {
+    // --- MOV: register/memory and immediate, accum, segment ---
+    case 0x88:
+    case 0x89:
+    case 0x8a:
+    case 0x8b:
+        decode();
+        if (d == 0) {
+            src = getReg(w, reg);
+            setRM(w, mod, rm, src);
+        } else {
+            src = getRM(w, mod, rm);
+            setReg(w, reg, src);
+        }
+        break;
+    // MOV reg/mem, immediate
+    case 0xc6:
+    case 0xc7:
+        decode();
+        if (reg == 0) {
+            src = getMem(w);
+            setRM(w, mod, rm, src);
+        }
+        break;
+    // MOV reg, immediate (B0-BF)
+    case 0xb0:
+    case 0xb1:
+    case 0xb2:
+    case 0xb3:
+    case 0xb4:
+    case 0xb5:
+    case 0xb6:
+    case 0xb7:
+    case 0xb8:
+    case 0xb9:
+    case 0xba:
+    case 0xbb:
+    case 0xbc:
+    case 0xbd:
+    case 0xbe:
+    case 0xbf:
+        w   = (op >> 3) & 1;
+        reg = op & 0b111;
+        src = getMem(w);
+        setReg(w, reg, src);
+        break;
+    // MOV accum, mem and MOV mem, accum
+    case 0xa0:
+    case 0xa1:
+    case 0xa2:
+    case 0xa3:
+        dst = getMem(W);
+        if (d == 0) {
+            src = getMem(w, getAddr(os, static_cast<Word>(dst)));
+            setReg(w, AX, src);
+        } else {
+            src = getReg(w, AX);
+            setMem(w, getAddr(os, static_cast<Word>(dst)), src);
+        }
+        break;
+    // MOV reg/mem, segreg and MOV segreg, reg/mem
+    case 0x8c:
+    case 0x8e:
+        decode();
+        if (d == 0) {
+            setRM(W, mod, rm, static_cast<int>(getSegReg(reg)));
+        } else {
+            setSegReg(reg, static_cast<Word>(getRM(W, mod, rm)));
+        }
+        break;
+    // --- PUSH/POP: general and segment registers ---
+    case 0x50:
+    case 0x51:
+    case 0x52:
+    case 0x53:
+    case 0x54:
+    case 0x55:
+    case 0x56:
+    case 0x57:
+        reg = op & 0b111;
+        push(getReg(W, reg));
+        break;
+    // PUSH segment register
+    case 0x06:
+    case 0x0e:
+    case 0x16:
+    case 0x1e:
+        reg = (op >> 3) & 0b111;
+        push(static_cast<int>(getSegReg(reg)));
+        break;
+    // POP general register
+    case 0x58:
+    case 0x59:
+    case 0x5a:
+    case 0x5b:
+    case 0x5c:
+    case 0x5d:
+    case 0x5e:
+    case 0x5f:
+        reg = op & 0b111;
+        setReg(W, reg, pop());
+        break;
+    // POP segment register
+    case 0x07:
+    case 0x0f:
+    case 0x17:
+    case 0x1f:
+        reg = (op >> 3) & 0b111;
+        setSegReg(reg, static_cast<Word>(pop()));
+        break;
+    // XCHG reg, reg/mem
+    case 0x86:
+    case 0x87:
+        decode();
+        dst = getReg(w, reg);
+        src = getRM(w, mod, rm);
+        setReg(w, reg, src);
+        setRM(w, mod, rm, dst);
+        break;
+    // XCHG AX, reg
+    case 0x91:
+    case 0x92:
+    case 0x93:
+    case 0x94:
+    case 0x95:
+    case 0x96:
+    case 0x97:
+        reg = op & 0b111;
+        dst = getReg(W, AX);
+        src = getReg(W, reg);
+        setReg(W, AX, src);
+        setReg(W, reg, dst);
+        break;
+    // XLAT
+    case 0xd7: {
+        int al_val = getReg(B, AX);
+        setReg(B, AX, getMem(B, getAddr(os, (getReg(W, 3) + al_val) & 0xffff))); // BX = reg 3
+        break;
+    }
+    // IN accum, port (immed and DX)
+    case 0xe4:
+    case 0xe5:
+        src = getMem(B);
+        setReg(w, AX, static_cast<int>(machine.port_in(w, src)));
+        break;
+    case 0xec:
+    case 0xed:
+        src = getReg(W, 2); // DX
+        setReg(w, AX, static_cast<int>(machine.port_in(w, src)));
+        break;
+    // OUT port, accum
+    case 0xe6:
+    case 0xe7:
+        src = getMem(B);
+        machine.port_out(w, src, static_cast<Word>(getReg(w, AX)));
+        break;
+    case 0xee:
+    case 0xef:
+        src = getReg(W, 2);
+        machine.port_out(w, src, static_cast<Word>(getReg(w, AX)));
+        break;
+    // LEA
+    case 0x8d:
+        decode();
+        setReg(w, reg, (getEA(mod, rm) - (static_cast<unsigned>(os) << 4)) & 0xffff);
+        break;
+    // LDS
+    case 0xc5:
+        decode();
+        src = getEA(mod, rm);
+        setReg(w, reg, getMem(W, src));
+        core.ds = static_cast<Word>(getMem(W, src + 2) & 0xffff);
+        break;
+    // LES
+    case 0xc4:
+        decode();
+        src = getEA(mod, rm);
+        setReg(w, reg, getMem(W, src));
+        core.es = static_cast<Word>(getMem(W, src + 2) & 0xffff);
+        break;
+    // LAHF
+    case 0x9f:
+        core.ax = (core.ax & 0x00ff) | ((core.flags & 0xff) << 8);
+        break;
+    // SAHF
+    case 0x9e:
+        core.flags = (core.flags & 0xff00) | (core.ax >> 8);
+        break;
+    // PUSHF / POPF
+    case 0x9c:
+        push(static_cast<int>(core.flags));
+        break;
+    case 0x9d:
+        core.flags = static_cast<Word>(pop() & 0xffff);
+        break;
+    // ADD reg/mem, reg and ADD reg, reg/mem
+    case 0x00:
+    case 0x01:
+    case 0x02:
+    case 0x03:
+        decode();
+        if (d == 0) {
+            dst = getRM(w, mod, rm);
+            src = getReg(w, reg);
+            res = add(w, dst, src);
+            setRM(w, mod, rm, res);
+        } else {
+            dst = getReg(w, reg);
+            src = getRM(w, mod, rm);
+            res = add(w, dst, src);
+            setReg(w, reg, res);
+        }
+        break;
+    // ADD accum, immediate
+    case 0x04:
+    case 0x05:
+        dst = getReg(w, AX);
+        src = getMem(w);
+        setReg(w, AX, add(w, dst, src));
+        break;
+    // ADC (same pattern)
+    case 0x10:
+    case 0x11:
+    case 0x12:
+    case 0x13:
+        decode();
+        if (d == 0) {
+            dst = getRM(w, mod, rm);
+            src = getReg(w, reg);
+            res = adc(w, dst, src);
+            setRM(w, mod, rm, res);
+        } else {
+            dst = getReg(w, reg);
+            src = getRM(w, mod, rm);
+            res = adc(w, dst, src);
+            setReg(w, reg, res);
+        }
+        break;
+    case 0x14:
+    case 0x15:
+        dst = getReg(w, AX);
+        src = getMem(w);
+        setReg(w, AX, adc(w, dst, src));
+        break;
+    // INC general register
+    case 0x40:
+    case 0x41:
+    case 0x42:
+    case 0x43:
+    case 0x44:
+    case 0x45:
+    case 0x46:
+    case 0x47:
+        reg = op & 0b111;
+        setReg(W, reg, inc(W, getReg(W, reg)));
+        break;
+    // AAA, DAA (simplified: set flags)
+    case 0x37: {
+        int al_val = getReg(B, AX);
+        if ((al_val & 0xf) > 9 || getFlag(AF)) {
+            setReg(B, AX, (al_val + 6) & 0xff);
+            core.ax = (core.ax + 0x100) & 0xffff;
+            setFlag(CF, true);
+            setFlag(AF, true);
+        } else {
+            setFlag(CF, false);
+            setFlag(AF, false);
+        }
+        setReg(B, AX, getReg(B, AX) & 0xf);
+        break;
+    }
+    case 0x27: {
+        int al_val  = getReg(B, AX);
+        bool old_cf = getFlag(CF);
+        setFlag(CF, false);
+        if ((al_val & 0xf) > 9 || getFlag(AF)) {
+            al_val = (al_val + 6) & 0xff;
+            setFlag(CF, old_cf || (al_val < 0));
+            setFlag(AF, true);
+        } else
+            setFlag(AF, false);
+        if (al_val > 0x99 || old_cf) {
+            al_val = (al_val + 0x60) & 0xff;
+            setFlag(CF, true);
+        } else
+            setFlag(CF, false);
+        setReg(B, AX, al_val);
+        setFlags(B, al_val);
+        break;
+    }
+    // --- SUB, SBB, CMP, INC, DEC: arithmetic and compare ---
+    case 0x28:
+    case 0x29:
+    case 0x2a:
+    case 0x2b:
+        decode();
+        if (d == 0) {
+            dst = getRM(w, mod, rm);
+            src = getReg(w, reg);
+            res = sub(w, dst, src);
+            setRM(w, mod, rm, res);
+        } else {
+            dst = getReg(w, reg);
+            src = getRM(w, mod, rm);
+            res = sub(w, dst, src);
+            setReg(w, reg, res);
+        }
+        break;
+    case 0x2c:
+    case 0x2d:
+        dst = getReg(w, AX);
+        src = getMem(w);
+        setReg(w, AX, sub(w, dst, src));
+        break;
+    // SBB
+    case 0x18:
+    case 0x19:
+    case 0x1a:
+    case 0x1b:
+        decode();
+        if (d == 0) {
+            dst = getRM(w, mod, rm);
+            src = getReg(w, reg);
+            res = sbb(w, dst, src);
+            setRM(w, mod, rm, res);
+        } else {
+            dst = getReg(w, reg);
+            src = getRM(w, mod, rm);
+            res = sbb(w, dst, src);
+            setReg(w, reg, res);
+        }
+        break;
+    case 0x1c:
+    case 0x1d:
+        dst = getReg(w, AX);
+        src = getMem(w);
+        setReg(w, AX, sbb(w, dst, src));
+        break;
+    // DEC general register
+    case 0x48:
+    case 0x49:
+    case 0x4a:
+    case 0x4b:
+    case 0x4c:
+    case 0x4d:
+    case 0x4e:
+    case 0x4f:
+        reg = op & 0b111;
+        setReg(W, reg, dec(W, getReg(W, reg)));
+        break;
+    // CMP
+    case 0x38:
+    case 0x39:
+    case 0x3a:
+    case 0x3b:
+        decode();
+        if (d == 0) {
+            dst = getRM(w, mod, rm);
+            src = getReg(w, reg);
+        } else {
+            dst = getReg(w, reg);
+            src = getRM(w, mod, rm);
+        }
+        sub(w, dst, src);
+        break;
+    case 0x3c:
+    case 0x3d:
+        dst = getReg(w, AX);
+        src = getMem(w);
+        sub(w, dst, src);
+        break;
+    // AAS, DAS (simplified)
+    case 0x3f: {
+        int al_val = getReg(B, AX);
+        if ((al_val & 0xf) > 9 || getFlag(AF)) {
+            setReg(B, AX, (al_val - 6) & 0xff);
+            core.ax = (core.ax - 0x100) & 0xffff;
+            setFlag(CF, true);
+            setFlag(AF, true);
+        } else {
+            setFlag(CF, false);
+            setFlag(AF, false);
+        }
+        setReg(B, AX, getReg(B, AX) & 0xf);
+        break;
+    }
+    case 0x2f: {
+        int al_val  = getReg(B, AX);
+        bool old_cf = getFlag(CF);
+        setFlag(CF, false);
+        if ((al_val & 0xf) > 9 || getFlag(AF)) {
+            al_val = (al_val - 6) & 0xff;
+            setFlag(CF, old_cf || (al_val > 0));
+            setFlag(AF, true);
+        } else
+            setFlag(AF, false);
+        if (al_val > 0x99 || old_cf) {
+            al_val = (al_val - 0x60) & 0xff;
+            setFlag(CF, true);
+        } else
+            setFlag(CF, false);
+        setReg(B, AX, al_val);
+        setFlags(B, al_val);
+        break;
+    }
+    // AAM, AAD
+    case 0xd4: {
+        src = getMem(B);
+        if (src == 0) {
+            if (!intercept(MSG_ARITH_DIVZERO))
+                throw Exception(MSG_ARITH_DIVZERO);
+        } else {
+            int al_val = getReg(B, AX);
+            core.ax    = (core.ax & 0x00ff) | ((al_val / src) & 0xff) << 8;
+            setReg(B, AX, al_val % src);
+            setFlags(W, core.ax);
+        }
+        break;
+    }
+    case 0xd5: {
+        src        = getMem(B);
+        int ah_val = core.ax >> 8;
+        setReg(B, AX, (ah_val * src + getReg(B, AX)) & 0xff);
+        core.ax &= 0x00ff;
+        setFlags(B, getReg(B, AX));
+        break;
+    }
+    // CBW, CWD
+    case 0x98:
+        if (getReg(B, AX) & 0x80)
+            core.ax |= 0xff00;
+        else
+            core.ax &= 0x00ff;
+        break;
+    case 0x99:
+        if (core.ax & 0x8000)
+            core.dx = 0xffff;
+        else
+            core.dx = 0;
+        break;
+    // AND, OR, XOR, TEST (logic)
+    case 0x20:
+    case 0x21:
+    case 0x22:
+    case 0x23:
+        decode();
+        if (d == 0) {
+            dst = getRM(w, mod, rm);
+            src = getReg(w, reg);
+            res = dst & src;
+            logic(w, res);
+            setRM(w, mod, rm, res);
+        } else {
+            dst = getReg(w, reg);
+            src = getRM(w, mod, rm);
+            res = dst & src;
+            logic(w, res);
+            setReg(w, reg, res);
+        }
+        break;
+    case 0x24:
+    case 0x25:
+        dst = getReg(w, AX);
+        src = getMem(w);
+        logic(w, dst & src);
+        setReg(w, AX, dst & src);
+        break;
+    case 0x08:
+    case 0x09:
+    case 0x0a:
+    case 0x0b:
+        decode();
+        if (d == 0) {
+            dst = getRM(w, mod, rm);
+            src = getReg(w, reg);
+            res = dst | src;
+            logic(w, res);
+            setRM(w, mod, rm, res);
+        } else {
+            dst = getReg(w, reg);
+            src = getRM(w, mod, rm);
+            res = dst | src;
+            logic(w, res);
+            setReg(w, reg, res);
+        }
+        break;
+    case 0x0c:
+    case 0x0d:
+        dst = getReg(w, AX);
+        src = getMem(w);
+        logic(w, dst | src);
+        setReg(w, AX, dst | src);
+        break;
+    case 0x30:
+    case 0x31:
+    case 0x32:
+    case 0x33:
+        decode();
+        if (d == 0) {
+            dst = getRM(w, mod, rm);
+            src = getReg(w, reg);
+            res = dst ^ src;
+            logic(w, res);
+            setRM(w, mod, rm, res);
+        } else {
+            dst = getReg(w, reg);
+            src = getRM(w, mod, rm);
+            res = dst ^ src;
+            logic(w, res);
+            setReg(w, reg, res);
+        }
+        break;
+    case 0x34:
+    case 0x35:
+        dst = getReg(w, AX);
+        src = getMem(w);
+        logic(w, dst ^ src);
+        setReg(w, AX, dst ^ src);
+        break;
+    case 0x84:
+    case 0x85:
+        decode();
+        logic(w, getRM(w, mod, rm) & getReg(w, reg));
+        break;
+    case 0xa8:
+    case 0xa9:
+        logic(w, getReg(w, AX) & getMem(w));
+        break;
+    // String ops (one iteration each)
+    case 0xa4: // MOVS
+    case 0xa5:
+        src = getMem(w, getAddr(os, core.si));
+        setMem(w, getAddr(core.es, core.di), src);
+        core.si = (core.si + (getFlag(DF) ? -1 : 1) * (1 + w)) & 0xffff;
+        core.di = (core.di + (getFlag(DF) ? -1 : 1) * (1 + w)) & 0xffff;
+        break;
+    case 0xa6:
+    case 0xa7:
+        dst = getMem(w, getAddr(core.es, core.di));
+        src = getMem(w, getAddr(os, core.si));
+        sub(w, src, dst);
+        core.si = (core.si + (getFlag(DF) ? -1 : 1) * (1 + w)) & 0xffff;
+        core.di = (core.di + (getFlag(DF) ? -1 : 1) * (1 + w)) & 0xffff;
+        break;
+    case 0xae:
+    case 0xaf:
+        dst = getMem(w, getAddr(core.es, core.di));
+        src = getReg(w, AX);
+        sub(w, src, dst);
+        core.di = (core.di + (getFlag(DF) ? -1 : 1) * (1 + w)) & 0xffff;
+        break;
+    case 0xac:
+    case 0xad:
+        src = getMem(w, getAddr(os, core.si));
+        setReg(w, AX, src);
+        core.si = (core.si + (getFlag(DF) ? -1 : 1) * (1 + w)) & 0xffff;
+        break;
+    case 0xaa:
+    case 0xab:
+        setMem(w, getAddr(core.es, core.di), getReg(w, AX));
+        core.di = (core.di + (getFlag(DF) ? -1 : 1) * (1 + w)) & 0xffff;
+        break;
+    // --- CALL, RET, JMP: transfer and conditional jumps ---
+    case 0xe8: {
+        dst = signconv(W, getMem(W));
+        push(static_cast<int>(core.ip));
+        core.ip = (core.ip + dst) & 0xffff;
+        break;
+    }
+    case 0x9a: {
+        dst = getMem(W);
+        src = getMem(W);
+        push(static_cast<int>(core.cs));
+        push(static_cast<int>(core.ip));
+        core.ip = static_cast<Word>(dst & 0xffff);
+        core.cs = static_cast<Word>(src & 0xffff);
+        break;
+    }
+    case 0xc3:
+        core.ip = static_cast<Word>(pop() & 0xffff);
+        break;
+    case 0xc2: {
+        src     = getMem(W);
+        core.ip = static_cast<Word>(pop() & 0xffff);
+        core.sp = (core.sp + src) & 0xffff;
+        break;
+    }
+    case 0xcb:
+        core.ip = static_cast<Word>(pop() & 0xffff);
+        core.cs = static_cast<Word>(pop() & 0xffff);
+        break;
+    case 0xca: {
+        src     = getMem(W);
+        core.ip = static_cast<Word>(pop() & 0xffff);
+        core.cs = static_cast<Word>(pop() & 0xffff);
+        core.sp = (core.sp + src) & 0xffff;
+        break;
+    }
+    case 0xe9: {
+        dst     = signconv(W, getMem(W));
+        core.ip = (core.ip + dst) & 0xffff;
+        break;
+    }
+    case 0xeb: {
+        dst     = signconv(B, getMem(B));
+        core.ip = (core.ip + dst) & 0xffff;
+        break;
+    }
+    case 0xea: {
+        dst     = getMem(W);
+        src     = getMem(W);
+        core.ip = static_cast<Word>(dst & 0xffff);
+        core.cs = static_cast<Word>(src & 0xffff);
+        break;
+    }
+    // Conditional jumps (Jcc)
+    case 0x70:
+        dst = signconv(B, getMem(B));
+        if (getFlag(OF))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    case 0x71:
+        dst = signconv(B, getMem(B));
+        if (!getFlag(OF))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    case 0x72:
+        dst = signconv(B, getMem(B));
+        if (getFlag(CF))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    case 0x73:
+        dst = signconv(B, getMem(B));
+        if (!getFlag(CF))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    case 0x74:
+        dst = signconv(B, getMem(B));
+        if (getFlag(ZF))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    case 0x75:
+        dst = signconv(B, getMem(B));
+        if (!getFlag(ZF))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    case 0x76:
+        dst = signconv(B, getMem(B));
+        if (getFlag(CF) || getFlag(ZF))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    case 0x77:
+        dst = signconv(B, getMem(B));
+        if (!(getFlag(CF) || getFlag(ZF)))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    case 0x78:
+        dst = signconv(B, getMem(B));
+        if (getFlag(SF))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    case 0x79:
+        dst = signconv(B, getMem(B));
+        if (!getFlag(SF))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    case 0x7a:
+        dst = signconv(B, getMem(B));
+        if (getFlag(PF))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    case 0x7b:
+        dst = signconv(B, getMem(B));
+        if (!getFlag(PF))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    case 0x7c:
+        dst = signconv(B, getMem(B));
+        if (getFlag(SF) != getFlag(OF))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    case 0x7d:
+        dst = signconv(B, getMem(B));
+        if (getFlag(SF) == getFlag(OF))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    case 0x7e:
+        dst = signconv(B, getMem(B));
+        if (getFlag(ZF) || (getFlag(SF) != getFlag(OF)))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    case 0x7f:
+        dst = signconv(B, getMem(B));
+        if (!getFlag(ZF) && (getFlag(SF) == getFlag(OF)))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    // LOOP, LOOPE, LOOPNE, JCXZ
+    case 0xe2: {
+        dst = signconv(B, getMem(B));
+        src = (getReg(W, 1) - 1) & 0xffff; // CX
+        setReg(W, 1, src);
+        if (src != 0)
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    }
+    case 0xe1: {
+        dst = signconv(B, getMem(B));
+        src = (getReg(W, 1) - 1) & 0xffff;
+        setReg(W, 1, src);
+        if (src != 0 && getFlag(ZF))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    }
+    case 0xe0: {
+        dst = signconv(B, getMem(B));
+        src = (getReg(W, 1) - 1) & 0xffff;
+        setReg(W, 1, src);
+        if (src != 0 && !getFlag(ZF))
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    }
+    case 0xe3: {
+        dst = signconv(B, getMem(B));
+        if (getReg(W, 1) == 0)
+            core.ip = (core.ip + dst) & 0xffff;
+        break;
+    }
+    // --- INT, INTO, IRET: software interrupt and return ---
+    case 0xcc:
+        callInt(3);
+        break;
+    case 0xcd:
+        callInt(getMem(B));
+        break;
+    case 0xce:
+        if (getFlag(OF)) {
+            if (!intercept(MSG_ARITH_OVERFLOW))
+                callInt(4);
+        }
+        break;
+    case 0xcf:
+        core.flags = static_cast<Word>(pop() & 0xffff);
+        core.cs    = static_cast<Word>(pop() & 0xffff);
+        core.ip    = static_cast<Word>(pop() & 0xffff);
+        break;
+    // Flag ops
+    case 0xf8:
+        setFlag(CF, false);
+        break;
+    case 0xf5:
+        setFlag(CF, !getFlag(CF));
+        break;
+    case 0xf9:
+        setFlag(CF, true);
+        break;
+    case 0xfc:
+        setFlag(DF, false);
+        break;
+    case 0xfd:
+        setFlag(DF, true);
+        break;
+    case 0xfa:
+        setFlag(IF, false);
+        break;
+    case 0xfb:
+        setFlag(IF, true);
+        break;
+    case 0xf4: // HLT
+        return false;
+    case 0x9b: // WAIT
+        break;
+    case 0xd8:
+    case 0xd9:
+    case 0xda:
+    case 0xdb:
+    case 0xdc:
+    case 0xdd:
+    case 0xde:
+    case 0xdf:
+        decode();
+        break;
+    case 0xf0: // LOCK
+        break;
+    case 0x90: // NOP
+        break;
+    // --- Group 80/81/82/83: ALU with immediate; D0-D3: shift/rotate; F6/F7: TEST/NOT/NEG/MUL/DIV;
+    // FE/FF: INC/DEC/CALL/JMP/PUSH ---
+    case 0x80:
+    case 0x81:
+    case 0x82:
+    case 0x83: {
+        decode();
+        dst = getRM(w, mod, rm);
+        src = getMem(B);
+        if (op == 0x81)
+            src |= getMem(B) << 8;
+        else if (op == 0x83 && (src & static_cast<int>(SIGN[B])) != 0)
+            src |= 0xff00;
+        switch (reg) {
+        case 0:
+            res = add(w, dst, src);
+            setRM(w, mod, rm, res);
+            break;
+        case 1:
+            if (op == 0x80 || op == 0x81) {
+                res = dst | src;
+                logic(w, res);
+                setRM(w, mod, rm, res);
+            }
+            break;
+        case 2:
+            res = adc(w, dst, src);
+            setRM(w, mod, rm, res);
+            break;
+        case 3:
+            res = sbb(w, dst, src);
+            setRM(w, mod, rm, res);
+            break;
+        case 4:
+            if (op == 0x80 || op == 0x81) {
+                res = dst & src;
+                logic(w, res);
+                setRM(w, mod, rm, res);
+            }
+            break;
+        case 5:
+            res = sub(w, dst, src);
+            setRM(w, mod, rm, res);
+            break;
+        case 6:
+            if (op == 0x80 || op == 0x81) {
+                res = dst ^ src;
+                logic(w, res);
+                setRM(w, mod, rm, res);
+            }
+            break;
+        case 7:
+            sub(w, dst, src);
+            break;
+        default:
+            break;
+        }
+        break;
+    }
+    // POP reg/mem
+    case 0x8f:
+        decode();
+        if (reg == 0)
+            setRM(W, mod, rm, pop());
+        break;
+    // Shift/rotate group D0-D3
+    case 0xd0:
+    case 0xd1:
+    case 0xd2:
+    case 0xd3: {
+        decode();
+        dst = getRM(w, mod, rm);
+        src = (op == 0xd0 || op == 0xd1) ? 1 : (getReg(B, 1) & 0x1f); // CL
+        bool temp_cf;
+        switch (reg) {
+        case 0: // ROL
+            for (int cnt = 0; cnt < src; ++cnt) {
+                temp_cf = msb(w, dst);
+                dst     = ((dst << 1) | (temp_cf ? 1 : 0)) & MASK[w];
+            }
+            setFlag(CF, (dst & 1) != 0);
+            if (src == 1)
+                setFlag(OF, msb(w, dst) != getFlag(CF));
+            break;
+        case 1: // ROR
+            for (int cnt = 0; cnt < src; ++cnt) {
+                temp_cf = (dst & 1) != 0;
+                dst     = ((dst >> 1) | (temp_cf ? static_cast<int>(SIGN[w]) : 0)) & MASK[w];
+            }
+            setFlag(CF, msb(w, dst));
+            if (src == 1)
+                setFlag(OF, msb(w, dst) != msb(w, dst << 1));
+            break;
+        case 2: // RCL
+            for (int cnt = 0; cnt < src; ++cnt) {
+                temp_cf = msb(w, dst);
+                dst     = ((dst << 1) | (getFlag(CF) ? 1 : 0)) & MASK[w];
+                setFlag(CF, temp_cf);
+            }
+            if (src == 1)
+                setFlag(OF, msb(w, dst) != getFlag(CF));
+            break;
+        case 3: // RCR
+            if (src == 1)
+                setFlag(OF, msb(w, dst) != getFlag(CF));
+            for (int cnt = 0; cnt < src; ++cnt) {
+                temp_cf = (dst & 1) != 0;
+                dst     = ((dst >> 1) | (getFlag(CF) ? static_cast<int>(SIGN[w]) : 0)) & MASK[w];
+                setFlag(CF, temp_cf);
+            }
+            break;
+        case 4: // SAL/SHL
+            for (int cnt = 0; cnt < src; ++cnt) {
+                setFlag(CF, (dst & static_cast<int>(SIGN[w])) != 0);
+                dst = (dst << 1) & MASK[w];
+            }
+            if (src == 1)
+                setFlag(OF, ((dst & static_cast<int>(SIGN[w])) != 0) != getFlag(CF));
+            if (src > 0)
+                setFlags(w, dst);
+            break;
+        case 5: // SHR
+            if (src == 1)
+                setFlag(OF, (dst & static_cast<int>(SIGN[w])) != 0);
+            for (int cnt = 0; cnt < src; ++cnt) {
+                setFlag(CF, (dst & 1) != 0);
+                dst = (dst >> 1) & MASK[w];
+            }
+            if (src > 0)
+                setFlags(w, dst);
+            break;
+        case 7: // SAR
+            if (src == 1)
+                setFlag(OF, false);
+            for (int cnt = 0; cnt < src; ++cnt) {
+                setFlag(CF, (dst & 1) != 0);
+                dst = (signconv(w, dst) >> 1) & MASK[w];
+            }
+            if (src > 0)
+                setFlags(w, dst);
+            break;
+        default:
+            break;
+        }
+        setRM(w, mod, rm, dst);
+        break;
+    }
+    // F6/F7: TEST imm, NOT, NEG, MUL, IMUL, DIV, IDIV
+    case 0xf6:
+    case 0xf7: {
+        decode();
+        src = getRM(w, mod, rm);
+        switch (reg) {
+        case 0:
+            logic(w, getMem(w) & src);
+            break;
+        case 2:
+            setRM(w, mod, rm, ~src);
+            break;
+        case 3: {
+            dst = sub(w, 0, src);
+            setFlag(CF, dst != 0);
+            setRM(w, mod, rm, dst);
+            break;
+        }
+        case 4: // MUL
+            if (w == B) {
+                dst = getReg(B, AX);
+                res = (dst * src) & 0xffff;
+                setReg(W, AX, res);
+                setFlag(CF, (res >> 8) != 0);
+                setFlag(OF, (res >> 8) != 0);
+            } else {
+                long lres = (long)(getReg(W, AX) & 0xffff) * (long)(src & 0xffff);
+                setReg(W, AX, lres & 0xffff);
+                setReg(W, 2, (lres >> 16) & 0xffff); // DX
+                setFlag(CF, (lres >> 16) != 0);
+                setFlag(OF, (lres >> 16) != 0);
+            }
+            break;
+        case 5: // IMUL
+            if (w == B) {
+                int s = signconv(B, src), dval = signconv(B, getReg(B, AX));
+                res = (dval * s) & 0xffff;
+                setReg(W, AX, res);
+                setFlag(CF, (res != 0 && (res > 0x7f || res < (int)0xff80)));
+                setFlag(OF, (res != 0 && (res > 0x7f || res < (int)0xff80)));
+            } else {
+                long ld = (long)signconv(W, getReg(W, AX)) * (long)signconv(W, src);
+                setReg(W, AX, ld & 0xffff);
+                setReg(W, 2, (ld >> 16) & 0xffff);
+                setFlag(CF, (ld >> 16) != 0 && (ld >> 16) != 0xffff);
+                setFlag(OF, (ld >> 16) != 0 && (ld >> 16) != 0xffff);
+            }
+            break;
+        case 6: // DIV
+            if (src == 0) {
+                if (!intercept(MSG_ARITH_DIVZERO))
+                    throw Exception(MSG_ARITH_DIVZERO);
+            } else if (w == B) {
+                dst = getReg(W, AX);
+                res = dst / src;
+                if (res > 0xff) {
+                    if (!intercept(MSG_ARITH_DIVZERO))
+                        throw Exception(MSG_ARITH_DIVZERO);
+                } else {
+                    setReg(B, AX, res);
+                    core.ax = (core.ax & 0x00ff) | ((dst % src) << 8);
+                }
+            } else {
+                long ldst = (long)(core.dx << 16) | getReg(W, AX);
+                long lres = ldst / src;
+                if (lres > 0xffff) {
+                    if (!intercept(MSG_ARITH_DIVZERO))
+                        throw Exception(MSG_ARITH_DIVZERO);
+                } else {
+                    setReg(W, AX, lres & 0xffff);
+                    setReg(W, 2, ldst % src);
+                }
+            }
+            break;
+        case 7: // IDIV
+            if (src == 0) {
+                if (!intercept(MSG_ARITH_DIVZERO))
+                    throw Exception(MSG_ARITH_DIVZERO);
+            } else {
+                int s = signconv(w, src);
+                if (w == B) {
+                    dst = signconv(W, getReg(W, AX));
+                    res = dst / s;
+                    if (res > 0x7f || res < (int)0xff81) {
+                        if (!intercept(MSG_ARITH_DIVZERO))
+                            throw Exception(MSG_ARITH_DIVZERO);
+                    } else {
+                        setReg(B, AX, res);
+                        core.ax = (core.ax & 0x00ff) | ((dst % s) << 8);
+                    }
+                } else {
+                    long ldst = (long)(core.dx << 16) | (getReg(W, AX) & 0xffff);
+                    ldst      = (ldst << 32) >> 32;
+                    long lres = ldst / s;
+                    if (lres > 0x7fff || lres < -0x8000) {
+                        if (!intercept(MSG_ARITH_DIVZERO))
+                            throw Exception(MSG_ARITH_DIVZERO);
+                    } else {
+                        setReg(W, AX, lres & 0xffff);
+                        setReg(W, 2, ldst % s);
+                    }
+                }
+            }
+            break;
+        default:
+            break;
+        }
+        break;
+    }
+    // FE: INC/DEC byte
+    case 0xfe:
+        decode();
+        src = getRM(w, mod, rm);
+        switch (reg) {
+        case 0:
+            setRM(w, mod, rm, inc(w, src));
+            break;
+        case 1:
+            setRM(w, mod, rm, dec(w, src));
+            break;
+        default:
+            break;
+        }
+        break;
+    // FF: INC/DEC word, CALL, JMP, PUSH
+    case 0xff:
+        decode();
+        src = getRM(w, mod, rm);
+        switch (reg) {
+        case 0:
+            setRM(w, mod, rm, inc(w, src));
+            break;
+        case 1:
+            setRM(w, mod, rm, dec(w, src));
+            break;
+        case 2:
+            push(static_cast<int>(core.ip));
+            core.ip = static_cast<Word>(src & 0xffff);
+            break;
+        case 3: {
+            unsigned addr = getEA(mod, rm);
+            push(static_cast<int>(core.cs));
+            push(static_cast<int>(core.ip));
+            core.ip = static_cast<Word>(getMem(W, addr) & 0xffff);
+            core.cs = static_cast<Word>(getMem(W, addr + 2) & 0xffff);
+            break;
+        }
+        case 4:
+            core.ip = static_cast<Word>(src & 0xffff);
+            break;
+        case 5: {
+            unsigned addr = getEA(mod, rm);
+            core.ip       = static_cast<Word>(getMem(W, addr) & 0xffff);
+            core.cs       = static_cast<Word>(getMem(W, addr + 2) & 0xffff);
+            break;
+        }
+        case 6:
+            push(src);
+            break;
+        default:
+            break;
+        }
+        break;
+    default:
+        return true;
+    }
+    return true;
 }

@@ -93,11 +93,11 @@ void Machine::enable_trace(const char *trace_mode)
 //
 void Machine::enable_trace(unsigned bitmask)
 {
-    debug_syscalls   = bitmask & 01;   // -d e
-    debug_memory       = bitmask & 02;   // -d m
-    debug_instructions = bitmask & 04;   // -d i
-    debug_registers    = bitmask & 010;  // -d r
-    debug_fetch        = bitmask & 020;  // -d f
+    debug_syscalls     = bitmask & 01;  // -d e
+    debug_memory       = bitmask & 02;  // -d m
+    debug_instructions = bitmask & 04;  // -d i
+    debug_registers    = bitmask & 010; // -d r
+    debug_fetch        = bitmask & 020; // -d f
 }
 
 //
@@ -182,7 +182,7 @@ void Machine::print_memory_access(unsigned addr, Word val, const char *opname)
 }
 
 //
-// Print instruction address, opcode from RK and mnemonics.
+// Print instruction address and opcode (up to 6 bytes from prefetch queue).
 //
 void Processor::print_instruction()
 {
@@ -190,33 +190,63 @@ void Processor::print_instruction()
     auto save_flags = out.flags();
 
     out << std::hex << std::setfill('0') << std::setw(5) << core.ip << " : ";
-    out << opcode;
-    //TODO: print_executive_address();
+    out << std::setw(12) << opcode;
     out << std::endl;
 
-    // Restore.
     out.flags(save_flags);
 }
 
 //
-// Print changes in CPU registers.
+// Print changed CPU registers (core vs prev), then update prev.
 //
 void Processor::print_registers()
 {
     auto &out       = Machine::get_trace_stream();
     auto save_flags = out.flags();
 
-    //TODO: Print changed registers.
-    //for (unsigned i = 0; i < 16; i++) {
-    //    if (core.M[i] != prev.M[i]) {
-    //        out << "      M" << std::hex << i << " = " << std::setfill('0') << std::setw(5)
-    //            << core.M[i] << std::endl;
-    //    }
-    //}
+    if (core.ax != prev.ax)
+        out << "      AX = " << std::hex << std::setfill('0') << std::setw(4) << core.ax
+            << std::endl;
+    if (core.bx != prev.bx)
+        out << "      BX = " << std::hex << std::setfill('0') << std::setw(4) << core.bx
+            << std::endl;
+    if (core.cx != prev.cx)
+        out << "      CX = " << std::hex << std::setfill('0') << std::setw(4) << core.cx
+            << std::endl;
+    if (core.dx != prev.dx)
+        out << "      DX = " << std::hex << std::setfill('0') << std::setw(4) << core.dx
+            << std::endl;
+    if (core.sp != prev.sp)
+        out << "      SP = " << std::hex << std::setfill('0') << std::setw(4) << core.sp
+            << std::endl;
+    if (core.bp != prev.bp)
+        out << "      BP = " << std::hex << std::setfill('0') << std::setw(4) << core.bp
+            << std::endl;
+    if (core.si != prev.si)
+        out << "      SI = " << std::hex << std::setfill('0') << std::setw(4) << core.si
+            << std::endl;
+    if (core.di != prev.di)
+        out << "      DI = " << std::hex << std::setfill('0') << std::setw(4) << core.di
+            << std::endl;
+    if (core.cs != prev.cs)
+        out << "      CS = " << std::hex << std::setfill('0') << std::setw(4) << core.cs
+            << std::endl;
+    if (core.ds != prev.ds)
+        out << "      DS = " << std::hex << std::setfill('0') << std::setw(4) << core.ds
+            << std::endl;
+    if (core.ss != prev.ss)
+        out << "      SS = " << std::hex << std::setfill('0') << std::setw(4) << core.ss
+            << std::endl;
+    if (core.es != prev.es)
+        out << "      ES = " << std::hex << std::setfill('0') << std::setw(4) << core.es
+            << std::endl;
+    if (core.ip != prev.ip)
+        out << "      IP = " << std::hex << std::setfill('0') << std::setw(4) << core.ip
+            << std::endl;
+    if (core.flags != prev.flags)
+        out << "      FL = " << std::hex << std::setfill('0') << std::setw(4) << core.flags
+            << std::endl;
 
-    // Update previous state.
     prev = core;
-
-    // Restore output flags.
     out.flags(save_flags);
 }
