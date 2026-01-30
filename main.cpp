@@ -24,7 +24,7 @@
 #include <cstring>
 #include <iostream>
 
-#include "session.h"
+#include "machine.h"
 
 //
 // CLI options.
@@ -45,7 +45,7 @@ static const struct option long_options[] = {
 //
 static void print_usage(std::ostream &out, const char *prog_name)
 {
-    out << "PC i86 Simulator, Version " << Session::get_version() << "\n";
+    out << "PC i86 Simulator, Version " << VERSION_STRING << "\n";
     out << "Usage:" << std::endl;
     out << "    " << prog_name << " [options...] disk.img" << std::endl;
     out << "Input files:" << std::endl;
@@ -78,9 +78,12 @@ int main(int argc, char *argv[])
         prog_name++;
     }
 
-    // Instantiate the session.
-    // Enable wall clock by default.
-    Session session;
+    // Instantiate the machine.
+    Memory memory;
+    Machine machine{ memory };
+
+    // A name of disk file.
+    std::string disk_file;
 
     // Parse command line options.
     for (;;) {
@@ -93,13 +96,12 @@ int main(int argc, char *argv[])
 
         case 1:
             // Regular argument.
-            if (session.get_disk_file().empty()) {
-                session.set_disk_file(optarg);
-            } else {
+            if (!disk_file.empty()) {
                 std::cerr << "Too many arguments: " << optarg << std::endl;
                 print_usage(std::cerr, prog_name);
-                exit(EXIT_FAILURE);
+                ::exit(EXIT_FAILURE);
             }
+            disk_file = optarg;
             continue;
 
         case 'h':
@@ -109,27 +111,32 @@ int main(int argc, char *argv[])
 
         case 'v':
             // Verbose.
-            session.set_verbose(true);
+            machine.set_verbose(true);
             continue;
 
         case 'V':
             // Show version and exit.
-            std::cout << "Version " << Session::get_version() << "\n";
+            std::cout << "Version " << VERSION_STRING << "\n";
             exit(EXIT_SUCCESS);
 
         case 't':
             // Enable tracing of INT calls, to stdout by default.
-            session.enable_trace("e");
+            Machine::enable_trace("e");
             continue;
 
         case 'T':
             // Redirect tracing to a file.
-            session.set_trace_file(optarg, "irm");
+            Machine::redirect_trace(optarg, "irm");
+            Machine::get_trace_stream() << "PC i86 Simulator Version: " << VERSION_STRING << "\n";
             continue;
 
         case 'd':
             // Set trace options.
-            session.enable_trace(optarg);
+            if (optarg && *optarg) {
+                Machine::enable_trace(optarg);
+            } else {
+                Machine::close_trace();
+            }
             continue;
 
         default:
@@ -140,14 +147,27 @@ int main(int argc, char *argv[])
     }
 
     // Must specify a file to run.
-    if (session.get_disk_file().empty()) {
+    if (disk_file.empty()) {
         print_usage(std::cerr, prog_name);
         exit(EXIT_FAILURE);
     }
 
-    // Simulate the last session.
-    session.run();
-    session.finish();
+    try {
+        // Boot from disk.
+        machine.boot_disk(disk_file);
 
-    return session.get_exit_status();
+        // Run simulation.
+        machine.run();
+
+        // Finish the trace output.
+        Machine::close_trace();
+
+    } catch (const std::exception &ex) {
+        // Print exception message.
+        std::cerr << "Error: " << ex.what() << std::endl;
+        exit(EXIT_FAILURE);
+    } catch (...) {
+        // Assuming the exception message already printed.
+        exit(EXIT_FAILURE);
+    }
 }

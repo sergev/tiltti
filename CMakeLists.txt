@@ -28,7 +28,6 @@ add_compile_options(-Wall -Werror -Wshadow -fcolor-diagnostics)
 
 # Build library
 add_library(simulator STATIC
-    session.cpp
     machine.cpp
     memory.cpp
     disk.cpp
@@ -53,7 +52,7 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
     OUTPUT_VARIABLE GIT_REVCOUNT
 )
-set_source_files_properties(session.cpp PROPERTIES COMPILE_FLAGS
+set_source_files_properties(main.cpp PROPERTIES COMPILE_FLAGS
     -DVERSION_STRING=\\"${CMAKE_PROJECT_VERSION}.${GIT_REVCOUNT}-${GIT_HASH}\\"
 )
 
