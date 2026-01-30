@@ -46,7 +46,6 @@ void Processor::reset()
 {
     //TODO
     core    = {};
-    core.PC = 1;
 
     machine.trace_exception("Reset");
 }
@@ -66,7 +65,7 @@ bool Processor::intercept(const std::string &message)
         intercept_count--;
 
         // Jump to dedicated address.
-        core.PC = intercept_addr;
+        core.ip = intercept_addr;
         return true;
     } else {
         return false;
@@ -74,8 +73,8 @@ bool Processor::intercept(const std::string &message)
 }
 
 //
-// Execute one instruction, placed at address PC.
-// Increment PC.
+// Execute one instruction.
+// Increment IP register.
 // Emit exception in case of failure.
 //
 void Processor::step()

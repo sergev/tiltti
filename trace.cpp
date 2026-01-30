@@ -189,8 +189,8 @@ void Processor::print_instruction()
     auto &out       = Machine::get_trace_stream();
     auto save_flags = out.flags();
 
-    out << std::hex << std::setfill('0') << std::setw(5) << core.PC << " : ";
-    out << RK;
+    out << std::hex << std::setfill('0') << std::setw(5) << core.ip << " : ";
+    out << opcode;
     //TODO: print_executive_address();
     out << std::endl;
 
@@ -206,12 +206,13 @@ void Processor::print_registers()
     auto &out       = Machine::get_trace_stream();
     auto save_flags = out.flags();
 
-    for (unsigned i = 0; i < 16; i++) {
-        if (core.M[i] != prev.M[i]) {
-            out << "      M" << std::hex << i << " = " << std::setfill('0') << std::setw(5)
-                << core.M[i] << std::endl;
-        }
-    }
+    //TODO: Print changed registers.
+    //for (unsigned i = 0; i < 16; i++) {
+    //    if (core.M[i] != prev.M[i]) {
+    //        out << "      M" << std::hex << i << " = " << std::setfill('0') << std::setw(5)
+    //            << core.M[i] << std::endl;
+    //    }
+    //}
 
     // Update previous state.
     prev = core;

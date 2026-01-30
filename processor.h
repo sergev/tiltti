@@ -36,8 +36,9 @@ class Memory;
 // Internal state of the processor.
 //
 struct CoreState {
-    unsigned PC;           // program counter СчАС
-    unsigned M[16];        // registers modifiers
+    unsigned ip;           // instruction pointer
+
+    //TODO: registers
 };
 
 //
@@ -45,29 +46,17 @@ struct CoreState {
 //
 class Processor {
 private:
-    // Reference to the machine.
-    Machine &machine;
-
-    // 32K words of virtual memory.
-    Memory &memory;
-
-    // Current state.
-    struct CoreState core{};
-
-    // Previous state, for tracing.
-    struct CoreState prev{};
-
-    unsigned RK{};    // регистр команд
-    unsigned Aex{};   // executive address
+    Machine &machine;        // Reference to the machine
+    Memory &memory;          // Physical memory
+    struct CoreState core{}; // Current state
+    struct CoreState prev{}; // Previous state, for tracing
+    unsigned opcode{};       // Current instruction being executed
 
     // Intercept divzero/overflow.
     unsigned intercept_count{};     // intercept this many times
     unsigned intercept_addr{ 020 }; // jump to this address
     const std::string MSG_ARITH_OVERFLOW = "Arithmetic overflow";
     const std::string MSG_ARITH_DIVZERO  = "Division by zero";
-
-    // Get CPU time in 1/50 of second.
-    unsigned get_cpu_time();
 
 public:
     // Exception for unexpected situations.
@@ -93,12 +82,10 @@ public:
     void finish();
 
     // Set register value.
-    void set_pc(unsigned val) { core.PC = val; }
-    void set_m(unsigned index, unsigned val) { core.M[index] = val; }
+    void set_ip(unsigned val) { core.ip = val; }
 
     // Get register value.
-    unsigned get_pc() const { return core.PC; }
-    unsigned get_m(unsigned index) const { return core.M[index]; }
+    unsigned get_ip() const { return core.ip; }
 
     // Intercept ofvl/divzero exception, when enabled.
     bool intercept(const std::string &message);

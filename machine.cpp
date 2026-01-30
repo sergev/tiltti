@@ -81,7 +81,7 @@ again:
 
     } catch (const Processor::Exception &ex) {
         // Unexpected situation in the machine.
-        auto pc = cpu.get_pc();
+        auto ip = cpu.get_ip();
         cpu.finish();
 
         auto const *message = ex.what();
@@ -90,7 +90,7 @@ again:
             return;
         }
         std::cerr << "Error: " << message << " @" << std::oct << std::setfill('0') << std::setw(5)
-                  << pc << std::endl;
+                  << ip << std::endl;
         // trace_exception(message);
 
         if (cpu.intercept(message)) {
@@ -197,7 +197,7 @@ void Machine::boot_disk(const std::string &filename)
 
     // Start at this address.
     unsigned ip = 0x7c00;
-    cpu.set_pc(ip);
+    cpu.set_ip(ip);
 
     //TODO: load sector #0 from disk.
 }
