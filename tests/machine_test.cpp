@@ -70,6 +70,7 @@ TEST(MachineTest, SingleStepMoves)
     machine.cpu.set_ip(0);
 
     // Single-step through the 3 MOV instructions
+    Machine::enable_trace("r");
     machine.cpu.step();
     machine.cpu.step();
     machine.cpu.step();

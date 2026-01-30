@@ -59,7 +59,7 @@ static int shift(int x, int n)
 //
 // Initialize the processor.
 //
-Processor::Processor(Machine &mach, Memory &mem) : machine(mach), memory(mem)
+Processor::Processor(Machine &mach) : machine(mach)
 {
     reset();
 }
@@ -175,9 +175,9 @@ unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
 int Processor::getMem(int width)
 {
     unsigned addr = getAddr(core.cs, core.ip);
-    int val       = static_cast<int>(machine.mem_load_byte(addr));
+    int val       = machine.mem_load_byte(addr);
     if (width == W)
-        val |= static_cast<int>(machine.mem_load_byte(addr + 1)) << 8;
+        val |= machine.mem_load_byte(addr + 1) << 8;
     core.ip = (core.ip + 1 + width) & 0xffff;
     return val & (width == W ? 0xffff : 0xff);
 }
@@ -188,8 +188,8 @@ int Processor::getMem(int width)
 int Processor::getMem(int width, unsigned addr)
 {
     if (width == B)
-        return static_cast<int>(machine.mem_load_byte(addr)) & 0xff;
-    return static_cast<int>(machine.mem_load(addr)) & 0xffff;
+        return machine.mem_load_byte(addr);
+    return machine.mem_load_word(addr);
 }
 
 //
@@ -198,9 +198,9 @@ int Processor::getMem(int width, unsigned addr)
 void Processor::setMem(int width, unsigned addr, int val)
 {
     if (width == B)
-        machine.mem_store_byte(addr, static_cast<Byte>(val & 0xff));
+        machine.mem_store_byte(addr, val);
     else
-        machine.mem_store(addr, static_cast<Word>(val & 0xffff));
+        machine.mem_store_word(addr, val);
 }
 
 //
@@ -549,7 +549,7 @@ void Processor::step()
     rep = 0;
     for (;;) {
         unsigned addr = getAddr(core.cs, core.ip);
-        int b         = static_cast<int>(machine.mem_load_byte(addr));
+        Byte b        = machine.mem_fetch_byte(addr);
         core.ip       = (core.ip + 1) & 0xffff;
         switch (b) {
         case 0x26:
@@ -578,20 +578,20 @@ void Processor::step()
 done_prefix:
 
     // Prefetch 6 bytes at CS:IP into queue for decode.
-    for (int i = 0; i < 6; ++i)
-        queue[static_cast<size_t>(i)] =
-            machine.mem_load_byte(getAddr(core.cs, (core.ip + i) & 0xffff));
-
+    for (int i = 0; i < 6; ++i) {
+        queue[i] = machine.mem_fetch_byte(getAddr(core.cs, (core.ip + i) & 0xffff));
+    }
     opcode = static_cast<uint64_t>(queue[0]) | (static_cast<uint64_t>(queue[1]) << 8) |
              (static_cast<uint64_t>(queue[2]) << 16) | (static_cast<uint64_t>(queue[3]) << 24) |
              (static_cast<uint64_t>(queue[4]) << 32) | (static_cast<uint64_t>(queue[5]) << 40);
+
+    // Show instruction: address, opcode and mnemonics.
+    machine.trace_instruction(opcode);
 
     op      = queue[0];
     d       = (op >> 1) & 1;
     w       = op & 1;
     core.ip = (core.ip + 1) & 0xffff;
-
-    machine.trace_instruction(opcode);
 
     // For REP string instructions: full REP loop in one step (match legacy cycle_opcode).
     if (rep != 0 && (op == 0xa4 || op == 0xa5 || op == 0xa6 || op == 0xa7 || op == 0xaa ||
@@ -764,23 +764,39 @@ bool Processor::exe_one()
     case 0xe4:
     case 0xe5:
         src = getMem(B);
-        setReg(w, AX, static_cast<int>(machine.port_in(w, src)));
+        if (w == B)
+            res = machine.port_in_byte(src);
+        else
+            res = machine.port_in_word(src);
+        setReg(w, AX, res);
         break;
     case 0xec:
     case 0xed:
         src = getReg(W, 2); // DX
-        setReg(w, AX, static_cast<int>(machine.port_in(w, src)));
+        if (w == B)
+            res = machine.port_in_byte(src);
+        else
+            res = machine.port_in_word(src);
+        setReg(w, AX, res);
         break;
     // OUT port, accum
     case 0xe6:
     case 0xe7:
         src = getMem(B);
-        machine.port_out(w, src, static_cast<Word>(getReg(w, AX)));
+        res = getReg(w, AX);
+        if (w == B)
+            machine.port_out_byte(src, res);
+        else
+            machine.port_out_word(src, res);
         break;
     case 0xee:
     case 0xef:
         src = getReg(W, 2);
-        machine.port_out(w, src, static_cast<Word>(getReg(w, AX)));
+        res = getReg(w, AX);
+        if (w == B)
+            machine.port_out_byte(src, res);
+        else
+            machine.port_out_word(src, res);
         break;
     // LEA
     case 0x8d:

@@ -34,8 +34,10 @@ static const struct option long_options[] = {
     { "help",           no_argument,        nullptr,    'h' },
     { "version",        no_argument,        nullptr,    'V' },
     { "verbose",        no_argument,        nullptr,    'v' },
-    { "trace",          required_argument,  nullptr,    'T' },
-    { "debug",          required_argument,  nullptr,    'd' },
+    { "output",         required_argument,  nullptr,    'o' },
+    { "regs",           required_argument,  nullptr,    'r' },
+    { "ports",          required_argument,  nullptr,    'p' },
+    { "syscalls",       required_argument,  nullptr,    's' },
     {},
     // clang-format on
 };
@@ -51,17 +53,14 @@ static void print_usage(std::ostream &out, const char *prog_name)
     out << "Input files:" << std::endl;
     out << "    disk.img                Image of bootable PC floppy or disk" << std::endl;
     out << "Options:" << std::endl;
-    out << "    -h, --help              Display available options" << std::endl;
-    out << "    -V, --version           Print the version number and exit" << std::endl;
     out << "    -v, --verbose           Verbose mode" << std::endl;
-    out << "    --trace=FILE            Redirect trace to the file" << std::endl;
-    out << "    -d MODE, --debug=MODE   Select debug mode, default irm" << std::endl;
-    out << "Debug modes:" << std::endl;
-    out << "    i       Trace instructions" << std::endl;
-    out << "    e       Trace INT calls" << std::endl;
-    out << "    f       Trace fetch" << std::endl;
-    out << "    r       Trace registers" << std::endl;
-    out << "    m       Trace memory read/write" << std::endl;
+    out << "    -V, --version           Print the version number and exit" << std::endl;
+    out << "    -h, --help              Display available options" << std::endl;
+    out << "Trace modes:" << std::endl;
+    out << "    -r, --regs              Trace registers and everything else" << std::endl;
+    out << "    -s, --syscalls          Trace INT software interrupts" << std::endl;
+    out << "    -p, --ports             Trace IN and OUT port access" << std::endl;
+    out << "    -o, --output=FILE       Redirect trace to the file" << std::endl;
 }
 
 //
@@ -87,7 +86,7 @@ int main(int argc, char *argv[])
 
     // Parse command line options.
     for (;;) {
-        switch (getopt_long(argc, argv, "-hVvl:tT:d:rs", long_options, nullptr)) {
+        switch (getopt_long(argc, argv, "-hVvrspo:", long_options, nullptr)) {
         case EOF:
             break;
 
@@ -119,24 +118,25 @@ int main(int argc, char *argv[])
             std::cout << "Version " << VERSION_STRING << "\n";
             exit(EXIT_SUCCESS);
 
-        case 't':
-            // Enable tracing of INT calls, to stdout by default.
-            Machine::enable_trace("e");
+        case 'r':
+            // Enable tracing of registers, instructions and everything else.
+            Machine::enable_trace("r");
             continue;
 
-        case 'T':
+        case 's':
+            // Enable tracing of INT syscalls, to stdout by default.
+            Machine::enable_trace("s");
+            continue;
+
+        case 'p':
+            // Enable tracing of IN and OUT port access.
+            Machine::enable_trace("p");
+            continue;
+
+        case 'o':
             // Redirect tracing to a file.
-            Machine::redirect_trace(optarg, "irm");
+            Machine::redirect_trace(optarg, "s");
             Machine::get_trace_stream() << "PC i86 Simulator Version: " << VERSION_STRING << "\n";
-            continue;
-
-        case 'd':
-            // Set trace options.
-            if (optarg && *optarg) {
-                Machine::enable_trace(optarg);
-            } else {
-                Machine::close_trace();
-            }
             continue;
 
         default:

@@ -31,11 +31,9 @@
 //
 // Flag to enable tracing.
 //
-bool Machine::debug_instructions; // trace machine instuctions
-bool Machine::debug_syscalls;     // trace INT syscalls
-bool Machine::debug_registers;    // trace CPU registers
-bool Machine::debug_memory;       // trace memory read/write
-bool Machine::debug_fetch;        // trace instruction fetch
+bool Machine::debug_all;      // trace CPU registers, instructions, memory and everything else
+bool Machine::debug_syscalls; // trace INT syscalls
+bool Machine::debug_ports;    // trace i/o ports
 
 //
 // Emit trace to this stream.
@@ -54,31 +52,23 @@ std::ofstream Machine::trace_stream;
 void Machine::enable_trace(const char *trace_mode)
 {
     // Disable all trace options.
-    debug_instructions = false;
-    debug_syscalls     = false;
-    debug_registers    = false;
-    debug_memory       = false;
-    debug_fetch        = false;
+    debug_all      = false;
+    debug_syscalls = false;
+    debug_ports    = false;
 
     if (trace_mode) {
         // Parse the mode string and enable all requested trace flags.
         for (unsigned i = 0; trace_mode[i]; i++) {
             char ch = trace_mode[i];
             switch (ch) {
-            case 'e':
-                debug_syscalls = true;
-                break;
-            case 'm':
-                debug_memory = true;
-                break;
-            case 'i':
-                debug_instructions = true;
+            case 'p':
+                debug_ports = true;
                 break;
             case 'r':
-                debug_registers = true;
+                debug_all = true;
                 break;
-            case 'f':
-                debug_fetch = true;
+            case 's':
+                debug_syscalls = true;
                 break;
             default:
                 throw std::runtime_error("Wrong trace option: " + std::string(1, ch));
@@ -89,15 +79,13 @@ void Machine::enable_trace(const char *trace_mode)
 
 //
 // Enable trace by bitmask,
-// for example by VTM instruction with register 0.
+// for example by some magic instruction.
 //
 void Machine::enable_trace(unsigned bitmask)
 {
-    debug_syscalls     = bitmask & 01;  // -d e
-    debug_memory       = bitmask & 02;  // -d m
-    debug_instructions = bitmask & 04;  // -d i
-    debug_registers    = bitmask & 010; // -d r
-    debug_fetch        = bitmask & 020; // -d f
+    debug_all      = bitmask & 01; // -r
+    debug_syscalls = bitmask & 02; // -s
+    debug_ports    = bitmask & 04; // -p
 }
 
 //
@@ -151,29 +139,27 @@ void Machine::print_exception(const char *message)
 }
 
 //
-// Print instruction fetch.
+// Print memory or port read/write.
 //
-void Machine::print_fetch(unsigned addr, Word val)
+void Machine::print_byte_access(unsigned addr, Byte val, const char *opname)
 {
     auto &out       = Machine::get_trace_stream();
     auto save_flags = out.flags();
 
-    out << "      Fetch [" << std::hex << std::setfill('0') << std::setw(5) << addr << "] = ";
+    out << "      " << opname << " [" << std::hex << std::setw(5)
+        << addr << "] = ";
     out << val << std::endl;
 
     // Restore.
     out.flags(save_flags);
 }
 
-//
-// Print memory read/write.
-//
-void Machine::print_memory_access(unsigned addr, Word val, const char *opname)
+void Machine::print_word_access(unsigned addr, Word val, const char *opname)
 {
     auto &out       = Machine::get_trace_stream();
     auto save_flags = out.flags();
 
-    out << "      Memory " << opname << " [" << std::hex << std::setfill('0') << std::setw(5)
+    out << "      " << opname << " [" << std::hex << std::setw(5)
         << addr << "] = ";
     out << val << std::endl;
 

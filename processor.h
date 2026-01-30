@@ -54,7 +54,6 @@ struct CoreState {
 class Processor {
 private:
     Machine &machine;        // Reference to the machine
-    Memory &memory;          // Physical memory
     struct CoreState core{}; // Current state
     struct CoreState prev{}; // Previous state, for tracing
     uint64_t opcode{};       // Up to 6 bytes from prefetch queue for tracing
@@ -116,7 +115,7 @@ public:
     };
 
     // Constructor.
-    Processor(Machine &machine, Memory &memory);
+    Processor(Machine &machine);
 
     // Reset to initial state.
     void reset();

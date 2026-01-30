@@ -43,7 +43,7 @@ uint64_t Machine::simulated_instructions = 0;
 //
 // Initialize the machine.
 //
-Machine::Machine(Memory &m) : memory(m), cpu(*this, m)
+Machine::Machine(Memory &m) : memory(m), cpu(*this)
 {
 }
 
@@ -106,24 +106,15 @@ again:
 }
 
 //
-// Check address is below Upper Memory Area; throw if not.
+// Fetch one byte of instruction from memory.
+// No tracing.
 //
-static void check_addr(unsigned addr)
+Byte Machine::mem_fetch_byte(unsigned addr)
 {
     if (addr >= 0xa0000) {
         throw Processor::Exception("Jump to Upper Memory Area");
     }
-}
-
-//
-// Load one byte from memory (with optional trace).
-//
-Byte Machine::mem_load_byte(unsigned addr)
-{
-    check_addr(addr);
     Byte val = memory.load(addr);
-    if (debug_memory)
-        print_memory_access(addr, static_cast<Word>(val), "Read");
     return val;
 }
 
@@ -132,66 +123,106 @@ Byte Machine::mem_load_byte(unsigned addr)
 //
 void Machine::mem_store_byte(unsigned addr, Byte val)
 {
-    check_addr(addr);
+    if (addr >= MEMORY_NBYTES) {
+        throw Processor::Exception("Store out of range");
+    }
     memory.store(addr, val);
-    if (debug_memory)
-        print_memory_access(addr, static_cast<Word>(val), "Write");
+    if (debug_all) {
+        print_byte_access(addr, val, "Write");
+    }
 }
 
 //
-// Fetch 16-bit instruction word at addr (little-endian).
+// Load one byte from memory (with optional trace).
 //
-Word Machine::mem_fetch(unsigned addr)
+Byte Machine::mem_load_byte(unsigned addr)
 {
-    check_addr(addr);
-    if (addr + 1 >= MEMORY_NBYTES)
-        throw Processor::Exception("Fetch out of range");
-    Word val =
-        static_cast<Word>(memory.load(addr)) | (static_cast<Word>(memory.load(addr + 1)) << 8);
-    trace_fetch(addr, val);
+    if (addr >= MEMORY_NBYTES) {
+        throw Processor::Exception("Load out of range");
+    }
+    Byte val = memory.load(addr);
+    if (debug_all) {
+        print_byte_access(addr, val, "Read");
+    }
     return val;
 }
 
 //
 // Write 16-bit word to memory (little-endian).
 //
-void Machine::mem_store(unsigned addr, Word val)
+void Machine::mem_store_word(unsigned addr, Word val)
 {
-    check_addr(addr);
-    memory.store(addr, static_cast<Byte>(val & 0xff));
-    memory.store(addr + 1, static_cast<Byte>(val >> 8));
-    trace_memory_write(addr, val);
+    if (addr + 1 >= MEMORY_NBYTES) {
+        throw Processor::Exception("Store out of range");
+    }
+    memory.store(addr, val & 0xff);
+    memory.store(addr + 1, val >> 8);
+    if (debug_all) {
+        print_word_access(addr, val, "Memory Write");
+    }
 }
 
 //
 // Read 16-bit word from memory (little-endian).
 //
-Word Machine::mem_load(unsigned addr)
+Word Machine::mem_load_word(unsigned addr)
 {
-    check_addr(addr);
-    if (addr + 1 >= MEMORY_NBYTES)
+    if (addr + 1 >= MEMORY_NBYTES) {
         throw Processor::Exception("Load out of range");
-    Word val =
-        static_cast<Word>(memory.load(addr)) | (static_cast<Word>(memory.load(addr + 1)) << 8);
-    trace_memory_read(addr, val);
+    }
+    Word val = memory.load(addr) | (memory.load(addr + 1) << 8);
+    if (debug_all) {
+        print_word_access(addr, val, "Memory Read");
+    }
     return val;
 }
 
 //
-// Port input (stub: return 0 until implemented).
+// Send one byte to port.
 //
-Word Machine::port_in(int w, unsigned /*port*/)
+void Machine::port_out_byte(unsigned port, Byte val)
 {
-    (void)w;
-    return 0;
+    //TODO: implement port_out
+    if (debug_all) {
+        print_byte_access(port, val, "Port Out");
+    }
 }
 
 //
-// Port output (stub: no-op until implemented).
+// Receive one byte from port.
 //
-void Machine::port_out(int w, unsigned /*port*/, Word /*val*/)
+Byte Machine::port_in_byte(unsigned port)
 {
-    (void)w;
+    //TODO: implement port_in
+    Word val = 0;
+    if (debug_all) {
+        print_byte_access(port, val, "Port In");
+    }
+    return val;
+}
+
+//
+// Send 16-bit word to port.
+//
+void Machine::port_out_word(unsigned port, Word val)
+{
+    //TODO: implement port_out
+    if (debug_all) {
+        print_word_access(port, val, "Outport");
+    }
+}
+
+//
+// Receive 16-bit word from port.
+//
+Word Machine::port_in_word(unsigned port)
+{
+    //TODO: implement port_in
+    Word val = 0;
+    if (debug_all) {
+        print_word_access(port, val, "Inport");
+    }
+    return val;
 }
 
 //

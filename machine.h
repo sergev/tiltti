@@ -65,13 +65,11 @@ private:
     static std::ofstream trace_stream;
 
     // Trace modes.
-    static bool debug_instructions; // trace machine instuctions
-    static bool debug_syscalls;     // trace syscalls
-    static bool debug_registers;    // trace CPU registers
-    static bool debug_memory;       // trace memory read/write
-    static bool debug_fetch;        // trace instruction fetch
-    bool after_call{};              // right after JVM instruction
-    bool after_return{};            // right after UJ(13) instruction
+    static bool debug_all;      // trace CPU registers, instructions, memory and everything else
+    static bool debug_syscalls; // trace syscalls
+    static bool debug_ports;    // trace i/o ports
+    bool after_call{};          // right after JVM instruction
+    bool after_return{};        // right after UJ(13) instruction
 
     // Static stuff.
     static bool verbose;                    // Verbose flag for tracing
@@ -113,7 +111,7 @@ public:
     static void close_trace();
     static bool trace_enabled()
     {
-        return debug_instructions | debug_syscalls | debug_registers | debug_memory | debug_fetch;
+        return debug_all | debug_syscalls | debug_ports;
     }
     void set_after_call() { after_call = true; };
     void set_after_return() { after_return = true; };
@@ -121,16 +119,19 @@ public:
     // Emit trace to this stream.
     static std::ostream &get_trace_stream();
 
-    // Memory access. Byte-addressed; word ops use little-endian (low at addr, high at addr+1).
+    // Memory access, byte-addressed.
+    // Word ops use little-endian (low at addr, high at addr+1).
+    Byte mem_fetch_byte(unsigned addr);
     Byte mem_load_byte(unsigned addr);
     void mem_store_byte(unsigned addr, Byte val);
-    Word mem_fetch(unsigned addr);
-    Word mem_load(unsigned addr);
-    void mem_store(unsigned addr, Word val);
+    Word mem_load_word(unsigned addr);
+    void mem_store_word(unsigned addr, Word val);
 
-    // Port I/O (stub: return 0 / no-op until implemented).
-    Word port_in(int w, unsigned port);
-    void port_out(int w, unsigned port, Word val);
+    // Port I/O.
+    Byte port_in_byte(unsigned port);
+    void port_out_byte(unsigned port, Byte val);
+    Word port_in_word(unsigned port);
+    void port_out_word(unsigned port, Word val);
 
     // Disk i/o.
     void disk_io(char op, unsigned disk_unit, unsigned sector, unsigned addr, unsigned nbytes);
@@ -148,39 +149,21 @@ public:
             print_exception(message);
     }
 
-    static void trace_fetch(unsigned addr, Word val)
-    {
-        if (debug_fetch)
-            print_fetch(addr, val);
-    }
-
-    static void trace_memory_write(unsigned addr, Word val)
-    {
-        if (debug_memory)
-            print_memory_access(addr, val, "Write");
-    }
-
-    static void trace_memory_read(unsigned addr, Word val)
-    {
-        if (debug_memory)
-            print_memory_access(addr, val, "Read");
-    }
-
     void trace_instruction(uint64_t opcode)
     {
-        if (debug_instructions || (debug_syscalls && is_syscall(opcode)))
+        if (debug_all || (debug_syscalls && is_syscall(opcode)))
             cpu.print_instruction();
     }
 
     void trace_registers()
     {
-        if (debug_registers)
+        if (debug_all)
             cpu.print_registers();
     }
 
     static void print_exception(const char *message);
-    static void print_fetch(unsigned addr, Word val);
-    static void print_memory_access(unsigned addr, Word val, const char *opname);
+    static void print_byte_access(unsigned addr, Byte val, const char *opname);
+    static void print_word_access(unsigned addr, Word val, const char *opname);
 };
 
 #endif // TILTTI_MACHINE_H
