@@ -16,19 +16,3 @@ std::string to_hex(unsigned val)
     os << std::hex << val;
     return os.str();
 }
-
-//
-// Check whether instruction is syscall (INT n, INT 3, INTO).
-// Uses first byte of opcode (caller passes low byte or full uint64_t).
-//
-bool is_syscall(unsigned opcode)
-{
-    switch (opcode & 0xff) {
-    case 0xcd:
-    case 0xcc:
-    case 0xce:
-        return true;
-    default:
-        return false;
-    }
-}

@@ -69,9 +69,4 @@ std::string to_hex(unsigned val);
 #define BITS(n)        ((uint32_t)~0U >> (31 - (n))) // bit mask n..0
 #define FIELD(x, n, w) (((x) >> (n)) & BITS(w))      // field of w bits, starting from bit n
 
-//
-// Check whether instruction is syscall.
-//
-bool is_syscall(unsigned opcode);
-
 #endif // TILTTI_I86_ARCH_H

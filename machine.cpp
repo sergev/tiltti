@@ -61,7 +61,6 @@ Machine::~Machine()
 //
 void Machine::run()
 {
-again:
     // Show initial state.
     trace_registers();
 
@@ -85,16 +84,11 @@ again:
 
         auto const *message = ex.what();
         if (!message[0]) {
-            // Empty message - legally halted by extracode e74.
+            // Empty message - legally halted.
             return;
         }
-        std::cerr << "Error: " << message << " @" << std::oct << std::setfill('0') << std::setw(5)
+        std::cerr << "Error: " << message << " @" << std::hex << std::setfill('0') << std::setw(5)
                   << ip << std::endl;
-        // trace_exception(message);
-
-        if (cpu.intercept(message)) {
-            goto again;
-        }
         throw std::runtime_error(message);
 
     } catch (std::exception &ex) {

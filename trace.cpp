@@ -148,7 +148,7 @@ void Machine::print_byte_access(unsigned addr, Byte val, const char *opname)
 
     out << "      " << opname << " [" << std::hex << std::setw(5)
         << addr << "] = ";
-    out << val << std::endl;
+    out << (unsigned)val << std::endl;
 
     // Restore.
     out.flags(save_flags);

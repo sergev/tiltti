@@ -43,24 +43,6 @@ private:
     bool dump_io_flag{}; // set to true to dump all disk reads
     unsigned dump_serial_num{};
 
-    // Path to disk images, semicolon separated.
-    std::string disk_search_path;
-
-    // List of all requested file names, for e57.
-    std::vector<std::string> file_paths;
-
-    // Enable system load list from the start.
-    bool system_load_list_flag{};
-
-    // Get name of a resident program by address.
-    std::unordered_map<unsigned, std::string> resident_name;
-
-    // Addresses of resident programs.
-    std::multiset<unsigned> resident_addr;
-
-    // Load the table of resident programs from this file.
-    std::string map_filename;
-
     // Trace output.
     static std::ofstream trace_stream;
 
@@ -88,10 +70,6 @@ public:
     // Destructor.
     ~Machine();
 
-    // Load script into machine.
-    void load_script(const std::string &filename);
-    void load_script(std::istream &input);
-
     // Run simulation.
     void run();
 
@@ -109,10 +87,7 @@ public:
     static void enable_trace(unsigned bitmask);
     static void redirect_trace(const char *file_name, const char *default_mode);
     static void close_trace();
-    static bool trace_enabled()
-    {
-        return debug_all | debug_syscalls | debug_ports;
-    }
+    static bool trace_enabled() { return debug_all | debug_syscalls | debug_ports; }
     void set_after_call() { after_call = true; };
     void set_after_return() { after_return = true; };
 
@@ -151,7 +126,7 @@ public:
 
     void trace_instruction(uint64_t opcode)
     {
-        if (debug_all || (debug_syscalls && is_syscall(opcode)))
+        if (debug_all)
             cpu.print_instruction();
     }
 

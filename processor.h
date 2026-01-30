@@ -65,12 +65,6 @@ private:
     unsigned rep{}; // 0=none, 1=REP/REPE/REPZ, 2=REPNE/REPNZ
     Word os{};      // segment override (default DS)
 
-    // Intercept divzero/overflow.
-    unsigned intercept_count{};     // intercept this many times
-    unsigned intercept_addr{ 020 }; // jump to this address
-    const std::string MSG_ARITH_OVERFLOW = "Arithmetic overflow";
-    const std::string MSG_ARITH_DIVZERO  = "Division by zero";
-
     // Helpers: effective address, register/memory access, stack, ALU, flags.
     unsigned getAddr(Word seg, Word off) const;
     unsigned getEA(unsigned mod_val, unsigned rm_val);
@@ -165,9 +159,6 @@ public:
     // Flags
     Word get_flags() const { return core.flags; }
     void set_flags(Word val) { core.flags = val; }
-
-    // Intercept ofvl/divzero exception, when enabled.
-    bool intercept(const std::string &message);
 
     // Print trace info.
     void print_instruction();

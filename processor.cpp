@@ -93,28 +93,6 @@ void Processor::reset()
 }
 
 //
-// Intercept ofvl/divzero exception, when enabled.
-// Return true when intercepted.
-// Return false when interception is disabled.
-//
-bool Processor::intercept(const std::string &message)
-{
-    // TODO
-    if (intercept_count > 0 &&            // interception enabled
-        (message == MSG_ARITH_OVERFLOW || // arithmetic overflow
-         message == MSG_ARITH_DIVZERO)) { // divide by zero
-
-        intercept_count--;
-
-        // Jump to dedicated address.
-        core.ip = intercept_addr;
-        return true;
-    } else {
-        return false;
-    }
-}
-
-//
 // Linear address from segment:offset (8086 real mode).
 //
 unsigned Processor::getAddr(Word seg, Word off) const
@@ -175,9 +153,9 @@ unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
 int Processor::getMem(int width)
 {
     unsigned addr = getAddr(core.cs, core.ip);
-    int val       = machine.mem_load_byte(addr);
+    int val       = machine.mem_fetch_byte(addr);
     if (width == W)
-        val |= machine.mem_load_byte(addr + 1) << 8;
+        val |= machine.mem_fetch_byte(addr + 1) << 8;
     core.ip = (core.ip + 1 + width) & 0xffff;
     return val & (width == W ? 0xffff : 0xff);
 }
@@ -422,11 +400,27 @@ void Processor::push(int val)
 }
 
 //
-// Software interrupt: push FLAGS, CS, IP; jump to vector. Division/overflow can be intercepted by
-// the machine.
+// Check whether instruction is syscall.
+//
+bool is_syscall(unsigned opcode)
+{
+    //TODO
+    return false;
+}
+
+//
+// Software interrupt: push FLAGS, CS, IP; jump to vector.
 //
 void Processor::callInt(int type)
 {
+#if 0
+    if (is_syscall(type)) {
+        //TODO: intercept syscalls
+        if (debug_all | debug_syscalls) {
+            print_syscall(type);
+        }
+    }
+#endif
     push(static_cast<int>(core.flags));
     setFlag(IF, false);
     setFlag(TF, false);
@@ -1046,8 +1040,7 @@ bool Processor::exe_one()
     case 0xd4: {
         src = getMem(B);
         if (src == 0) {
-            if (!intercept(MSG_ARITH_DIVZERO))
-                throw Exception(MSG_ARITH_DIVZERO);
+            callInt(0);
         } else {
             int al_val = getReg(B, AX);
             core.ax    = (core.ax & 0x00ff) | ((al_val / src) & 0xff) << 8;
@@ -1373,8 +1366,7 @@ bool Processor::exe_one()
         break;
     case 0xce:
         if (getFlag(OF)) {
-            if (!intercept(MSG_ARITH_OVERFLOW))
-                callInt(4);
+            callInt(4);
         }
         break;
     case 0xcf:
@@ -1619,14 +1611,12 @@ bool Processor::exe_one()
             break;
         case 6: // DIV
             if (src == 0) {
-                if (!intercept(MSG_ARITH_DIVZERO))
-                    throw Exception(MSG_ARITH_DIVZERO);
+                callInt(0);
             } else if (w == B) {
                 dst = getReg(W, AX);
                 res = dst / src;
                 if (res > 0xff) {
-                    if (!intercept(MSG_ARITH_DIVZERO))
-                        throw Exception(MSG_ARITH_DIVZERO);
+                    callInt(0);
                 } else {
                     setReg(B, AX, res);
                     core.ax = (core.ax & 0x00ff) | ((dst % src) << 8);
@@ -1635,8 +1625,7 @@ bool Processor::exe_one()
                 long ldst = (long)(core.dx << 16) | getReg(W, AX);
                 long lres = ldst / src;
                 if (lres > 0xffff) {
-                    if (!intercept(MSG_ARITH_DIVZERO))
-                        throw Exception(MSG_ARITH_DIVZERO);
+                    callInt(0);
                 } else {
                     setReg(W, AX, lres & 0xffff);
                     setReg(W, 2, ldst % src);
@@ -1645,16 +1634,14 @@ bool Processor::exe_one()
             break;
         case 7: // IDIV
             if (src == 0) {
-                if (!intercept(MSG_ARITH_DIVZERO))
-                    throw Exception(MSG_ARITH_DIVZERO);
+                callInt(0);
             } else {
                 int s = signconv(w, src);
                 if (w == B) {
                     dst = signconv(W, getReg(W, AX));
                     res = dst / s;
                     if (res > 0x7f || res < (int)0xff81) {
-                        if (!intercept(MSG_ARITH_DIVZERO))
-                            throw Exception(MSG_ARITH_DIVZERO);
+                        callInt(0);
                     } else {
                         setReg(B, AX, res);
                         core.ax = (core.ax & 0x00ff) | ((dst % s) << 8);
@@ -1664,8 +1651,7 @@ bool Processor::exe_one()
                     ldst      = (ldst << 32) >> 32;
                     long lres = ldst / s;
                     if (lres > 0x7fff || lres < -0x8000) {
-                        if (!intercept(MSG_ARITH_DIVZERO))
-                            throw Exception(MSG_ARITH_DIVZERO);
+                        callInt(0);
                     } else {
                         setReg(W, AX, lres & 0xffff);
                         setReg(W, 2, ldst % s);
