@@ -43,18 +43,6 @@ public:
     // Load data from memory.
     Byte load(unsigned addr) { return mem[addr]; }
 
-    // Bulk access to memory as bytes.
-    void write_bytes(const Bytes &input, unsigned addr);
-    void read_bytes(Bytes &output, unsigned nbytes, unsigned addr);
-    void write_bytes(const Byte input[], unsigned nbytes, unsigned addr);
-    void read_bytes(Byte output[], unsigned nbytes, unsigned addr);
-
-    // Bulk access to memory as words.
-    void write_words(const Words &input, unsigned addr);
-    void read_words(Words &output, unsigned nwords, unsigned addr);
-    void write_words(const Word input[], unsigned nwords, unsigned addr);
-    void read_words(Word output[], unsigned nwords, unsigned addr);
-
     Byte *get_ptr(unsigned addr) { return &mem[addr]; }
 
     // Dump disk data for debug.

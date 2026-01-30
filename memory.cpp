@@ -30,58 +30,6 @@
 #include <sstream>
 
 //
-// Backdoor read from memory.
-// No tracing.
-//
-void Memory::read_bytes(Bytes &output, unsigned nbytes, unsigned addr)
-{
-    output.resize(nbytes);
-    memcpy(output.data(), &mem[addr], nbytes * sizeof(Byte));
-}
-
-void Memory::read_bytes(Byte output[], unsigned nbytes, unsigned addr)
-{
-    memcpy(output, &mem[addr], nbytes * sizeof(Byte));
-}
-
-void Memory::read_words(Words &output, unsigned nwords, unsigned addr)
-{
-    output.resize(nwords);
-    memcpy(output.data(), &mem[addr], nwords * sizeof(Word));
-}
-
-void Memory::read_words(Word output[], unsigned nwords, unsigned addr)
-{
-    memcpy(output, &mem[addr], nwords * sizeof(Word));
-}
-
-//
-// Backdoor write to memory.
-// No tracing.
-//
-void Memory::write_bytes(const Bytes &input, unsigned addr)
-{
-    unsigned nbytes = input.size();
-    memcpy(&mem[addr], input.data(), nbytes * sizeof(Byte));
-}
-
-void Memory::write_bytes(const Byte input[], unsigned nbytes, unsigned addr)
-{
-    memcpy(&mem[addr], input, nbytes * sizeof(Byte));
-}
-
-void Memory::write_words(const Words &input, unsigned addr)
-{
-    unsigned nwords = input.size();
-    memcpy(&mem[addr], input.data(), nwords * sizeof(Word));
-}
-
-void Memory::write_words(const Word input[], unsigned nwords, unsigned addr)
-{
-    memcpy(&mem[addr], input, nwords * sizeof(Word));
-}
-
-//
 // Dump block of memory to file.
 //
 void Memory::dump(unsigned serial_num, unsigned disk_unit, unsigned sector, unsigned addr,
