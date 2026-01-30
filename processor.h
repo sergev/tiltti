@@ -133,6 +133,40 @@ public:
     // Get register value.
     unsigned get_ip() const { return core.ip; }
 
+    // General registers
+    Word get_ax() const { return core.ax; }
+    void set_ax(Word val) { core.ax = val; }
+    Word get_bx() const { return core.bx; }
+    void set_bx(Word val) { core.bx = val; }
+    Word get_cx() const { return core.cx; }
+    void set_cx(Word val) { core.cx = val; }
+    Word get_dx() const { return core.dx; }
+    void set_dx(Word val) { core.dx = val; }
+
+    // Pointer/index registers
+    Word get_sp() const { return core.sp; }
+    void set_sp(Word val) { core.sp = val; }
+    Word get_bp() const { return core.bp; }
+    void set_bp(Word val) { core.bp = val; }
+    Word get_si() const { return core.si; }
+    void set_si(Word val) { core.si = val; }
+    Word get_di() const { return core.di; }
+    void set_di(Word val) { core.di = val; }
+
+    // Segment registers
+    Word get_cs() const { return core.cs; }
+    void set_cs(Word val) { core.cs = val; }
+    Word get_ds() const { return core.ds; }
+    void set_ds(Word val) { core.ds = val; }
+    Word get_ss() const { return core.ss; }
+    void set_ss(Word val) { core.ss = val; }
+    Word get_es() const { return core.es; }
+    void set_es(Word val) { core.es = val; }
+
+    // Flags
+    Word get_flags() const { return core.flags; }
+    void set_flags(Word val) { core.flags = val; }
+
     // Intercept ofvl/divzero exception, when enabled.
     bool intercept(const std::string &message);
 

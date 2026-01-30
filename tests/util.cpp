@@ -23,11 +23,10 @@
 //
 #include "util.h"
 
-#include <fstream>
 #include <cstring>
+#include <fstream>
 
-//#include "fixture_machine.h"
-//#include "fixture_session.h"
+//TODO: #include "fixture.h"
 
 //
 // Get current test name, as specified in TEST() macro.

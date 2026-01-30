@@ -21,7 +21,7 @@ add_definitions(-DTEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 add_definitions(-DBUILD_DIR="${CMAKE_BINARY_DIR}")
 
 set(TEST_SOURCES
-    #TODO
+    machine_test.cpp
     util.cpp
 )
 
