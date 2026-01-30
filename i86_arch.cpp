@@ -23,6 +23,12 @@ std::string to_hex(unsigned val)
 //
 bool is_syscall(unsigned opcode)
 {
-    unsigned b = opcode & 0xff;
-    return b == 0xcd || b == 0xcc || b == 0xce;
+    switch (opcode & 0xff) {
+    case 0xcd:
+    case 0xcc:
+    case 0xce:
+        return true;
+    default:
+        return false;
+    }
 }

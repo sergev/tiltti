@@ -168,8 +168,7 @@ public:
 
     void trace_instruction(uint64_t opcode)
     {
-        if (debug_instructions ||
-            (debug_syscalls && is_syscall(static_cast<unsigned>(opcode & 0xff))))
+        if (debug_instructions || (debug_syscalls && is_syscall(opcode)))
             cpu.print_instruction();
     }
 
