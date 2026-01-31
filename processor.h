@@ -57,8 +57,11 @@ private:
     struct CoreState core{}; // Current state
     struct CoreState prev{}; // Previous state, for tracing
 
-    // Prefetch opcode and decode state (internal to step()).
+    // Current opcode being executed.
     std::vector<Byte> opcode{};
+    unsigned plen{};  // prefix length
+
+    // Decode state (internal to step()).
     unsigned op{}, d{}, w{}, mod{}, reg{}, rm{};
     int ea{ -1 };   // effective address cache
     unsigned rep{}; // 0=none, 1=REP/REPE/REPZ, 2=REPNE/REPNZ
@@ -116,7 +119,7 @@ public:
     unsigned get_ip() const { return core.ip; }
 
     // Get first byte of opcode.
-    unsigned get_opcode() const { return opcode[0]; }
+    unsigned get_op() const { return op; }
 
     // General registers
     Word get_ax() const { return core.ax; }

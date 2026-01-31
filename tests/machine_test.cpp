@@ -84,5 +84,5 @@ TEST(MachineTest, SingleStepMoves)
 
     // Fourth step executes HLT.
     machine.cpu.step();
-    EXPECT_EQ(machine.cpu.get_opcode(), 0xf4);
+    EXPECT_EQ(machine.cpu.get_op(), 0xf4);
 }

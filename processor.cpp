@@ -77,6 +77,7 @@ void Processor::reset()
     core.es    = 0x0000;
     core.flags = 0;
     opcode     = {};
+    plen       = 0;
     rep        = 0;
     os         = core.ds;
     ea         = -1;
@@ -101,10 +102,10 @@ unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
 {
     int disp = 0;
     if (mod_val == 0b01) {
-        disp = static_cast<signed char>(opcode[2]);
+        disp = static_cast<signed char>(opcode[plen+2]);
     } else if (mod_val == 0b10) {
-        disp = static_cast<int>(static_cast<unsigned>(opcode[2]) |
-                                (static_cast<unsigned>(opcode[3]) << 8));
+        disp = static_cast<int>(static_cast<unsigned>(opcode[plen+2]) |
+                                (static_cast<unsigned>(opcode[plen+3]) << 8));
     }
     int ea_val = 0;
     switch (rm_val) {
@@ -128,7 +129,7 @@ unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
         break;
     case 0b110:
         if (mod_val == 0b00)
-            ea_val = static_cast<unsigned>(opcode[2]) | (static_cast<unsigned>(opcode[3]) << 8);
+            ea_val = static_cast<unsigned>(opcode[plen+2]) | (static_cast<unsigned>(opcode[plen+3]) << 8);
         else
             ea_val = (core.bp + disp) & 0xffff;
         break;
@@ -362,9 +363,9 @@ void Processor::setSegReg(unsigned r, Word val)
 //
 void Processor::decode()
 {
-    mod = (opcode[1] >> 6) & 0b11;
-    reg = (opcode[1] >> 3) & 0b111;
-    rm  = opcode[1] & 0b111;
+    mod = (opcode[plen+1] >> 6) & 0b11;
+    reg = (opcode[plen+1] >> 3) & 0b111;
+    rm  = opcode[plen+1] & 0b111;
     if (mod == 0b01)
         core.ip = (core.ip + 2) & 0xffff;
     else if ((mod == 0b00 && rm == 0b110) || mod == 0b10)
@@ -531,8 +532,10 @@ bool Processor::msb(int width, int x)
 void Processor::step()
 {
     // Consume segment override and REP prefix bytes; set default segment and repetition mode.
-    os    = core.ds;
-    rep   = 0;
+    os     = core.ds;
+    rep    = 0;
+    opcode = {};
+    plen   = 0;
     for (;;) {
         unsigned addr = getAddr(core.cs, core.ip);
         Byte prefix   = machine.mem_fetch_byte(addr);
@@ -558,17 +561,13 @@ void Processor::step()
         default:
             goto done_prefix;
         }
-
-        // Show this prefix.
-        opcode = { prefix };
-        machine.trace_instruction();
-
+        opcode.push_back(prefix);
+        plen++;
         core.ip = (core.ip + 1) & 0xffff;
     }
 done_prefix:
 
     // Prefetch 6 bytes at CS:IP for decode.
-    opcode = {};
     for (int i = 0; i < 6; ++i) {
         opcode.push_back(machine.mem_fetch_byte(getAddr(core.cs, (core.ip + i) & 0xffff)));
     }
@@ -576,7 +575,7 @@ done_prefix:
     // Show instruction: address, opcode and mnemonics.
     machine.trace_instruction();
 
-    op      = opcode[0];
+    op      = opcode[plen];
     d       = (op >> 1) & 1;
     w       = op & 1;
     core.ip = (core.ip + 1) & 0xffff;

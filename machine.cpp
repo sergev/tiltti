@@ -253,9 +253,11 @@ void Machine::boot_disk(const std::string &filename)
     // TODO: Attach image as disk or floppy.
     disk_mount(4, filename, true);
 
-    // Start at this address.
-    unsigned ip = 0x7c00;
-    cpu.set_ip(ip);
+    // Start at address 07c0:0000.
+    unsigned addr = 0x7c00;
+    cpu.set_cs(addr >> 4);
+    cpu.set_ip(0);
 
-    // TODO: load sector #0 from disk.
+    // Load sector #0 from disk.
+    disk_io('r', 4, 0, addr, SECTOR_NBYTES);
 }
