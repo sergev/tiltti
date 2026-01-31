@@ -124,7 +124,7 @@ public:
             print_exception(message);
     }
 
-    void trace_instruction(uint64_t opcode)
+    void trace_instruction()
     {
         if (debug_all)
             cpu.print_instruction();

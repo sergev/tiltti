@@ -83,7 +83,6 @@ void Processor::reset()
     core.ss    = 0x0000;
     core.es    = 0x0000;
     core.flags = 0;
-    opcode     = 0;
     queue      = {};
     rep        = 0;
     os         = core.ds;
@@ -539,13 +538,12 @@ void Processor::step()
     prev = core;
 
     // Consume segment override and REP prefix bytes; set default segment and repetition mode.
-    os  = core.ds;
-    rep = 0;
+    os    = core.ds;
+    rep   = 0;
     for (;;) {
         unsigned addr = getAddr(core.cs, core.ip);
-        Byte b        = machine.mem_fetch_byte(addr);
-        core.ip       = (core.ip + 1) & 0xffff;
-        switch (b) {
+        Byte prefix   = machine.mem_fetch_byte(addr);
+        switch (prefix) {
         case 0x26:
             os = core.es;
             break;
@@ -565,22 +563,25 @@ void Processor::step()
             rep = 1;
             break;
         default:
-            core.ip = (core.ip - 1) & 0xffff;
             goto done_prefix;
         }
+
+        // Show this prefix.
+        queue = { prefix };
+        machine.trace_instruction();
+
+        core.ip = (core.ip + 1) & 0xffff;
     }
 done_prefix:
 
     // Prefetch 6 bytes at CS:IP into queue for decode.
+    queue = {};
     for (int i = 0; i < 6; ++i) {
-        queue[i] = machine.mem_fetch_byte(getAddr(core.cs, (core.ip + i) & 0xffff));
+        queue.push_back(machine.mem_fetch_byte(getAddr(core.cs, (core.ip + i) & 0xffff)));
     }
-    opcode = static_cast<uint64_t>(queue[0]) | (static_cast<uint64_t>(queue[1]) << 8) |
-             (static_cast<uint64_t>(queue[2]) << 16) | (static_cast<uint64_t>(queue[3]) << 24) |
-             (static_cast<uint64_t>(queue[4]) << 32) | (static_cast<uint64_t>(queue[5]) << 40);
 
     // Show instruction: address, opcode and mnemonics.
-    machine.trace_instruction(opcode);
+    machine.trace_instruction();
 
     op      = queue[0];
     d       = (op >> 1) & 1;

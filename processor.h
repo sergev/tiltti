@@ -56,10 +56,9 @@ private:
     Machine &machine;        // Reference to the machine
     struct CoreState core{}; // Current state
     struct CoreState prev{}; // Previous state, for tracing
-    uint64_t opcode{};       // Up to 6 bytes from prefetch queue for tracing
 
     // Prefetch queue and decode state (internal to step()).
-    std::array<Byte, 6> queue{};
+    std::vector<Byte> queue{};
     unsigned op{}, d{}, w{}, mod{}, reg{}, rm{};
     int ea{ -1 };   // effective address cache
     unsigned rep{}; // 0=none, 1=REP/REPE/REPZ, 2=REPNE/REPNZ

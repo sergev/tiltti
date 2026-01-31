@@ -25,6 +25,7 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <capstone/capstone.h>
 
 #include "machine.h"
 
@@ -39,6 +40,9 @@ bool Machine::debug_ports;    // trace i/o ports
 // Emit trace to this stream.
 //
 std::ofstream Machine::trace_stream;
+
+// Capstone handle.
+static csh disasm;
 
 //
 // Enable trace with given modes.
@@ -73,6 +77,11 @@ void Machine::enable_trace(const char *trace_mode)
             default:
                 throw std::runtime_error("Wrong trace option: " + std::string(1, ch));
             }
+        }
+
+        // Initialize Capstone for i86 16-bit mode.
+        if (cs_open(CS_ARCH_X86, CS_MODE_16, &disasm) != CS_ERR_OK) {
+            throw std::runtime_error("Failed to initialize Capstone");
         }
     }
 }
@@ -168,15 +177,31 @@ void Machine::print_word_access(unsigned addr, Word val, const char *opname)
 }
 
 //
-// Print instruction address and opcode (up to 6 bytes from prefetch queue).
+// Print instruction address and opcode (from prefetch queue).
 //
 void Processor::print_instruction()
 {
     auto &out       = Machine::get_trace_stream();
     auto save_flags = out.flags();
 
-    out << std::hex << std::setfill('0') << std::setw(5) << core.ip << " : ";
-    out << std::setw(12) << opcode;
+    out << std::hex << std::setfill('0') << std::setw(4) << core.cs
+        << ' ' << std::setfill('0') << std::setw(4) << core.ip << " :";
+
+    // Disassemble one instruction.
+    cs_insn *insn;
+    size_t count = cs_disasm(disasm, queue.data(), queue.size(), 0x0, 1, &insn);
+    if (count > 0) {
+        for (size_t i = 0; i < insn->size; ++i) {
+            out << ' ' << std::setw(2) << std::setfill('0') << (unsigned)insn->bytes[i];
+        }
+        out << "  " << insn[0].mnemonic << ' ' << insn[0].op_str;
+        cs_free(insn, count);
+    } else {
+        // Cannot disassembler, just print bytes.
+        for (size_t i = 0; i < queue.size(); ++i) {
+            out << ' ' << std::setw(2) << std::setfill('0') << (unsigned)queue[i];
+        }
+    }
     out << std::endl;
 
     out.flags(save_flags);

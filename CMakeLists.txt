@@ -7,6 +7,9 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 add_compile_options(-Wall -Werror -Wshadow -fcolor-diagnostics)
 
+include(FindPkgConfig)
+pkg_check_modules(CAPSTONE REQUIRED capstone)
+
 #
 # TODO: Enable cppcheck by default
 #
@@ -38,7 +41,8 @@ add_library(simulator STATIC
 
 # Build executable file
 add_executable(${PROJECT_NAME} main.cpp)
-target_link_libraries(${PROJECT_NAME} simulator)
+target_include_directories(${PROJECT_NAME} PRIVATE ${CAPSTONE_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} simulator ${CAPSTONE_LIBRARIES})
 
 # Get git commit hash and revision count
 execute_process(
