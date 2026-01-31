@@ -38,7 +38,7 @@ class Memory;
 //
 //
 // Visible architectural state (for trace and reset).
-// Decode state (op, mod, reg, rm, ea, queue) is internal to one instruction.
+// Decode state (op, mod, reg, rm, ea, opcode) is internal to one instruction.
 //
 struct CoreState {
     Word ax{}, bx{}, cx{}, dx{}; // general (AX = AH:AL, etc.)
@@ -57,8 +57,8 @@ private:
     struct CoreState core{}; // Current state
     struct CoreState prev{}; // Previous state, for tracing
 
-    // Prefetch queue and decode state (internal to step()).
-    std::vector<Byte> queue{};
+    // Prefetch opcode and decode state (internal to step()).
+    std::vector<Byte> opcode{};
     unsigned op{}, d{}, w{}, mod{}, reg{}, rm{};
     int ea{ -1 };   // effective address cache
     unsigned rep{}; // 0=none, 1=REP/REPE/REPZ, 2=REPNE/REPNZ
@@ -93,20 +93,10 @@ private:
     static int signconv(int width, int x);
     static bool msb(int width, int x);
 
-    // Execute one opcode (used by step and REP loop). Returns false on HLT.
-    bool exe_one();
+    // Execute one opcode (used by step and REP loop).
+    void exe_one();
 
 public:
-    // Exception for unexpected situations.
-    class Exception : public std::exception {
-    private:
-        std::string message;
-
-    public:
-        explicit Exception(const std::string &m) : message(m) {}
-        const char *what() const noexcept override { return message.c_str(); }
-    };
-
     // Constructor.
     Processor(Machine &machine);
 
@@ -124,6 +114,9 @@ public:
 
     // Get register value.
     unsigned get_ip() const { return core.ip; }
+
+    // Get first byte of opcode.
+    unsigned get_opcode() const { return opcode[0]; }
 
     // General registers
     Word get_ax() const { return core.ax; }

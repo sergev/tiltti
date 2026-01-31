@@ -65,14 +65,7 @@ Processor::Processor(Machine &mach) : machine(mach)
 }
 
 //
-// Finalize the processor (no-op; state is preserved for trace).
-//
-void Processor::finish()
-{
-}
-
-//
-// Reset routine: all registers and queue to initial 8086 state.
+// Reset routine: all registers and opcode to initial 8086 state.
 //
 void Processor::reset()
 {
@@ -83,12 +76,14 @@ void Processor::reset()
     core.ss    = 0x0000;
     core.es    = 0x0000;
     core.flags = 0;
-    queue      = {};
+    opcode     = {};
     rep        = 0;
     os         = core.ds;
     ea         = -1;
 
+    // Show initial state.
     machine.trace_exception("Reset");
+    machine.trace_registers();
 }
 
 //
@@ -106,10 +101,10 @@ unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
 {
     int disp = 0;
     if (mod_val == 0b01) {
-        disp = static_cast<signed char>(queue[2]);
+        disp = static_cast<signed char>(opcode[2]);
     } else if (mod_val == 0b10) {
-        disp = static_cast<int>(static_cast<unsigned>(queue[2]) |
-                                (static_cast<unsigned>(queue[3]) << 8));
+        disp = static_cast<int>(static_cast<unsigned>(opcode[2]) |
+                                (static_cast<unsigned>(opcode[3]) << 8));
     }
     int ea_val = 0;
     switch (rm_val) {
@@ -133,7 +128,7 @@ unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
         break;
     case 0b110:
         if (mod_val == 0b00)
-            ea_val = static_cast<unsigned>(queue[2]) | (static_cast<unsigned>(queue[3]) << 8);
+            ea_val = static_cast<unsigned>(opcode[2]) | (static_cast<unsigned>(opcode[3]) << 8);
         else
             ea_val = (core.bp + disp) & 0xffff;
         break;
@@ -363,13 +358,13 @@ void Processor::setSegReg(unsigned r, Word val)
 }
 
 //
-// Decode ModR/M byte from queue; advance IP by 1, 2, or 3.
+// Decode ModR/M byte from opcode; advance IP by 1, 2, or 3.
 //
 void Processor::decode()
 {
-    mod = (queue[1] >> 6) & 0b11;
-    reg = (queue[1] >> 3) & 0b111;
-    rm  = queue[1] & 0b111;
+    mod = (opcode[1] >> 6) & 0b11;
+    reg = (opcode[1] >> 3) & 0b111;
+    rm  = opcode[1] & 0b111;
     if (mod == 0b01)
         core.ip = (core.ip + 2) & 0xffff;
     else if ((mod == 0b00 && rm == 0b110) || mod == 0b10)
@@ -401,7 +396,7 @@ void Processor::push(int val)
 //
 // Check whether instruction is syscall.
 //
-bool is_syscall(unsigned opcode)
+bool is_syscall(unsigned op)
 {
     //TODO
     return false;
@@ -535,8 +530,6 @@ bool Processor::msb(int width, int x)
 //
 void Processor::step()
 {
-    prev = core;
-
     // Consume segment override and REP prefix bytes; set default segment and repetition mode.
     os    = core.ds;
     rep   = 0;
@@ -567,23 +560,23 @@ void Processor::step()
         }
 
         // Show this prefix.
-        queue = { prefix };
+        opcode = { prefix };
         machine.trace_instruction();
 
         core.ip = (core.ip + 1) & 0xffff;
     }
 done_prefix:
 
-    // Prefetch 6 bytes at CS:IP into queue for decode.
-    queue = {};
+    // Prefetch 6 bytes at CS:IP for decode.
+    opcode = {};
     for (int i = 0; i < 6; ++i) {
-        queue.push_back(machine.mem_fetch_byte(getAddr(core.cs, (core.ip + i) & 0xffff)));
+        opcode.push_back(machine.mem_fetch_byte(getAddr(core.cs, (core.ip + i) & 0xffff)));
     }
 
     // Show instruction: address, opcode and mnemonics.
     machine.trace_instruction();
 
-    op      = queue[0];
+    op      = opcode[0];
     d       = (op >> 1) & 1;
     w       = op & 1;
     core.ip = (core.ip + 1) & 0xffff;
@@ -596,22 +589,22 @@ done_prefix:
                 break;
             if (rep)
                 setReg(W, 1, getReg(W, 1) - 1);
-            if (!exe_one())
-                throw Exception("");
+            exe_one();
             if (rep && ((rep == 1 && !getFlag(ZF)) || (rep == 2 && getFlag(ZF))))
                 break;
         } while (rep != 0);
     } else {
-        if (!exe_one())
-            throw Exception("");
+        exe_one();
     }
+
+    // Show changed registers.
+    machine.trace_registers();
 }
 
 //
 // Decode op, d, w and optional ModR/M; then execute the matching 8086 instruction.
-// Returns false on HLT.
 //
-bool Processor::exe_one()
+void Processor::exe_one()
 {
     int dst, src, res;
     const int AX = 0; // accumulator index for getReg/setReg
@@ -1398,7 +1391,8 @@ bool Processor::exe_one()
         setFlag(IF, true);
         break;
     case 0xf4: // HLT
-        return false;
+        // Pause until an external interrupt is received.
+        break;
     case 0x9b: // WAIT
         break;
     case 0xd8:
@@ -1720,7 +1714,6 @@ bool Processor::exe_one()
         }
         break;
     default:
-        return true;
+        break;
     }
-    return true;
 }

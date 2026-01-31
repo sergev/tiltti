@@ -69,8 +69,11 @@ TEST(MachineTest, SingleStepMoves)
     machine.cpu.set_cs(LOAD_SEG);
     machine.cpu.set_ip(0);
 
-    // Single-step through the 3 MOV instructions
+    // Show trace.
     Machine::enable_trace("r");
+    machine.trace_registers();
+
+    // Single-step through the 3 MOV instructions
     machine.cpu.step();
     machine.cpu.step();
     machine.cpu.step();
@@ -79,6 +82,7 @@ TEST(MachineTest, SingleStepMoves)
     EXPECT_EQ(machine.cpu.get_bx(), 0x5678u);
     EXPECT_EQ(machine.cpu.get_cx(), 0x9abcu);
 
-    // Fourth step executes HLT and throws Processor::Exception with empty message
-    EXPECT_THROW(machine.cpu.step(), Processor::Exception);
+    // Fourth step executes HLT.
+    machine.cpu.step();
+    EXPECT_EQ(machine.cpu.get_opcode(), 0xf4);
 }

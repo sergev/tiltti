@@ -177,7 +177,7 @@ void Machine::print_word_access(unsigned addr, Word val, const char *opname)
 }
 
 //
-// Print instruction address and opcode (from prefetch queue).
+// Print instruction address and opcode.
 //
 void Processor::print_instruction()
 {
@@ -189,7 +189,7 @@ void Processor::print_instruction()
 
     // Disassemble one instruction.
     cs_insn *insn;
-    size_t count = cs_disasm(disasm, queue.data(), queue.size(), 0x0, 1, &insn);
+    size_t count = cs_disasm(disasm, opcode.data(), opcode.size(), 0x0, 1, &insn);
     if (count > 0) {
         for (size_t i = 0; i < insn->size; ++i) {
             out << ' ' << std::setw(2) << std::setfill('0') << (unsigned)insn->bytes[i];
@@ -198,8 +198,8 @@ void Processor::print_instruction()
         cs_free(insn, count);
     } else {
         // Cannot disassembler, just print bytes.
-        for (size_t i = 0; i < queue.size(); ++i) {
-            out << ' ' << std::setw(2) << std::setfill('0') << (unsigned)queue[i];
+        for (size_t i = 0; i < opcode.size(); ++i) {
+            out << ' ' << std::setw(2) << std::setfill('0') << (unsigned)opcode[i];
         }
     }
     out << std::endl;
@@ -251,11 +251,8 @@ void Processor::print_registers()
     if (core.es != prev.es)
         out << "      ES = " << std::hex << std::setfill('0') << std::setw(4) << core.es
             << std::endl;
-    if (core.ip != prev.ip)
-        out << "      IP = " << std::hex << std::setfill('0') << std::setw(4) << core.ip
-            << std::endl;
     if (core.flags != prev.flags)
-        out << "      FL = " << std::hex << std::setfill('0') << std::setw(4) << core.flags
+        out << "   Flags = " << std::hex << std::setfill('0') << std::setw(4) << core.flags
             << std::endl;
 
     prev = core;
