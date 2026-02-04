@@ -99,9 +99,6 @@ private:
     // Execute one opcode (used by step and REP loop).
     void exe_one();
 
-    bool is_syscall(int type);
-    void process_syscall(int type);
-
 public:
     // Constructor.
     Processor(Machine &machine);

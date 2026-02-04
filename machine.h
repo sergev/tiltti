@@ -121,6 +121,12 @@ public:
     // Boot from disk or floppy image.
     void boot_disk(const std::string &filename);
 
+    // Syscalls.
+    bool is_syscall(int type);
+    void process_syscall(int type);
+    void handle_int13_disk();
+    void handle_int40_floppy();
+
     //
     // Trace methods.
     //

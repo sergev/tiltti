@@ -399,9 +399,9 @@ void Processor::push(int val)
 //
 void Processor::callInt(int type)
 {
-    if (is_syscall(type)) {
+    if (machine.is_syscall(type)) {
         // Intercept syscalls.
-        process_syscall(type);
+        machine.process_syscall(type);
         return;
     }
     Word offset   = getMem(W, type * 4);

@@ -1,5 +1,5 @@
 //
-// i86 processor.
+// Processing of INT requests.
 //
 // Copyright (c) 2026 Serge Vakulenko
 //
@@ -26,7 +26,7 @@
 //
 // Check whether instruction is syscall.
 //
-bool Processor::is_syscall(int type)
+bool Machine::is_syscall(int type)
 {
     switch (type) {
     case 0x00: case 0x01: // CPU exception
@@ -151,10 +151,10 @@ void Processor::print_syscall(int type)
 //
 // Process INT request.
 //
-void Processor::process_syscall(int type)
+void Machine::process_syscall(int type)
 {
-    if (machine.trace_enabled()) {
-        print_syscall(type);
+    if (trace_enabled()) {
+        cpu.print_syscall(type);
     }
     switch (type) {
     case 0x00:
@@ -180,8 +180,9 @@ void Processor::process_syscall(int type)
         //TODO: Memory Size
         throw std::runtime_error("Unimplemented Memory Size Request");
     case 0x13:
-        //TODO: Disk
-        throw std::runtime_error("Unimplemented Disk Request");
+        // Disk
+        handle_int13_disk();
+        return;
     case 0x14:
         //TODO: Serial
         throw std::runtime_error("Unimplemented Serial Request");
@@ -202,7 +203,8 @@ void Processor::process_syscall(int type)
         //TODO: RTC Timer
         throw std::runtime_error("Unimplemented RTC Timer Request");
     case 0x40:
-        //TODO: Floppy disk
+        // Floppy disk
+        handle_int40_floppy();
         throw std::runtime_error("Unimplemented Floppy disk Request");
     default:
         throw std::runtime_error("Unknown syscall 0x" + to_hex(type));
