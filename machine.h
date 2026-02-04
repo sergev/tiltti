@@ -125,7 +125,6 @@ public:
     bool is_syscall(int type);
     void process_syscall(int type);
     void handle_int13_disk();
-    void handle_int40_floppy();
 
     //
     // Trace methods.
@@ -154,6 +153,7 @@ public:
 
 private:
     void floppy_setup();
+    void read_dap(unsigned addr, unsigned &count, Word &buf_seg, Word &buf_off, uint64_t &lba) const;
 };
 
 #endif // TILTTI_MACHINE_H

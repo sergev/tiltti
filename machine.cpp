@@ -91,7 +91,7 @@ Byte Machine::mem_fetch_byte(unsigned addr)
     if (addr >= 0xa0000) {
         throw std::runtime_error("Jump to Upper Memory Area");
     }
-    Byte val = memory.load(addr);
+    Byte val = memory.load8(addr);
     return val;
 }
 
@@ -103,7 +103,7 @@ void Machine::mem_store_byte(unsigned addr, Byte val)
     if (addr >= MEMORY_NBYTES) {
         throw std::runtime_error("Store out of range");
     }
-    memory.store(addr, val);
+    memory.store8(addr, val);
     if (debug_all) {
         print_byte_access(addr, val, "Memory Write");
     }
@@ -117,7 +117,7 @@ Byte Machine::mem_load_byte(unsigned addr)
     if (addr >= MEMORY_NBYTES) {
         throw std::runtime_error("Load out of range");
     }
-    Byte val = memory.load(addr);
+    Byte val = memory.load8(addr);
     if (debug_all) {
         print_byte_access(addr, val, "Memory Read");
     }
@@ -132,8 +132,7 @@ void Machine::mem_store_word(unsigned addr, Word val)
     if (addr + 1 >= MEMORY_NBYTES) {
         throw std::runtime_error("Store out of range");
     }
-    memory.store(addr, val & 0xff);
-    memory.store(addr + 1, val >> 8);
+    memory.store16(addr, val);
     if (debug_all) {
         print_word_access(addr, val, "Memory Write");
     }
@@ -147,7 +146,7 @@ Word Machine::mem_load_word(unsigned addr)
     if (addr + 1 >= MEMORY_NBYTES) {
         throw std::runtime_error("Load out of range");
     }
-    Word val = memory.load(addr) | (memory.load(addr + 1) << 8);
+    Word val = memory.load16(addr);
     if (debug_all) {
         print_word_access(addr, val, "Memory Read");
     }

@@ -53,9 +53,7 @@ bool Machine::is_syscall(int type)
         return true;
     case 0x1E: // Floppy param table
     case 0x1F: // Font 8x8 ext
-        return false;
-    case 0x40: // Floppy disk
-        return true;
+    case 0x40: // Floppy disk internal
     case 0x41: // HD0 FDPT
     case 0x46: // HD1 FDPT
         return false;
@@ -138,9 +136,6 @@ void Processor::print_syscall(int type)
     case 0x1A:
         machine.print_exception("RTC Timer Request");
         return;
-    case 0x40:
-        machine.print_exception("Floppy disk Request");
-        return;
     default:
         break;
     }
@@ -202,10 +197,6 @@ void Machine::process_syscall(int type)
     case 0x1A:
         //TODO: RTC Timer
         throw std::runtime_error("Unimplemented RTC Timer Request");
-    case 0x40:
-        // Floppy disk
-        handle_int40_floppy();
-        throw std::runtime_error("Unimplemented Floppy disk Request");
     default:
         throw std::runtime_error("Unknown syscall 0x" + to_hex(type));
     }

@@ -37,11 +37,17 @@ public:
     explicit Memory() = default;
     virtual ~Memory() = default;
 
-    // Store data to memory.
-    void store(unsigned addr, Byte val) { mem[addr] = val; }
+    // Load/store byte from/to memory.
+    Byte load8(unsigned addr) { return mem[addr]; }
+    void store8(unsigned addr, Byte val) { mem[addr] = val; }
 
-    // Load data from memory.
-    Byte load(unsigned addr) { return mem[addr]; }
+    // Load/store a 16-bit word from/to memory.
+    Word load16(unsigned addr) { return mem[addr] | (mem[addr + 1] << 8); }
+    void store16(unsigned addr, Word val) { mem[addr] = val; mem[addr + 1] = val >> 8; }
+
+    // Load/store a 32-bit long word from/to memory.
+    uint32_t load32(unsigned addr) { return load16(addr) | (load16(addr + 2) << 16); }
+    void store32(unsigned addr, uint32_t val) { store16(addr, val); store16(addr + 2, val >> 16); }
 
     Byte *get_ptr(unsigned addr) { return &mem[addr]; }
 
