@@ -28,7 +28,7 @@
 #include <cstdint>
 #include <string>
 
-#include "i86_arch.h"
+#include "pc86_arch.h"
 
 class Machine;
 class Memory;

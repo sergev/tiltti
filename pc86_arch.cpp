@@ -3,7 +3,7 @@
 //
 // Copyright (c) 2026 Serge Vakulenko
 //
-#include "i86_arch.h"
+#include "pc86_arch.h"
 
 #include <sstream>
 

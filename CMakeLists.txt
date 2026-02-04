@@ -31,7 +31,7 @@ pkg_check_modules(CAPSTONE REQUIRED capstone)
 
 # Build library
 add_library(simulator STATIC
-    i86_arch.cpp
+    pc86_arch.cpp
     machine.cpp
     memory.cpp
     disk.cpp

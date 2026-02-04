@@ -43,8 +43,18 @@ uint64_t Machine::simulated_instructions = 0;
 //
 // Initialize the machine.
 //
-Machine::Machine(Memory &m) : memory(m), cpu(*this)
+Machine::Machine(Memory &m) : memory(m), cpu(*this),
+    ivt(*(Interrupt_Vector_Table*) memory.get_ptr(0x0)),
+    bda(*(Bios_Data_Area*) memory.get_ptr(0x400)),
+    ebda(*(Extended_Bios_Data_Area*) memory.get_ptr(0x9fc00)),
+    bios(memory.get_ptr(0xf0000)),
+    diskette_param_table2(*(Floppy_Extended_Disk_Base_Table*) bios)
 {
+    // Set pointer to EBDA.
+    bda.ebda_seg = 0x9fc00 >> 4;
+    ebda.size    = (sizeof(ebda) + 1023) / 1024; // round up
+
+    floppy_setup();
 }
 
 //
@@ -250,14 +260,49 @@ void Machine::disk_mount(unsigned disk_unit, const std::string &path, bool write
 //
 void Machine::boot_disk(const std::string &filename)
 {
-    // TODO: Attach image as disk or floppy.
-    disk_mount(4, filename, true);
+    // Attach image as floppy A.
+    disk_mount(FLOPPY_A, filename, true);
+
+    // TODO: Alternatively, attach image as disk C.
 
     // Start at address 07c0:0000.
     unsigned addr = 0x7c00;
     cpu.set_cs(addr >> 4);
     cpu.set_ip(0);
 
-    // Load sector #0 from disk.
-    disk_io('r', 4, 0, addr, SECTOR_NBYTES);
+    // Load boot sector from disk.
+    disk_io('r', FLOPPY_A, 0, addr, SECTOR_NBYTES);
+}
+
+//
+// Initialize floppy BIOS.
+//
+void Machine::floppy_setup()
+{
+    // Parameters for 1.44M floppy type.
+    static const Floppy_Extended_Disk_Base_Table diskette_params = {
+        .dbt = {
+            .specify1       = 0xAF, // step rate 12ms, head unload 240ms
+            .specify2       = 0x02, // head load time 4ms, DMA used
+            .shutoff_ticks  = 37,   // ~2 seconds
+            .bps_code       = 0x02, // 512 byte sectors
+            .sectors        = 18,   // 1.44M media
+            .interblock_len = 0x1B,
+            .data_len       = 0xff, // Not used - because size code is 0x02
+            .gap_len        = 0x6c,
+            .fill_byte      = 0xf6,
+            .settle_time    = 0x0F, // 15ms
+            .startup_time   = 8,    // 1 second
+        },
+        .max_track  = 79, // maximum track
+        .data_rate  = 0,  // data transfer rate
+        .drive_type = 4,  // drive type in CMOS
+    };
+
+    // Initialize the floppy param table.
+    memcpy(&diskette_param_table2, &diskette_params, sizeof(diskette_param_table2));
+    memcpy(&bios[BIOS_DISKETTE_PARAM_TABLE], &diskette_params.dbt, sizeof(diskette_params.dbt));
+
+    // Vector 0x1E points to the floppy param table.
+    ivt.ivec[0x1e] = { .offset = BIOS_DISKETTE_PARAM_TABLE, .seg = 0xf000 };
 }

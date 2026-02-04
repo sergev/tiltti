@@ -64,6 +64,12 @@ public:
     // PC i86 processor.
     Processor cpu;
 
+    Interrupt_Vector_Table &ivt;   // Interrupt vector table at 0x00000
+    Bios_Data_Area &bda;           // Bios Data Area at 0x00400
+    Extended_Bios_Data_Area &ebda; // Extended Bios Data Area at 0x9fc00
+    Byte *bios;                    // Bios ROM at 0xf0000
+    Floppy_Extended_Disk_Base_Table &diskette_param_table2;
+
     // Constructor.
     explicit Machine(Memory &memory);
 
@@ -139,6 +145,9 @@ public:
     static void print_exception(const char *message);
     static void print_byte_access(unsigned addr, Byte val, const char *opname);
     static void print_word_access(unsigned addr, Word val, const char *opname);
+
+private:
+    void floppy_setup();
 };
 
 #endif // TILTTI_MACHINE_H
