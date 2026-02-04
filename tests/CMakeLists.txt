@@ -22,6 +22,7 @@ add_definitions(-DBUILD_DIR="${CMAKE_BINARY_DIR}")
 
 set(TEST_SOURCES
     machine_test.cpp
+    cpu_test.cpp
     util.cpp
 )
 

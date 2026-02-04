@@ -29,6 +29,8 @@
 #include <random>
 #include <string>
 
+#include "machine.h"
+
 //
 // Get current test name, as specified in TEST() macro.
 //
