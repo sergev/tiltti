@@ -131,6 +131,29 @@ public:
     Word get_dx() const { return core.dx; }
     void set_dx(Word val) { core.dx = val; }
 
+    //
+    // Byte halves of general registers
+    //
+    Byte get_al() const { return core.ax; }
+    Byte get_ah() const { return core.ax >> 8; }
+    void set_al(Byte val) { core.ax = (core.ax & 0xff00) | val; }
+    void set_ah(Byte val) { core.ax = (core.ax & 0x00ff) | (val << 8); }
+
+    Byte get_bl() const { return core.bx; }
+    Byte get_bh() const { return core.bx >> 8; }
+    void set_bl(Byte val) { core.bx = (core.bx & 0xff00) | val; }
+    void set_bh(Byte val) { core.bx = (core.bx & 0x00ff) | (val << 8); }
+
+    Byte get_cl() const { return core.cx; }
+    Byte get_ch() const { return core.cx >> 8; }
+    void set_cl(Byte val) { core.cx = (core.cx & 0xff00) | val; }
+    void set_ch(Byte val) { core.cx = (core.cx & 0x00ff) | (val << 8); }
+
+    Byte get_dl() const { return core.dx; }
+    Byte get_dh() const { return core.dx >> 8; }
+    void set_dl(Byte val) { core.dx = (core.dx & 0xff00) | val; }
+    void set_dh(Byte val) { core.dx = (core.dx & 0x00ff) | (val << 8); }
+
     // Pointer/index registers
     Word get_sp() const { return core.sp; }
     void set_sp(Word val) { core.sp = val; }

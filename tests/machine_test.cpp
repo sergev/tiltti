@@ -26,7 +26,7 @@
 
 #include <gtest/gtest.h>
 
-#include "i86_arch.h"
+#include "pc86_arch.h"
 
 //
 // Boot sector load address.
@@ -85,4 +85,33 @@ TEST(MachineTest, SingleStepMoves)
     // Fourth step executes HLT.
     machine.cpu.step();
     EXPECT_EQ(machine.cpu.get_op(), 0xf4);
+}
+
+//
+// Byte register halves: get/set AH, AL, BH, BL, CH, CL, DH, DL.
+//
+TEST(MachineTest, ByteRegisterHalves)
+{
+    Memory memory;
+    Machine machine(memory);
+    Processor &cpu = machine.cpu;
+
+    // set_ax(0x1234) -> get_ah()==0x12, get_al()==0x34
+    cpu.set_ax(0x1234);
+    EXPECT_EQ(cpu.get_ah(), 0x12u);
+    EXPECT_EQ(cpu.get_al(), 0x34u);
+
+    // set_ah(0xab) updates AX high byte only -> get_ax()==0xab34
+    cpu.set_ah(0xab);
+    EXPECT_EQ(cpu.get_ax(), 0xab34u);
+    EXPECT_EQ(cpu.get_al(), 0x34u);
+
+    // CX: set_cl/set_ch and word consistency
+    cpu.set_cx(0x9abc);
+    EXPECT_EQ(cpu.get_ch(), 0x9au);
+    EXPECT_EQ(cpu.get_cl(), 0xbcu);
+    cpu.set_cl(0x12);
+    EXPECT_EQ(cpu.get_cx(), 0x9a12u);
+    cpu.set_ch(0xef);
+    EXPECT_EQ(cpu.get_cx(), 0xef12u);
 }
