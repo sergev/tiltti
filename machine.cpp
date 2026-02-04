@@ -72,6 +72,7 @@ Machine::~Machine()
 void Machine::run()
 {
     try {
+        trace_registers();
         for (;;) {
             after_call   = false;
             after_return = false;
@@ -109,7 +110,7 @@ void Machine::mem_store_byte(unsigned addr, Byte val)
     }
     memory.store(addr, val);
     if (debug_all) {
-        print_byte_access(addr, val, "Write");
+        print_byte_access(addr, val, "Memory Write");
     }
 }
 
@@ -123,7 +124,7 @@ Byte Machine::mem_load_byte(unsigned addr)
     }
     Byte val = memory.load(addr);
     if (debug_all) {
-        print_byte_access(addr, val, "Read");
+        print_byte_access(addr, val, "Memory Read");
     }
     return val;
 }

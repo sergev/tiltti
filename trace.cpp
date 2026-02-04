@@ -155,7 +155,7 @@ void Machine::print_byte_access(unsigned addr, Byte val, const char *opname)
     auto &out       = Machine::get_trace_stream();
     auto save_flags = out.flags();
 
-    out << "     " << opname << " [" << std::hex << std::setw(5)
+    out << "      " << opname << " [" << std::hex << std::setw(5)
         << addr << "] = ";
     out << (unsigned)val << std::endl;
 
@@ -168,7 +168,7 @@ void Machine::print_word_access(unsigned addr, Word val, const char *opname)
     auto &out       = Machine::get_trace_stream();
     auto save_flags = out.flags();
 
-    out << "     " << opname << " [" << std::hex << std::setw(5)
+    out << "      " << opname << " [" << std::hex << std::setw(5)
         << addr << "] = ";
     out << val << std::endl;
 
@@ -183,9 +183,9 @@ void Processor::print_instruction()
 {
     auto &out       = Machine::get_trace_stream();
     auto save_flags = out.flags();
+    auto pc         = (core.cs << 4) + core.ip;
 
-    out << std::hex << std::setfill('0') << std::setw(4) << core.cs
-        << ' ' << std::setfill('0') << std::setw(4) << core.ip << " :";
+    out << std::hex << std::setfill('0') << std::setw(5) << pc << " :";
 
     // Disassemble one instruction.
     cs_insn *insn;
@@ -220,43 +220,43 @@ void Processor::print_registers()
     auto save_flags = out.flags();
 
     if (core.ax != prev.ax)
-        out << "     AX = " << std::hex << std::setfill('0') << std::setw(4) << core.ax
+        out << "      AX = " << std::hex << std::setfill('0') << std::setw(4) << core.ax
             << std::endl;
     if (core.bx != prev.bx)
-        out << "     BX = " << std::hex << std::setfill('0') << std::setw(4) << core.bx
+        out << "      BX = " << std::hex << std::setfill('0') << std::setw(4) << core.bx
             << std::endl;
     if (core.cx != prev.cx)
-        out << "     CX = " << std::hex << std::setfill('0') << std::setw(4) << core.cx
+        out << "      CX = " << std::hex << std::setfill('0') << std::setw(4) << core.cx
             << std::endl;
     if (core.dx != prev.dx)
-        out << "     DX = " << std::hex << std::setfill('0') << std::setw(4) << core.dx
+        out << "      DX = " << std::hex << std::setfill('0') << std::setw(4) << core.dx
             << std::endl;
     if (core.sp != prev.sp)
-        out << "     SP = " << std::hex << std::setfill('0') << std::setw(4) << core.sp
+        out << "      SP = " << std::hex << std::setfill('0') << std::setw(4) << core.sp
             << std::endl;
     if (core.bp != prev.bp)
-        out << "     BP = " << std::hex << std::setfill('0') << std::setw(4) << core.bp
+        out << "      BP = " << std::hex << std::setfill('0') << std::setw(4) << core.bp
             << std::endl;
     if (core.si != prev.si)
-        out << "     SI = " << std::hex << std::setfill('0') << std::setw(4) << core.si
+        out << "      SI = " << std::hex << std::setfill('0') << std::setw(4) << core.si
             << std::endl;
     if (core.di != prev.di)
-        out << "     DI = " << std::hex << std::setfill('0') << std::setw(4) << core.di
+        out << "      DI = " << std::hex << std::setfill('0') << std::setw(4) << core.di
             << std::endl;
     if (core.cs != prev.cs)
-        out << "     CS = " << std::hex << std::setfill('0') << std::setw(4) << core.cs
+        out << "      CS = " << std::hex << std::setfill('0') << std::setw(4) << core.cs
             << std::endl;
     if (core.ds != prev.ds)
-        out << "     DS = " << std::hex << std::setfill('0') << std::setw(4) << core.ds
+        out << "      DS = " << std::hex << std::setfill('0') << std::setw(4) << core.ds
             << std::endl;
     if (core.ss != prev.ss)
-        out << "     SS = " << std::hex << std::setfill('0') << std::setw(4) << core.ss
+        out << "      SS = " << std::hex << std::setfill('0') << std::setw(4) << core.ss
             << std::endl;
     if (core.es != prev.es)
-        out << "     ES = " << std::hex << std::setfill('0') << std::setw(4) << core.es
+        out << "      ES = " << std::hex << std::setfill('0') << std::setw(4) << core.es
             << std::endl;
     if (core.flags != prev.flags)
-        out << "     Flags = " << std::hex << std::setfill('0') << std::setw(4) << core.flags
+        out << "      Flags = " << std::hex << std::setfill('0') << std::setw(4) << core.flags
             << std::endl;
 
     prev = core;
