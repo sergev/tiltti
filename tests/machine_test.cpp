@@ -1,18 +1,10 @@
-#include "util.h"
-
-//
-// Boot sector load address.
-//
-static const unsigned BOOT_ADDR = 0x7c00;
+#include "fixture.h"
 
 //
 // Single-step through MOV immediate instructions and verify register values.
 //
-TEST(MachineTest, SingleStepMoves)
+TEST_F(MachineTest, SingleStepMoves)
 {
-    Memory memory;
-    Machine machine(memory);
-
     // Write instructions at 0x7c00:
     // MOV AX, 0x1234  (B8 34 12)
     // MOV BX, 0x5678  (BB 78 56)
@@ -33,36 +25,29 @@ TEST(MachineTest, SingleStepMoves)
     machine.mem_store_byte(BOOT_ADDR + 9, 0xf4);
 
     // Set CS:IP to fetch from 0x7c00
-    machine.cpu.set_cs(BOOT_ADDR >> 4);
-    machine.cpu.set_ip(0);
-
-    // Show trace.
-    Machine::enable_trace("r");
+    cpu.set_cs(BOOT_ADDR >> 4);
+    cpu.set_ip(0);
     machine.trace_registers();
 
     // Single-step through the 3 MOV instructions
-    machine.cpu.step();
-    machine.cpu.step();
-    machine.cpu.step();
+    cpu.step();
+    cpu.step();
+    cpu.step();
 
-    EXPECT_EQ(machine.cpu.get_ax(), 0x1234u);
-    EXPECT_EQ(machine.cpu.get_bx(), 0x5678u);
-    EXPECT_EQ(machine.cpu.get_cx(), 0x9abcu);
+    EXPECT_EQ(cpu.get_ax(), 0x1234u);
+    EXPECT_EQ(cpu.get_bx(), 0x5678u);
+    EXPECT_EQ(cpu.get_cx(), 0x9abcu);
 
     // Fourth step executes HLT.
-    machine.cpu.step();
-    EXPECT_EQ(machine.cpu.get_op(), 0xf4);
+    cpu.step();
+    EXPECT_EQ(cpu.get_op(), 0xf4);
 }
 
 //
 // Byte register halves: get/set AH, AL, BH, BL, CH, CL, DH, DL.
 //
-TEST(MachineTest, ByteRegisterHalves)
+TEST_F(MachineTest, ByteRegisterHalves)
 {
-    Memory memory;
-    Machine machine(memory);
-    Processor &cpu = machine.cpu;
-
     // set_ax(0x1234) -> get_ah()==0x12, get_al()==0x34
     cpu.set_ax(0x1234);
     EXPECT_EQ(cpu.get_ah(), 0x12u);

@@ -527,6 +527,23 @@ bool Processor::msb(int width, int x)
 // Execute one instruction. One call = one instruction (prefixes consumed, then one opcode
 // executed). Increment IP register. Emit exception in case of failure.
 //
+// If the instruction has a segment override prefix, that
+// segment is used unconditionally for the memory operand.
+// If no segment override prefix is present, the CPU selects
+// the segment solely based on which base register(s) are used in
+// the effective address.
+// Summary as an exact decision algorithm:
+//
+// For each memory operand:
+//  * If a segment override prefix is present
+//      → Use the overridden segment
+//  * Else if the instruction is a string instruction
+//      → Use the instruction-defined segment(s)
+//  * Else if the effective address uses BP or SP
+//      → Use SS
+//  * Else
+//      → Use DS
+//
 void Processor::step()
 {
     // Consume segment override and REP prefix bytes; set default segment and repetition mode.

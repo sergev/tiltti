@@ -21,12 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "util.h"
+#include "fixture.h"
 
 #include <cstring>
 #include <fstream>
-
-//TODO: #include "fixture.h"
 
 //
 // Get current test name, as specified in TEST() macro.

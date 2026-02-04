@@ -1,17 +1,10 @@
-#include "util.h"
+#include "fixture.h"
 
 //
 // add byte [ss:bp+di-64h], cl
 //
-TEST(CpuTest, add_byte_ss_bp_di_64h_cl)
+TEST_F(MachineTest, add_byte_ss_bp_di_64h_cl)
 {
-    Memory memory;
-    Machine machine(memory);
-    Processor &cpu = machine.cpu;
-
-    // Optionally enable trace.
-    Machine::enable_trace("r");
-
     // Initial CPU State
     cpu.set_ax(0x52A1);
     cpu.set_bx(0xE724);

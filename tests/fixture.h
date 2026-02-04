@@ -26,10 +26,30 @@
 
 #include <gtest/gtest.h>
 
-#include <random>
 #include <string>
 
 #include "machine.h"
+
+//
+// Fixture with preallocated machine.
+//
+// For details, see: https://github.com/google/googletest/blob/main/docs/primer.md
+//
+class MachineTest : public ::testing::Test {
+protected:
+    Memory memory;
+    Machine machine{ memory };
+    Processor &cpu{ machine.cpu };
+
+    // Boot sector load address.
+    static const unsigned BOOT_ADDR = 0x7c00;
+
+    void SetUp() override
+    {
+        // Show trace.
+        Machine::enable_trace("r");
+    }
+};
 
 //
 // Get current test name, as specified in TEST() macro.
