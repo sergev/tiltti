@@ -86,55 +86,55 @@ void Processor::print_syscall(int type)
 {
     switch (type) {
     case 0x00:
-        machine.print_exception("Divide Error");
+        machine.print_exception("Int 0h Divide Error");
         return;
     case 0x01:
-        machine.print_exception("Single Step");
+        machine.print_exception("Int 1h Single Step");
         return;
     case 0x02:
-        machine.print_exception("NMI");
+        machine.print_exception("Int 2h NMI");
         return;
     case 0x03:
-        machine.print_exception("Breakpoint");
+        machine.print_exception("Int 3h Breakpoint");
         return;
     case 0x04:
-        machine.print_exception("Overflow");
+        machine.print_exception("Int 4h Overflow");
         return;
     case 0x05:
-        machine.print_exception("Print Screen Request");
+        machine.print_exception("Int 5h Print Screen Request");
         return;
     case 0x10:
-        machine.print_exception("Video Request");
+        machine.print_exception("Int 10h Video Request");
         return;
     case 0x11:
-        machine.print_exception("Equipment List Request");
+        machine.print_exception("Int 11h Equipment List Request");
         return;
     case 0x12:
-        machine.print_exception("Memory Size Request");
+        machine.print_exception("Int 12h Memory Size Request");
         return;
     case 0x13:
-        machine.print_exception("Disk Request");
+        machine.print_exception("Int 13h Disk Request");
         return;
     case 0x14:
-        machine.print_exception("Serial Request");
+        machine.print_exception("Int 14h Serial Request");
         return;
     case 0x15:
-        machine.print_exception("System Services Request");
+        machine.print_exception("Int 15h System Services Request");
         return;
     case 0x16:
-        machine.print_exception("Keyboard Request");
+        machine.print_exception("Int 16h Keyboard Request");
         return;
     case 0x17:
-        machine.print_exception("Printer Request");
+        machine.print_exception("Int 17h Printer Request");
         return;
     case 0x18:
-        machine.print_exception("ROM BASIC Request");
+        machine.print_exception("Int 18h ROM BASIC Request");
         return;
     case 0x19:
-        machine.print_exception("Boot Request");
+        machine.print_exception("Int 19h Boot Request");
         return;
     case 0x1A:
-        machine.print_exception("RTC Timer Request");
+        machine.print_exception("Int 1Ah RTC Timer Request");
         return;
     default:
         break;

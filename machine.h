@@ -154,6 +154,34 @@ public:
 private:
     void floppy_setup();
     void read_dap(unsigned addr, unsigned &count, Word &buf_seg, Word &buf_off, uint64_t &lba) const;
+
+    // Int 13: disk
+    void int13_reset_disk_system();
+    void int13_read_disk_status();
+    void int13_read_sectors();
+    void int13_write_sectors();
+    void int13_verify_sectors();
+    void int13_format_track();
+    void int13_get_drive_parameters();
+    void int13_initialize_drive_parameters();
+    void int13_seek_to_cylinder();
+    void int13_alternate_disk_reset();
+    void int13_check_drive_ready();
+    void int13_recalibrate_drive();
+    void int13_controller_diagnostic();
+    void int13_read_disk_drive_size();
+    void int13_detect_disk_change();
+    void int13_edd_installation_check();
+    void int13_extended_read();
+    void int13_extended_write();
+    void int13_extended_verify();
+    void int13_lock_unlock_drive();
+    void int13_eject_media();
+    void int13_extended_seek();
+    void int13_get_edd_parameters();
+    void int13_extended_media_change();
+    void int13_el_torito_cd_emulation();
+    void int13_set_hardware_configuration();
 };
 
 #endif // TILTTI_MACHINE_H

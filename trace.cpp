@@ -144,7 +144,7 @@ void Machine::close_trace()
 void Machine::print_exception(const char *message)
 {
     auto &out = Machine::get_trace_stream();
-    out << "--- " << message << std::endl;
+    out << "----- " << message << std::endl;
 }
 
 //

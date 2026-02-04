@@ -29,7 +29,7 @@
 #include <sstream>
 
 //
-// Read DAP at DS:SI from memory (raw load to avoid trace noise).
+// Read DAP at DS:SI from memory.
 // DAP layout: size(u8), reserved(u8), count(u16), buffer_off(u16), buffer_seg(u16), lba(u64).
 //
 void Machine::read_dap(unsigned addr, unsigned &count, Word &buf_seg, Word &buf_off, uint64_t &lba) const
@@ -41,196 +41,499 @@ void Machine::read_dap(unsigned addr, unsigned &count, Word &buf_seg, Word &buf_
 }
 
 //
-// Process Int 13h requests: Disk I/O.
+// Process Int 13h request: Disk I/O.
 //
 void Machine::handle_int13_disk()
 {
-#if 0
     switch (cpu.get_ah()) {
     case 0x00:
-        Machine::print_exception("INT 13h AH=00h Reset disk system");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " (drive)" << std::endl;
+        int13_reset_disk_system();
         break;
     case 0x01:
-        Machine::print_exception("INT 13h AH=01h Read disk status");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " (drive)" << std::endl;
+        int13_read_disk_status();
         break;
     case 0x02:
-        Machine::print_exception("INT 13h AH=02h Read sectors (CHS)");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " AL=0x" << std::setw(2)
-            << (unsigned)al << " (count) CHS=" << cylinder << "/" << head << "/" << sector
-            << " ES:BX=0x" << std::setw(4) << es << ":0x" << std::setw(4) << bx << std::endl;
+        int13_read_sectors();
         break;
     case 0x03:
-        Machine::print_exception("INT 13h AH=03h Write sectors (CHS)");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " AL=0x" << std::setw(2)
-            << (unsigned)al << " (count) CHS=" << cylinder << "/" << head << "/" << sector
-            << " ES:BX=0x" << std::setw(4) << es << ":0x" << std::setw(4) << bx << std::endl;
+        int13_write_sectors();
         break;
     case 0x04:
-        Machine::print_exception("INT 13h AH=04h Verify sectors (CHS)");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " AL=0x" << std::setw(2)
-            << (unsigned)al << " CHS=" << cylinder << "/" << head << "/" << sector << std::endl;
+        int13_verify_sectors();
         break;
     case 0x05:
-        Machine::print_exception("INT 13h AH=05h Format track");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " AL=0x" << std::setw(2)
-            << (unsigned)al << " (sectors/track) CH=0x" << std::setw(2) << (unsigned)ch
-            << " DH=0x" << std::setw(2) << (unsigned)dh << " ES:BX=0x" << std::setw(4) << es
-            << ":0x" << std::setw(4) << bx << std::endl;
+        int13_format_track();
         break;
     case 0x08:
-        Machine::print_exception("INT 13h AH=08h Get drive parameters");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " (drive)" << std::endl;
+        int13_get_drive_parameters();
         break;
     case 0x09:
-        Machine::print_exception("INT 13h AH=09h Initialize drive parameters");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " (drive)" << std::endl;
+        int13_initialize_drive_parameters();
         break;
     case 0x0C:
-        Machine::print_exception("INT 13h AH=0Ch Seek to cylinder");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " cylinder=" << cylinder
-            << std::endl;
+        int13_seek_to_cylinder();
         break;
     case 0x0D:
-        Machine::print_exception("INT 13h AH=0Dh Alternate disk reset");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " (drive)" << std::endl;
+        int13_alternate_disk_reset();
         break;
     case 0x10:
-        Machine::print_exception("INT 13h AH=10h Check drive ready");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " (drive)" << std::endl;
+        int13_check_drive_ready();
         break;
     case 0x11:
-        Machine::print_exception("INT 13h AH=11h Recalibrate drive");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " (drive)" << std::endl;
+        int13_recalibrate_drive();
         break;
     case 0x14:
-        Machine::print_exception("INT 13h AH=14h Controller diagnostic");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " (drive)" << std::endl;
+        int13_controller_diagnostic();
         break;
     case 0x15:
-        Machine::print_exception("INT 13h AH=15h Read disk drive size");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " (drive)" << std::endl;
+        int13_read_disk_drive_size();
         break;
     case 0x16:
-        Machine::print_exception("INT 13h AH=16h Detect disk change");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " (drive)" << std::endl;
+        int13_detect_disk_change();
         break;
     case 0x41:
-        Machine::print_exception("INT 13h AH=41h EDD installation check");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " (drive)" << std::endl;
+        int13_edd_installation_check();
         break;
-    case 0x42: {
-        Machine::print_exception("INT 13h AH=42h Extended read (LBA)");
-        unsigned addr = pc86_linear_addr(ds, si);
-        unsigned count;
-        Word buf_seg, buf_off;
-        uint64_t lba;
-        read_dap(m->memory, addr, count, buf_seg, buf_off, lba);
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " DS:SI=0x" << std::setw(4) << ds
-            << ":0x" << std::setw(4) << si << " count=" << count << " buffer=0x" << std::setw(4)
-            << buf_seg << ":0x" << std::setw(4) << buf_off << " LBA=0x" << std::setw(16) << lba
-            << std::endl;
+    case 0x42:
+        int13_extended_read();
         break;
-    }
-    case 0x43: {
-        Machine::print_exception("INT 13h AH=43h Extended write (LBA)");
-        unsigned addr = pc86_linear_addr(ds, si);
-        unsigned count;
-        Word buf_seg, buf_off;
-        uint64_t lba;
-        read_dap(m->memory, addr, count, buf_seg, buf_off, lba);
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " DS:SI=0x" << std::setw(4) << ds
-            << ":0x" << std::setw(4) << si << " count=" << count << " buffer=0x" << std::setw(4)
-            << buf_seg << ":0x" << std::setw(4) << buf_off << " LBA=0x" << std::setw(16) << lba
-            << std::endl;
+    case 0x43:
+        int13_extended_write();
         break;
-    }
-    case 0x44: {
-        Machine::print_exception("INT 13h AH=44h Extended verify (LBA)");
-        unsigned addr = pc86_linear_addr(ds, si);
-        unsigned count;
-        Word buf_seg, buf_off;
-        uint64_t lba;
-        read_dap(m->memory, addr, count, buf_seg, buf_off, lba);
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " DS:SI=0x" << std::setw(4) << ds
-            << ":0x" << std::setw(4) << si << " count=" << count << " LBA=0x" << std::setw(16)
-            << lba << std::endl;
+    case 0x44:
+        int13_extended_verify();
         break;
-    }
     case 0x45:
-        Machine::print_exception("INT 13h AH=45h Lock/unlock drive");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " AL=0x" << std::setw(2)
-            << (unsigned)al << " (subfunction)" << std::endl;
+        int13_lock_unlock_drive();
         break;
     case 0x46:
-        Machine::print_exception("INT 13h AH=46h Eject media");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " (drive)" << std::endl;
+        int13_eject_media();
         break;
-    case 0x47: {
-        Machine::print_exception("INT 13h AH=47h Extended seek (LBA)");
-        unsigned addr = pc86_linear_addr(ds, si);
-        unsigned count;
-        Word buf_seg, buf_off;
-        uint64_t lba;
-        read_dap(m->memory, addr, count, buf_seg, buf_off, lba);
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " DS:SI=0x" << std::setw(4) << ds
-            << ":0x" << std::setw(4) << si << " LBA=0x" << std::setw(16) << lba << std::endl;
+    case 0x47:
+        int13_extended_seek();
         break;
-    }
     case 0x48:
-        Machine::print_exception("INT 13h AH=48h Get drive parameters (EDD)");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " DS:SI=0x" << std::setw(4) << ds
-            << ":0x" << std::setw(4) << si << " (buffer)" << std::endl;
+        int13_get_edd_parameters();
         break;
     case 0x49:
-        Machine::print_exception("INT 13h AH=49h Extended media change");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " (drive)" << std::endl;
+        int13_extended_media_change();
         break;
     case 0x4B:
-        Machine::print_exception("INT 13h AH=4Bh El Torito CD emulation");
-        out << "      AL=0x" << std::setw(2) << (unsigned)al << " DS:SI=0x" << std::setw(4) << ds
-            << ":0x" << std::setw(4) << si << " (packet)" << std::endl;
+        int13_el_torito_cd_emulation();
         break;
     case 0x4E:
-        Machine::print_exception("INT 13h AH=4Eh Set hardware configuration");
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " AL=0x" << std::setw(2)
-            << (unsigned)al << " (subfunction)" << std::endl;
+        int13_set_hardware_configuration();
         break;
     default:
-        Machine::print_exception(("INT 13h AH=0x" + to_hex(ah) + " (unknown)").c_str());
-        out << "      DL=0x" << std::setw(2) << (unsigned)dl << " CX=0x" << std::setw(4) << cx
-            << " DX=0x" << std::setw(4) << dx << " DS:SI=0x" << std::setw(4) << ds << ":0x"
-            << std::setw(4) << si << " ES:BX=0x" << std::setw(4) << es << ":0x" << std::setw(4)
-            << bx << std::endl;
-        break;
+        if (Machine::trace_enabled()) {
+            auto &out = Machine::get_trace_stream();
+            auto save = out.flags();
+
+            out << "----- AH=" << std::hex << std::setfill('0') << std::setw(2) << (unsigned)cpu.get_ah()
+                << "h Unknown request" << std::endl;
+            out << "      AH=0x" << std::setw(2) << (unsigned)cpu.get_ah()
+                << " DL=0x" << std::setw(2) << (unsigned)cpu.get_dl()
+                << " CX=0x" << std::setw(4) << cpu.get_cx()
+                << " DX=0x" << std::setw(4) << cpu.get_dx()
+                << " DS:SI=0x" << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si()
+                << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx() << std::endl;
+            out.flags(save);
+        }
+        throw std::runtime_error("Unimplemented disk request");
     }
+}
 
-    Word ax = cpu.get_ax();
-    Word cx = cpu.get_cx();
-    Word dx = cpu.get_dx();
-    Byte ah = (Byte)(ax >> 8);
-    Byte al = (Byte)(ax & 0xff);
-    Byte ch = (Byte)(cx >> 8);
-    Byte cl = (Byte)(cx & 0xff);
-    Byte dh = (Byte)(dx >> 8);
-    Byte dl = (Byte)(dx & 0xff);
-    Word es = cpu.get_es(), ds = cpu.get_ds(), bx = cpu.get_bx(), si = cpu.get_si();
+void Machine::int13_reset_disk_system()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
 
-    unsigned cylinder = ch | ((cl & 0xC0u) << 2);
-    unsigned sector   = cl & 0x3F; // 1-based
-    unsigned head     = dh;
+        out << "----- AH=00h Reset disk system" << std::endl;
+        out << "      DL=0x" << std::hex << std::setfill('0') << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Reset disk system");
+}
+
+void Machine::int13_read_disk_status()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=01h Read disk status" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Read disk status");
+}
+
+void Machine::int13_read_sectors()
+{
+    unsigned cylinder = cpu.get_ch() | ((cpu.get_cl() & 0xC0) << 2); // 10 bits, 0-based
+    unsigned sector   = cpu.get_cl() & 0x3f;                         // 6 bits, 1-based
+    unsigned head     = cpu.get_dh();                                // 8 bits, 0-based
 
     if (Machine::trace_enabled()) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << std::hex << std::setfill('0');
-
-
+        out << "----- AH=02h Read sectors (CHS)" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl()
+            << " AL=0x" << std::setw(2) << (unsigned)cpu.get_al()
+            << " (count) CHS=" << cylinder << "/" << head << "/" << sector
+            << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx() << std::endl;
         out.flags(save);
     }
+    throw std::runtime_error("Unimplemented: Read sectors (CHS)");
+}
 
-    throw std::runtime_error("Unimplemented call INT 13h AH=0x" + to_hex(ah));
-#endif
+void Machine::int13_write_sectors()
+{
+    unsigned cylinder = cpu.get_ch() | ((cpu.get_cl() & 0xC0) << 2); // 10 bits, 0-based
+    unsigned sector   = cpu.get_cl() & 0x3f;                         // 6 bits, 1-based
+    unsigned head     = cpu.get_dh();                                // 8 bits, 0-based
+
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=03h Write sectors (CHS)" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
+            << (unsigned)cpu.get_al() << " (count) CHS=" << cylinder << "/" << head << "/" << sector
+            << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx() << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Write sectors (CHS)");
+}
+
+void Machine::int13_verify_sectors()
+{
+    unsigned cylinder = cpu.get_ch() | ((cpu.get_cl() & 0xC0) << 2); // 10 bits, 0-based
+    unsigned sector   = cpu.get_cl() & 0x3f;                         // 6 bits, 1-based
+    unsigned head     = cpu.get_dh();                                // 8 bits, 0-based
+
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=04h Verify sectors (CHS)" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
+            << (unsigned)cpu.get_al() << " CHS=" << cylinder << "/" << head << "/" << sector << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Verify sectors (CHS)");
+}
+
+void Machine::int13_format_track()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=05h Format track" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
+            << (unsigned)cpu.get_al() << " (sectors/track) CH=0x" << std::setw(2) << (unsigned)cpu.get_ch()
+            << " DH=0x" << std::setw(2) << (unsigned)cpu.get_dh() << " ES:BX=0x" << std::setw(4) << cpu.get_es()
+            << ":0x" << std::setw(4) << cpu.get_bx() << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Format track");
+}
+
+void Machine::int13_get_drive_parameters()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=08h Get drive parameters" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Get drive parameters");
+}
+
+void Machine::int13_initialize_drive_parameters()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=09h Initialize drive parameters" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Initialize drive parameters");
+}
+
+void Machine::int13_seek_to_cylinder()
+{
+    unsigned cylinder = cpu.get_ch() | ((cpu.get_cl() & 0xC0) << 2); // 10 bits, 0-based
+
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=0Ch Seek to cylinder" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " cylinder=" << cylinder
+            << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Seek to cylinder");
+}
+
+void Machine::int13_alternate_disk_reset()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=0Dh Alternate disk reset" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Alternate disk reset");
+}
+
+void Machine::int13_check_drive_ready()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=10h Check drive ready" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Check drive ready");
+}
+
+void Machine::int13_recalibrate_drive()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=11h Recalibrate drive" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Recalibrate drive");
+}
+
+void Machine::int13_controller_diagnostic()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=14h Controller diagnostic" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Controller diagnostic");
+}
+
+void Machine::int13_read_disk_drive_size()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=15h Read disk drive size" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Read disk drive size");
+}
+
+void Machine::int13_detect_disk_change()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=16h Detect disk change" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Detect disk change");
+}
+
+void Machine::int13_edd_installation_check()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=41h EDD installation check" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: EDD installation check");
+}
+
+void Machine::int13_extended_read()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+        unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
+        unsigned count;
+        Word buf_seg, buf_off;
+        uint64_t lba;
+
+        read_dap(addr, count, buf_seg, buf_off, lba);
+        out << "----- AH=42h Extended read (LBA)" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x" << std::setw(4) << cpu.get_ds()
+            << ":0x" << std::setw(4) << cpu.get_si() << " count=" << count << " buffer=0x" << std::setw(4)
+            << buf_seg << ":0x" << std::setw(4) << buf_off << " LBA=0x" << std::setw(16) << lba
+            << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Extended read (LBA)");
+}
+
+void Machine::int13_extended_write()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+        unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
+        unsigned count;
+        Word buf_seg, buf_off;
+        uint64_t lba;
+
+        read_dap(addr, count, buf_seg, buf_off, lba);
+        out << "----- AH=43h Extended write (LBA)" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x" << std::setw(4) << cpu.get_ds()
+            << ":0x" << std::setw(4) << cpu.get_si() << " count=" << count << " buffer=0x" << std::setw(4)
+            << buf_seg << ":0x" << std::setw(4) << buf_off << " LBA=0x" << std::setw(16) << lba
+            << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Extended write (LBA)");
+}
+
+void Machine::int13_extended_verify()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+        unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
+        unsigned count;
+        Word buf_seg, buf_off;
+        uint64_t lba;
+
+        read_dap(addr, count, buf_seg, buf_off, lba);
+        out << "----- AH=44h Extended verify (LBA)" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x" << std::setw(4) << cpu.get_ds()
+            << ":0x" << std::setw(4) << cpu.get_si() << " count=" << count << " LBA=0x" << std::setw(16)
+            << lba << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Extended verify (LBA)");
+}
+
+void Machine::int13_lock_unlock_drive()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=45h Lock/unlock drive" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
+            << (unsigned)cpu.get_al() << " (subfunction)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Lock/unlock drive");
+}
+
+void Machine::int13_eject_media()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=46h Eject media" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Eject media");
+}
+
+void Machine::int13_extended_seek()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+        unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
+        unsigned count;
+        Word buf_seg, buf_off;
+        uint64_t lba;
+
+        read_dap(addr, count, buf_seg, buf_off, lba);
+        out << "----- AH=47h Extended seek (LBA)" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x" << std::setw(4) << cpu.get_ds()
+            << ":0x" << std::setw(4) << cpu.get_si() << " LBA=0x" << std::setw(16) << lba << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Extended seek (LBA)");
+}
+
+void Machine::int13_get_edd_parameters()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=48h Get drive parameters (EDD)" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x" << std::setw(4) << cpu.get_ds()
+            << ":0x" << std::setw(4) << cpu.get_si() << " (buffer)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Get drive parameters (EDD)");
+}
+
+void Machine::int13_extended_media_change()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=49h Extended media change" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Extended media change");
+}
+
+void Machine::int13_el_torito_cd_emulation()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=4Bh El Torito CD emulation" << std::endl;
+        out << "      AL=0x" << std::setw(2) << (unsigned)cpu.get_al() << " DS:SI=0x" << std::setw(4) << cpu.get_ds()
+            << ":0x" << std::setw(4) << cpu.get_si() << " (packet)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: El Torito CD emulation");
+}
+
+void Machine::int13_set_hardware_configuration()
+{
+    if (Machine::trace_enabled()) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
+
+        out << "----- AH=4Eh Set hardware configuration" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
+            << (unsigned)cpu.get_al() << " (subfunction)" << std::endl;
+        out.flags(save);
+    }
+    throw std::runtime_error("Unimplemented: Set hardware configuration");
 }
