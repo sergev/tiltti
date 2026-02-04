@@ -395,34 +395,32 @@ void Processor::push(int val)
 }
 
 //
-// Check whether instruction is syscall.
-//
-bool is_syscall(unsigned op)
-{
-    //TODO
-    return false;
-}
-
-//
 // Software interrupt: push FLAGS, CS, IP; jump to vector.
 //
 void Processor::callInt(int type)
 {
-#if 0
     if (is_syscall(type)) {
-        //TODO: intercept syscalls
-        if (debug_all | debug_syscalls) {
-            print_syscall(type);
-        }
+        // Intercept syscalls.
+        process_syscall(type);
+        return;
     }
-#endif
-    push(static_cast<int>(core.flags));
+    Word offset   = getMem(W, type * 4);
+    Word seg      = getMem(W, type * 4 + 2);
+    unsigned addr = offset + (seg << 4);
+
+    if (addr < 0x500 || addr >= 0xa0000) {
+        // Address out of user memory.
+        throw std::runtime_error("Bad INT vector");
+    }
+
+    // Take interrupt.
+    push(core.flags);
     setFlag(IF, false);
     setFlag(TF, false);
-    push(static_cast<int>(core.cs));
-    push(static_cast<int>(core.ip));
-    core.ip = static_cast<Word>(getMem(W, type * 4) & 0xffff);
-    core.cs = static_cast<Word>(getMem(W, type * 4 + 2) & 0xffff);
+    push(core.cs);
+    push(core.ip);
+    core.ip = offset;
+    core.cs = seg;
 }
 
 //

@@ -99,6 +99,9 @@ private:
     // Execute one opcode (used by step and REP loop).
     void exe_one();
 
+    bool is_syscall(int type);
+    void process_syscall(int type);
+
 public:
     // Constructor.
     Processor(Machine &machine);
@@ -158,6 +161,7 @@ public:
     // Print trace info.
     void print_instruction();
     void print_registers();
+    void print_syscall(int type);
 };
 
 #endif // TILTTI_PROCESSOR_H

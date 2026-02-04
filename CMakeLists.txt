@@ -37,6 +37,7 @@ add_library(simulator STATIC
     disk.cpp
     trace.cpp
     processor.cpp
+    syscall.cpp
 )
 
 # Build executable file

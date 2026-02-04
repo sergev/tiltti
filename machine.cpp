@@ -71,19 +71,14 @@ Machine::~Machine()
 //
 void Machine::run()
 {
-    try {
-        trace_registers();
-        for (;;) {
-            after_call   = false;
-            after_return = false;
+    trace_registers();
+    for (;;) {
+        after_call   = false;
+        after_return = false;
 
-            cpu.step();
+        cpu.step();
 
-            simulated_instructions++;
-        }
-    } catch (std::exception &ex) {
-        std::cerr << "Error: " << ex.what() << std::endl;
-        throw std::runtime_error(ex.what());
+        simulated_instructions++;
     }
 }
 
