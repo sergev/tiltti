@@ -1259,82 +1259,99 @@ void Processor::exe_one()
         break;
     }
     // Conditional jumps (Jcc)
-    case 0x70:
+
+    case 0x70: // JO - Overflow
+    case 0x60: // Undocumented
         dst = signconv(B, getMem(B));
         if (getFlag(OF))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x71:
+    case 0x71: // JNO - No overflow
+    case 0x61: // Undocumented
         dst = signconv(B, getMem(B));
         if (!getFlag(OF))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x72:
+    case 0x72: // JB, JC, JNAE - Below / Carry
+    case 0x62: // Undocumented
         dst = signconv(B, getMem(B));
         if (getFlag(CF))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x73:
+    case 0x73: // JNB, JNC, JAE - Above or equal / No carry
+    case 0x63: // Undocumented
         dst = signconv(B, getMem(B));
         if (!getFlag(CF))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x74:
+    case 0x74: // JE, JZ - Equal / Zero
+    case 0x64: // Undocumented
         dst = signconv(B, getMem(B));
         if (getFlag(ZF))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x75:
+    case 0x75: // JNE, JNZ - Not equal / Not zero
+    case 0x65: // Undocumented
         dst = signconv(B, getMem(B));
         if (!getFlag(ZF))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x76:
+    case 0x76: // JBE, JNA - Below or equal
+    case 0x66: // Undocumented
         dst = signconv(B, getMem(B));
         if (getFlag(CF) || getFlag(ZF))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x77:
+    case 0x77: // JA, JNBE - Above
+    case 0x67: // Undocumented
         dst = signconv(B, getMem(B));
         if (!(getFlag(CF) || getFlag(ZF)))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x78:
+    case 0x78: // JS - Sign
+    case 0x68: // Undocumented
         dst = signconv(B, getMem(B));
         if (getFlag(SF))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x79:
+    case 0x79: // JNS - Not sign
+    case 0x69: // Undocumented
         dst = signconv(B, getMem(B));
         if (!getFlag(SF))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x7a:
+    case 0x7a: // JP, JPE - Parity even
+    case 0x6a: // Undocumented
         dst = signconv(B, getMem(B));
         if (getFlag(PF))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x7b:
+    case 0x7b: // JNP, JPO - Parity odd
+    case 0x6b: // Undocumented
         dst = signconv(B, getMem(B));
         if (!getFlag(PF))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x7c:
+    case 0x7c: // JL, JNGE - Less (signed)
+    case 0x6c: // Undocumented
         dst = signconv(B, getMem(B));
         if (getFlag(SF) != getFlag(OF))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x7d:
+    case 0x7d: // JGE, JNL - Greater or equal (signed)
+    case 0x6d: // Undocumented
         dst = signconv(B, getMem(B));
         if (getFlag(SF) == getFlag(OF))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x7e:
+    case 0x7e: // JLE, JNG - Less or equal (signed)
+    case 0x6e: // Undocumented
         dst = signconv(B, getMem(B));
         if (getFlag(ZF) || (getFlag(SF) != getFlag(OF)))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x7f:
+    case 0x7f: // JG, JNLE - Greater (signed)
+    case 0x6f: // Undocumented
         dst = signconv(B, getMem(B));
         if (!getFlag(ZF) && (getFlag(SF) == getFlag(OF)))
             core.ip = (core.ip + dst) & 0xffff;
@@ -1370,7 +1387,7 @@ void Processor::exe_one()
             core.ip = (core.ip + dst) & 0xffff;
         break;
     }
-    // --- INT, INTO, IRET: software interrupt and return ---
+    // INT3, INT, INTO: software interrupt
     case 0xcc:
         callInt(3);
         break;
@@ -1382,10 +1399,10 @@ void Processor::exe_one()
             callInt(4);
         }
         break;
-    case 0xcf: // IRET: pop IP, CS, FLAGS (8086 order)
-        core.ip    = static_cast<Word>(pop() & 0xffff);
-        core.cs    = static_cast<Word>(pop() & 0xffff);
-        core.flags = static_cast<Word>(pop() & 0xffff);
+    case 0xcf: // IRET: pop IP, CS, FLAGS
+        core.ip    = pop();
+        core.cs    = pop();
+        core.flags = pop();
         break;
     // Flag ops
     case 0xf8:

@@ -46,7 +46,6 @@ TEST_F(MachineTest, and_al_9Fh)
     EXPECT_EQ(memory.load8(0x6121F), 0x90);
 }
 
-
 TEST_F(MachineTest, and_ax_5E8Eh)
 {
     // Initial CPU State
@@ -90,7 +89,6 @@ TEST_F(MachineTest, and_ax_5E8Eh)
     EXPECT_EQ(memory.load8(0x6FE80), 0x90);
     EXPECT_EQ(memory.load8(0x6FE81), 0x90);
 }
-
 
 TEST_F(MachineTest, and_byte_ds_bp_di_41E5h_6Ah)
 {
@@ -137,7 +135,6 @@ TEST_F(MachineTest, and_byte_ds_bp_di_41E5h_6Ah)
     EXPECT_EQ(memory.load8(0xC8D53), 0x22);
 }
 
-
 TEST_F(MachineTest, and_byte_ss_bp_65h_90h)
 {
     // Initial CPU State
@@ -183,7 +180,6 @@ TEST_F(MachineTest, and_byte_ss_bp_65h_90h)
     EXPECT_EQ(memory.load8(0xD06CD), 0x90);
 }
 
-
 TEST_F(MachineTest, and_ch_dh)
 {
     // Initial CPU State
@@ -228,7 +224,6 @@ TEST_F(MachineTest, and_ch_dh)
     EXPECT_EQ(memory.load8(0x47791), 0x90);
 }
 
-
 TEST_F(MachineTest, and_dl_dh)
 {
     // Initial CPU State
@@ -271,7 +266,6 @@ TEST_F(MachineTest, and_dl_dh)
     EXPECT_EQ(memory.load8(0xB8921), 0x90);
 }
 
-
 TEST_F(MachineTest, and_si_sp)
 {
     // Initial CPU State
@@ -312,7 +306,6 @@ TEST_F(MachineTest, and_si_sp)
     EXPECT_EQ(memory.load8(0xA4D10), 0x90);
     EXPECT_EQ(memory.load8(0xA4D11), 0x90);
 }
-
 
 TEST_F(MachineTest, and_word_cs_bx_si_FFA4h)
 {
@@ -361,7 +354,6 @@ TEST_F(MachineTest, and_word_cs_bx_si_FFA4h)
     EXPECT_EQ(memory.load8(0xB00B4), 0x15);
 }
 
-
 TEST_F(MachineTest, and_word_ds_bx_si_634Ah)
 {
     // Initial CPU State
@@ -409,7 +401,6 @@ TEST_F(MachineTest, and_word_ds_bx_si_634Ah)
     EXPECT_EQ(memory.load8(0x57397), 0x22);
 }
 
-
 TEST_F(MachineTest, and_word_ss_di_41h_di)
 {
     // Initial CPU State
@@ -455,7 +446,6 @@ TEST_F(MachineTest, and_word_ss_di_41h_di)
     EXPECT_EQ(memory.load8(0xE2BEA), 0x04);
 }
 
-
 TEST_F(MachineTest, or_al_94h)
 {
     // Initial CPU State
@@ -499,7 +489,6 @@ TEST_F(MachineTest, or_al_94h)
     EXPECT_EQ(memory.load8(0xFEF0A), 0x90);
     EXPECT_EQ(memory.load8(0xFEF0B), 0x90);
 }
-
 
 TEST_F(MachineTest, or_ax_D6CDh)
 {
@@ -545,7 +534,6 @@ TEST_F(MachineTest, or_ax_D6CDh)
     EXPECT_EQ(memory.load8(0xAB2B7), 0x90);
 }
 
-
 TEST_F(MachineTest, or_bh_byte_cs_bp_78h)
 {
     // Initial CPU State
@@ -589,7 +577,6 @@ TEST_F(MachineTest, or_bh_byte_cs_bp_78h)
     EXPECT_EQ(memory.load8(0x38F67), 0x90);
     EXPECT_EQ(memory.load8(0x369C7), 0x0E);
 }
-
 
 TEST_F(MachineTest, or_byte_ds_bx_di_31B5h_Ah)
 {
@@ -636,7 +623,6 @@ TEST_F(MachineTest, or_byte_ds_bx_di_31B5h_Ah)
     EXPECT_EQ(memory.load8(0xC84BE), 0xBA);
 }
 
-
 TEST_F(MachineTest, or_byte_ss_bp_65h_90h)
 {
     // Initial CPU State
@@ -682,7 +668,6 @@ TEST_F(MachineTest, or_byte_ss_bp_65h_90h)
     EXPECT_EQ(memory.load8(0xD06CD), 0xF0);
 }
 
-
 TEST_F(MachineTest, or_cl_ah)
 {
     // Initial CPU State
@@ -727,7 +712,6 @@ TEST_F(MachineTest, or_cl_ah)
     EXPECT_EQ(memory.load8(0xAAF37), 0x90);
 }
 
-
 TEST_F(MachineTest, or_di_bp)
 {
     // Initial CPU State
@@ -771,7 +755,6 @@ TEST_F(MachineTest, or_di_bp)
     EXPECT_EQ(memory.load8(0x02158), 0x90);
     EXPECT_EQ(memory.load8(0x02159), 0x90);
 }
-
 
 TEST_F(MachineTest, or_di_word_ds_si)
 {
@@ -818,7 +801,6 @@ TEST_F(MachineTest, or_di_word_ds_si)
     EXPECT_EQ(memory.load8(0x529EB), 0x8A);
     EXPECT_EQ(memory.load8(0x529EC), 0xF4);
 }
-
 
 TEST_F(MachineTest, or_word_ds_bx_si_47C4h_4h)
 {
@@ -867,7 +849,6 @@ TEST_F(MachineTest, or_word_ds_bx_si_47C4h_4h)
     EXPECT_EQ(memory.load8(0x2F745), 0x00);
 }
 
-
 TEST_F(MachineTest, or_word_ss_bp_si_629Ch_5531h)
 {
     // Initial CPU State
@@ -915,7 +896,6 @@ TEST_F(MachineTest, or_word_ss_bp_si_629Ch_5531h)
     EXPECT_EQ(memory.load8(0x0F57B), 0x55);
 }
 
-
 TEST_F(MachineTest, xor_ah_20h)
 {
     // Initial CPU State
@@ -957,7 +937,6 @@ TEST_F(MachineTest, xor_ah_20h)
     EXPECT_EQ(memory.load8(0x38F66), 0x90);
     EXPECT_EQ(memory.load8(0x38F67), 0x90);
 }
-
 
 TEST_F(MachineTest, xor_al_Ah)
 {
@@ -1003,7 +982,6 @@ TEST_F(MachineTest, xor_al_Ah)
     EXPECT_EQ(memory.load8(0xB7065), 0x90);
 }
 
-
 TEST_F(MachineTest, xor_ax_FF76h)
 {
     // Initial CPU State
@@ -1047,7 +1025,6 @@ TEST_F(MachineTest, xor_ax_FF76h)
     EXPECT_EQ(memory.load8(0xF43FC), 0x90);
     EXPECT_EQ(memory.load8(0xF43FD), 0x90);
 }
-
 
 TEST_F(MachineTest, xor_bl_25h)
 {
@@ -1093,7 +1070,6 @@ TEST_F(MachineTest, xor_bl_25h)
     EXPECT_EQ(memory.load8(0xCE56F), 0x90);
 }
 
-
 TEST_F(MachineTest, xor_bp_bx)
 {
     // Initial CPU State
@@ -1135,7 +1111,6 @@ TEST_F(MachineTest, xor_bp_bx)
     EXPECT_EQ(memory.load8(0xB278A), 0x90);
     EXPECT_EQ(memory.load8(0xB278B), 0x90);
 }
-
 
 TEST_F(MachineTest, xor_byte_ss_bp_si_Fh_bh)
 {
@@ -1182,7 +1157,6 @@ TEST_F(MachineTest, xor_byte_ss_bp_si_Fh_bh)
     EXPECT_EQ(memory.load8(0x4A259), 0xD9);
 }
 
-
 TEST_F(MachineTest, xor_dl_byte_ss_bp_si_1h)
 {
     // Initial CPU State
@@ -1226,7 +1200,6 @@ TEST_F(MachineTest, xor_dl_byte_ss_bp_si_1h)
     EXPECT_EQ(memory.load8(0x3732F), 0x90);
     EXPECT_EQ(memory.load8(0x51668), 0x4B);
 }
-
 
 TEST_F(MachineTest, xor_word_ds_bx_di_63h_bp)
 {
@@ -1275,7 +1248,6 @@ TEST_F(MachineTest, xor_word_ds_bx_di_63h_bp)
     EXPECT_EQ(memory.load8(0x4E07D), 0x72);
 }
 
-
 TEST_F(MachineTest, xor_word_ds_si_6C5Eh_7645h)
 {
     // Initial CPU State
@@ -1322,7 +1294,6 @@ TEST_F(MachineTest, xor_word_ds_si_6C5Eh_7645h)
     EXPECT_EQ(memory.load8(0x5ABB3), 0x78);
     EXPECT_EQ(memory.load8(0x5ABB4), 0x2A);
 }
-
 
 TEST_F(MachineTest, xor_word_ss_bp_F0Eh_FFD8h)
 {

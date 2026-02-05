@@ -48,7 +48,6 @@ TEST_F(MachineTest, div_byte_ds_bx)
     EXPECT_EQ(memory.load8(0x58F14), 0x82);
 }
 
-
 TEST_F(MachineTest, div_word_ds_si_39h)
 {
     // Initial CPU State
@@ -97,7 +96,6 @@ TEST_F(MachineTest, div_word_ds_si_39h)
     EXPECT_EQ(memory.load8(0x4AE17), 0x12);
     EXPECT_EQ(memory.load8(0x4AE18), 0xC2);
 }
-
 
 TEST_F(MachineTest, idiv_byte_ds_bx_si_5AD8h)
 {
@@ -159,7 +157,6 @@ TEST_F(MachineTest, idiv_byte_ds_bx_si_5AD8h)
     EXPECT_EQ(memory.load8(0xC9A0F), 0x41);
     EXPECT_EQ(memory.load8(0xC9A10), 0x12);
 }
-
 
 TEST_F(MachineTest, idiv_word_ss_bp_di)
 {
@@ -224,7 +221,6 @@ TEST_F(MachineTest, idiv_word_ss_bp_di)
     EXPECT_EQ(memory.load8(0x4D051), 0x45);
 }
 
-
 TEST_F(MachineTest, imul_byte_es_bp_si_2Eh)
 {
     // Initial CPU State
@@ -268,7 +264,6 @@ TEST_F(MachineTest, imul_byte_es_bp_si_2Eh)
     EXPECT_EQ(memory.load8(0x1A80B), 0x90);
     EXPECT_EQ(memory.load8(0x34E26), 0x00);
 }
-
 
 TEST_F(MachineTest, imul_word_cs_si)
 {
@@ -319,7 +314,6 @@ TEST_F(MachineTest, imul_word_cs_si)
     EXPECT_EQ(memory.load8(0xE6132), 0x5E);
 }
 
-
 TEST_F(MachineTest, mul_byte_ss_bp_di_79h)
 {
     // Initial CPU State
@@ -364,7 +358,6 @@ TEST_F(MachineTest, mul_byte_ss_bp_di_79h)
     EXPECT_EQ(memory.load8(0x3BBA1), 0x90);
     EXPECT_EQ(memory.load8(0xEDA00), 0xBC);
 }
-
 
 TEST_F(MachineTest, mul_word_es_bp_di_75h)
 {
@@ -414,7 +407,6 @@ TEST_F(MachineTest, mul_word_es_bp_di_75h)
     EXPECT_EQ(memory.load8(0x5191E), 0x00);
 }
 
-
 TEST_F(MachineTest, neg_ah)
 {
     // Initial CPU State
@@ -456,7 +448,6 @@ TEST_F(MachineTest, neg_ah)
     EXPECT_EQ(memory.load8(0x6E9B0), 0x90);
     EXPECT_EQ(memory.load8(0x6E9B1), 0x90);
 }
-
 
 TEST_F(MachineTest, neg_word_ds_si_3h)
 {
@@ -505,7 +496,6 @@ TEST_F(MachineTest, neg_word_ds_si_3h)
     EXPECT_EQ(memory.load8(0x9BEBD), 0x68);
 }
 
-
 TEST_F(MachineTest, not_byte_ds_bx_di_26h)
 {
     // Initial CPU State
@@ -549,7 +539,6 @@ TEST_F(MachineTest, not_byte_ds_bx_di_26h)
     EXPECT_EQ(memory.load8(0xEC1D1), 0x90);
     EXPECT_EQ(memory.load8(0x341FA), 0xEC);
 }
-
 
 TEST_F(MachineTest, not_word_ss_bp_Eh)
 {
