@@ -36,6 +36,9 @@
 
 class Machine {
 private:
+    // Protect the Upper Memory Area.
+    bool mode_640k{};
+
     // Disks and floppies.
     std::array<std::unique_ptr<Disk>, NDISKS> disks;
 

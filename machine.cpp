@@ -87,7 +87,7 @@ void Machine::run()
 //
 Byte Machine::mem_fetch_byte(unsigned addr)
 {
-    if (addr >= 0xa0000) {
+    if (mode_640k && addr >= 0xa0000) {
         throw std::runtime_error("Jump to Upper Memory Area");
     }
     Byte val = memory.load8(addr);
@@ -254,6 +254,9 @@ void Machine::disk_mount(unsigned disk_unit, const std::string &path, bool write
 //
 void Machine::boot_disk(const std::string &filename)
 {
+    // Enable Upper Memory Area.
+    mode_640k = true;
+
     // Attach image as floppy A.
     disk_mount(FLOPPY_A, filename, true);
 

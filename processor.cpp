@@ -495,6 +495,7 @@ void Processor::logic(int width, int res)
 {
     setFlag(CF, false);
     setFlag(OF, false);
+    setFlag(AF, false); // undefined per Intel; real 8086 clears it
     setFlags(width, res);
 }
 
