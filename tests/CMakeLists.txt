@@ -23,7 +23,25 @@ add_definitions(-DBUILD_DIR="${CMAKE_BINARY_DIR}")
 set(TEST_SOURCES
     fixture.cpp
     machine_test.cpp
-    cpu_test.cpp
+    add_adc_test.cpp
+    and_or_xor_test.cpp
+    call_ret_test.cpp
+    cmp_test_test.cpp
+    esc_test.cpp
+    in_out_test.cpp
+    inc_dec_test.cpp
+    int_test.cpp
+    jump_cond_test.cpp
+    jump_loop_test.cpp
+    misc_test.cpp
+    mov_test.cpp
+    mul_div_neg_not_test.cpp
+    pop_test.cpp
+    push_test.cpp
+    shift_rotate_test.cpp
+    string_test.cpp
+    sub_sbb_test.cpp
+    xchg_test.cpp
 )
 
 #
