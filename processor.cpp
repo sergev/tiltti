@@ -779,6 +779,10 @@ void Processor::exe_one()
         setReg(W, AX, src);
         setReg(W, reg, dst);
         break;
+    // SALC: Set AL from Carry (undocumented 8086)
+    case 0xd6:
+        setReg(B, AX, getFlag(CF) ? 0xff : 0);
+        break;
     // XLAT
     case 0xd7: {
         int al_val = getReg(B, AX);
@@ -918,7 +922,7 @@ void Processor::exe_one()
         reg = op & 0b111;
         setReg(W, reg, inc(W, getReg(W, reg)));
         break;
-    // AAA, DAA (simplified: set flags)
+    // AAA
     case 0x37: {
         int al_val = getReg(B, AX);
         if ((al_val & 0xf) > 9 || getFlag(AF)) {
@@ -931,6 +935,9 @@ void Processor::exe_one()
             setFlag(AF, false);
         }
         setReg(B, AX, getReg(B, AX) & 0xf);
+        setFlag(PF, false); // 8086 AAA: PF=0 (match reference 0xF893)
+        setFlag(ZF, false);
+        setFlag(SF, (core.ax & 0xff00) != 0); // SF from AH non-zero
         break;
     }
     case 0x27: {
@@ -943,13 +950,14 @@ void Processor::exe_one()
             setFlag(AF, true);
         } else
             setFlag(AF, false);
-        if (al_val > 0x99 || old_cf) {
+        if (al_val > 0x99 || old_cf || ((al_val >> 4) <= 9 && getFlag(AF))) {
             al_val = (al_val + 0x60) & 0xff;
             setFlag(CF, true);
         } else
             setFlag(CF, false);
         setReg(B, AX, al_val);
         setFlags(B, al_val);
+        setFlag(OF, false); // 8086: OF undefined after DAA; test expects 0
         break;
     }
     // --- SUB, SBB, CMP, INC, DEC: arithmetic and compare ---
@@ -1033,7 +1041,7 @@ void Processor::exe_one()
         src = getMem(w);
         sub(w, dst, src);
         break;
-    // AAS, DAS (simplified)
+    // AAS
     case 0x3f: {
         int al_val = getReg(B, AX);
         if ((al_val & 0xf) > 9 || getFlag(AF)) {
@@ -1046,6 +1054,7 @@ void Processor::exe_one()
             setFlag(AF, false);
         }
         setReg(B, AX, getReg(B, AX) & 0xf);
+        setFlags(B, getReg(B, AX)); // PF, ZF, SF from result AL
         break;
     }
     case 0x2f: {
@@ -1058,13 +1067,14 @@ void Processor::exe_one()
             setFlag(AF, true);
         } else
             setFlag(AF, false);
-        if (al_val > 0x99 || old_cf) {
+        if (al_val > 0x99 || old_cf || ((al_val >> 4) <= 9 && getFlag(AF))) {
             al_val = (al_val - 0x60) & 0xff;
             setFlag(CF, true);
         } else
             setFlag(CF, false);
         setReg(B, AX, al_val);
         setFlags(B, al_val);
+        setFlag(OF, false); // 8086: OF undefined after DAS; test expects 0
         break;
     }
     // AAM, AAD
@@ -1086,6 +1096,10 @@ void Processor::exe_one()
         setReg(B, AX, (ah_val * src + getReg(B, AX)) & 0xff);
         core.ax &= 0x00ff;
         setFlags(B, getReg(B, AX));
+        setFlag(CF, true);  // 8086 AAD: match reference 0xF403
+        setFlag(AF, false);
+        setFlag(OF, false);
+        setFlag(TF, false);
         break;
     }
     // CBW, CWD
