@@ -168,8 +168,8 @@ void Machine::port_out_byte(unsigned port, Byte val)
 //
 Byte Machine::port_in_byte(unsigned port)
 {
-    // TODO: implement port_in
-    Word val = 0;
+    // Unimplemented ports return 0xFF (floating bus / typical PC behavior).
+    const Byte val = 0xff;
     if (debug_all) {
         print_byte_access(port, val, "Port In");
     }
@@ -192,8 +192,8 @@ void Machine::port_out_word(unsigned port, Word val)
 //
 Word Machine::port_in_word(unsigned port)
 {
-    // TODO: implement port_in
-    Word val = 0;
+    // Unimplemented ports return 0xFFFF (floating bus / typical PC behavior).
+    const Word val = 0xffff;
     if (debug_all) {
         print_word_access(port, val, "Inport");
     }

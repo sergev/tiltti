@@ -1388,10 +1388,10 @@ void Processor::exe_one()
             callInt(4);
         }
         break;
-    case 0xcf:
-        core.flags = static_cast<Word>(pop() & 0xffff);
-        core.cs    = static_cast<Word>(pop() & 0xffff);
+    case 0xcf: // IRET: pop IP, CS, FLAGS (8086 order)
         core.ip    = static_cast<Word>(pop() & 0xffff);
+        core.cs    = static_cast<Word>(pop() & 0xffff);
+        core.flags = static_cast<Word>(pop() & 0xffff);
         break;
     // Flag ops
     case 0xf8:
@@ -1453,7 +1453,7 @@ void Processor::exe_one()
             setRM(w, mod, rm, res);
             break;
         case 1:
-            if (op == 0x80 || op == 0x81) {
+            if (op == 0x80 || op == 0x81 || op == 0x82 || op == 0x83) {
                 res = dst | src;
                 logic(w, res);
                 setRM(w, mod, rm, res);
@@ -1468,7 +1468,7 @@ void Processor::exe_one()
             setRM(w, mod, rm, res);
             break;
         case 4:
-            if (op == 0x80 || op == 0x81) {
+            if (op == 0x80 || op == 0x81 || op == 0x82 || op == 0x83) {
                 res = dst & src;
                 logic(w, res);
                 setRM(w, mod, rm, res);
@@ -1479,7 +1479,7 @@ void Processor::exe_one()
             setRM(w, mod, rm, res);
             break;
         case 6:
-            if (op == 0x80 || op == 0x81) {
+            if (op == 0x80 || op == 0x81 || op == 0x82 || op == 0x83) {
                 res = dst ^ src;
                 logic(w, res);
                 setRM(w, mod, rm, res);
