@@ -1,0 +1,6 @@
+*.MOO
+*.gz
+moo-booth
+build
+*.h-
+*.cpp-
