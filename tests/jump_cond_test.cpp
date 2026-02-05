@@ -3,6 +3,10 @@
 //
 // jb 0011h
 //
+// Wrong instruction bytes in test!
+// Memory at the instruction address is 62 0F (BOUND) instead of 72 11 (JB short).
+//
+#if 0
 TEST_F(MachineTest, jb_0011h)
 {
     // Initial CPU State
@@ -23,7 +27,7 @@ TEST_F(MachineTest, jb_0011h)
     machine.trace_registers();
 
     // Initial RAM entries
-    machine.mem_store_byte(0x3F81B, 0x62);
+    machine.mem_store_byte(0x3F81B, 0x62); // wrong!
     machine.mem_store_byte(0x3F81C, 0x0F);
     machine.mem_store_byte(0x3F81D, 0x90);
     machine.mem_store_byte(0x3F81E, 0x90);
@@ -36,6 +40,7 @@ TEST_F(MachineTest, jb_0011h)
 
     // Final RAM entries
 }
+#endif
 
 //
 // jb 0047h
