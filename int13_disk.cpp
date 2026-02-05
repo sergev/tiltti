@@ -21,23 +21,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "machine.h"
-#include "pc86_arch.h"
-
 #include <cstdint>
 #include <iomanip>
 #include <sstream>
+
+#include "machine.h"
+#include "pc86_arch.h"
 
 //
 // Read DAP at DS:SI from memory.
 // DAP layout: size(u8), reserved(u8), count(u16), buffer_off(u16), buffer_seg(u16), lba(u64).
 //
-void Machine::read_dap(unsigned addr, unsigned &count, Word &buf_seg, Word &buf_off, uint64_t &lba) const
+void Machine::read_dap(unsigned addr, unsigned &count, Word &buf_seg, Word &buf_off,
+                       uint64_t &lba) const
 {
-    count = memory.load16(addr + 2);
+    count   = memory.load16(addr + 2);
     buf_off = memory.load16(addr + 4);
     buf_seg = memory.load16(addr + 6);
-    lba = memory.load32(addr + 8) | ((uint64_t)memory.load32(addr + 12) << 32);
+    lba     = memory.load32(addr + 8) | ((uint64_t)memory.load32(addr + 12) << 32);
 }
 
 //
@@ -129,14 +130,14 @@ void Machine::handle_int13_disk()
             auto &out = Machine::get_trace_stream();
             auto save = out.flags();
 
-            out << "----- AH=" << std::hex << std::setfill('0') << std::setw(2) << (unsigned)cpu.get_ah()
-                << "h Unknown request" << std::endl;
-            out << "      AH=0x" << std::setw(2) << (unsigned)cpu.get_ah()
-                << " DL=0x" << std::setw(2) << (unsigned)cpu.get_dl()
-                << " CX=0x" << std::setw(4) << cpu.get_cx()
-                << " DX=0x" << std::setw(4) << cpu.get_dx()
-                << " DS:SI=0x" << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si()
-                << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx() << std::endl;
+            out << "----- AH=" << std::hex << std::setfill('0') << std::setw(2)
+                << (unsigned)cpu.get_ah() << "h Unknown request" << std::endl;
+            out << "      AH=0x" << std::setw(2) << (unsigned)cpu.get_ah() << " DL=0x"
+                << std::setw(2) << (unsigned)cpu.get_dl() << " CX=0x" << std::setw(4)
+                << cpu.get_cx() << " DX=0x" << std::setw(4) << cpu.get_dx() << " DS:SI=0x"
+                << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si()
+                << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4)
+                << cpu.get_bx() << std::endl;
             out.flags(save);
         }
         throw std::runtime_error("Unimplemented disk request");
@@ -150,7 +151,8 @@ void Machine::int13_reset_disk_system()
         auto save = out.flags();
 
         out << "----- AH=00h Reset disk system" << std::endl;
-        out << "      DL=0x" << std::hex << std::setfill('0') << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out << "      DL=0x" << std::hex << std::setfill('0') << std::setw(2)
+            << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
         out.flags(save);
     }
     throw std::runtime_error("Unimplemented: Reset disk system");
@@ -180,10 +182,10 @@ void Machine::int13_read_sectors()
         auto save = out.flags();
 
         out << "----- AH=02h Read sectors (CHS)" << std::endl;
-        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl()
-            << " AL=0x" << std::setw(2) << (unsigned)cpu.get_al()
-            << " (count) CHS=" << cylinder << "/" << head << "/" << sector
-            << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx() << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
+            << (unsigned)cpu.get_al() << " (count) CHS=" << cylinder << "/" << head << "/" << sector
+            << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx()
+            << std::endl;
         out.flags(save);
     }
     throw std::runtime_error("Unimplemented: Read sectors (CHS)");
@@ -202,7 +204,8 @@ void Machine::int13_write_sectors()
         out << "----- AH=03h Write sectors (CHS)" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
             << (unsigned)cpu.get_al() << " (count) CHS=" << cylinder << "/" << head << "/" << sector
-            << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx() << std::endl;
+            << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx()
+            << std::endl;
         out.flags(save);
     }
     throw std::runtime_error("Unimplemented: Write sectors (CHS)");
@@ -220,7 +223,8 @@ void Machine::int13_verify_sectors()
 
         out << "----- AH=04h Verify sectors (CHS)" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
-            << (unsigned)cpu.get_al() << " CHS=" << cylinder << "/" << head << "/" << sector << std::endl;
+            << (unsigned)cpu.get_al() << " CHS=" << cylinder << "/" << head << "/" << sector
+            << std::endl;
         out.flags(save);
     }
     throw std::runtime_error("Unimplemented: Verify sectors (CHS)");
@@ -234,9 +238,10 @@ void Machine::int13_format_track()
 
         out << "----- AH=05h Format track" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
-            << (unsigned)cpu.get_al() << " (sectors/track) CH=0x" << std::setw(2) << (unsigned)cpu.get_ch()
-            << " DH=0x" << std::setw(2) << (unsigned)cpu.get_dh() << " ES:BX=0x" << std::setw(4) << cpu.get_es()
-            << ":0x" << std::setw(4) << cpu.get_bx() << std::endl;
+            << (unsigned)cpu.get_al() << " (sectors/track) CH=0x" << std::setw(2)
+            << (unsigned)cpu.get_ch() << " DH=0x" << std::setw(2) << (unsigned)cpu.get_dh()
+            << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx()
+            << std::endl;
         out.flags(save);
     }
     throw std::runtime_error("Unimplemented: Format track");
@@ -378,8 +383,8 @@ void Machine::int13_edd_installation_check()
 void Machine::int13_extended_read()
 {
     if (Machine::trace_enabled()) {
-        auto &out = Machine::get_trace_stream();
-        auto save = out.flags();
+        auto &out     = Machine::get_trace_stream();
+        auto save     = out.flags();
         unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
         unsigned count;
         Word buf_seg, buf_off;
@@ -387,10 +392,10 @@ void Machine::int13_extended_read()
 
         read_dap(addr, count, buf_seg, buf_off, lba);
         out << "----- AH=42h Extended read (LBA)" << std::endl;
-        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x" << std::setw(4) << cpu.get_ds()
-            << ":0x" << std::setw(4) << cpu.get_si() << " count=" << count << " buffer=0x" << std::setw(4)
-            << buf_seg << ":0x" << std::setw(4) << buf_off << " LBA=0x" << std::setw(16) << lba
-            << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x"
+            << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si()
+            << " count=" << count << " buffer=0x" << std::setw(4) << buf_seg << ":0x"
+            << std::setw(4) << buf_off << " LBA=0x" << std::setw(16) << lba << std::endl;
         out.flags(save);
     }
     throw std::runtime_error("Unimplemented: Extended read (LBA)");
@@ -399,8 +404,8 @@ void Machine::int13_extended_read()
 void Machine::int13_extended_write()
 {
     if (Machine::trace_enabled()) {
-        auto &out = Machine::get_trace_stream();
-        auto save = out.flags();
+        auto &out     = Machine::get_trace_stream();
+        auto save     = out.flags();
         unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
         unsigned count;
         Word buf_seg, buf_off;
@@ -408,10 +413,10 @@ void Machine::int13_extended_write()
 
         read_dap(addr, count, buf_seg, buf_off, lba);
         out << "----- AH=43h Extended write (LBA)" << std::endl;
-        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x" << std::setw(4) << cpu.get_ds()
-            << ":0x" << std::setw(4) << cpu.get_si() << " count=" << count << " buffer=0x" << std::setw(4)
-            << buf_seg << ":0x" << std::setw(4) << buf_off << " LBA=0x" << std::setw(16) << lba
-            << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x"
+            << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si()
+            << " count=" << count << " buffer=0x" << std::setw(4) << buf_seg << ":0x"
+            << std::setw(4) << buf_off << " LBA=0x" << std::setw(16) << lba << std::endl;
         out.flags(save);
     }
     throw std::runtime_error("Unimplemented: Extended write (LBA)");
@@ -420,8 +425,8 @@ void Machine::int13_extended_write()
 void Machine::int13_extended_verify()
 {
     if (Machine::trace_enabled()) {
-        auto &out = Machine::get_trace_stream();
-        auto save = out.flags();
+        auto &out     = Machine::get_trace_stream();
+        auto save     = out.flags();
         unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
         unsigned count;
         Word buf_seg, buf_off;
@@ -429,9 +434,9 @@ void Machine::int13_extended_verify()
 
         read_dap(addr, count, buf_seg, buf_off, lba);
         out << "----- AH=44h Extended verify (LBA)" << std::endl;
-        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x" << std::setw(4) << cpu.get_ds()
-            << ":0x" << std::setw(4) << cpu.get_si() << " count=" << count << " LBA=0x" << std::setw(16)
-            << lba << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x"
+            << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si()
+            << " count=" << count << " LBA=0x" << std::setw(16) << lba << std::endl;
         out.flags(save);
     }
     throw std::runtime_error("Unimplemented: Extended verify (LBA)");
@@ -467,8 +472,8 @@ void Machine::int13_eject_media()
 void Machine::int13_extended_seek()
 {
     if (Machine::trace_enabled()) {
-        auto &out = Machine::get_trace_stream();
-        auto save = out.flags();
+        auto &out     = Machine::get_trace_stream();
+        auto save     = out.flags();
         unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
         unsigned count;
         Word buf_seg, buf_off;
@@ -476,8 +481,9 @@ void Machine::int13_extended_seek()
 
         read_dap(addr, count, buf_seg, buf_off, lba);
         out << "----- AH=47h Extended seek (LBA)" << std::endl;
-        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x" << std::setw(4) << cpu.get_ds()
-            << ":0x" << std::setw(4) << cpu.get_si() << " LBA=0x" << std::setw(16) << lba << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x"
+            << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si() << " LBA=0x"
+            << std::setw(16) << lba << std::endl;
         out.flags(save);
     }
     throw std::runtime_error("Unimplemented: Extended seek (LBA)");
@@ -490,8 +496,9 @@ void Machine::int13_get_edd_parameters()
         auto save = out.flags();
 
         out << "----- AH=48h Get drive parameters (EDD)" << std::endl;
-        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x" << std::setw(4) << cpu.get_ds()
-            << ":0x" << std::setw(4) << cpu.get_si() << " (buffer)" << std::endl;
+        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x"
+            << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si() << " (buffer)"
+            << std::endl;
         out.flags(save);
     }
     throw std::runtime_error("Unimplemented: Get drive parameters (EDD)");
@@ -517,8 +524,9 @@ void Machine::int13_el_torito_cd_emulation()
         auto save = out.flags();
 
         out << "----- AH=4Bh El Torito CD emulation" << std::endl;
-        out << "      AL=0x" << std::setw(2) << (unsigned)cpu.get_al() << " DS:SI=0x" << std::setw(4) << cpu.get_ds()
-            << ":0x" << std::setw(4) << cpu.get_si() << " (packet)" << std::endl;
+        out << "      AL=0x" << std::setw(2) << (unsigned)cpu.get_al() << " DS:SI=0x"
+            << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si() << " (packet)"
+            << std::endl;
         out.flags(save);
     }
     throw std::runtime_error("Unimplemented: El Torito CD emulation");

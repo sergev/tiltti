@@ -21,11 +21,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
+#include <capstone/capstone.h>
+
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-#include <capstone/capstone.h>
 
 #include "machine.h"
 
@@ -155,8 +156,7 @@ void Machine::print_byte_access(unsigned addr, Byte val, const char *opname)
     auto &out       = Machine::get_trace_stream();
     auto save_flags = out.flags();
 
-    out << "      " << opname << " [" << std::hex << std::setw(5)
-        << addr << "] = ";
+    out << "      " << opname << " [" << std::hex << std::setw(5) << addr << "] = ";
     out << (unsigned)val << std::endl;
 
     // Restore.
@@ -168,8 +168,7 @@ void Machine::print_word_access(unsigned addr, Word val, const char *opname)
     auto &out       = Machine::get_trace_stream();
     auto save_flags = out.flags();
 
-    out << "      " << opname << " [" << std::hex << std::setw(5)
-        << addr << "] = ";
+    out << "      " << opname << " [" << std::hex << std::setw(5) << addr << "] = ";
     out << val << std::endl;
 
     // Restore.

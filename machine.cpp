@@ -43,12 +43,11 @@ uint64_t Machine::simulated_instructions = 0;
 //
 // Initialize the machine.
 //
-Machine::Machine(Memory &m) : memory(m), cpu(*this),
-    ivt(*(Interrupt_Vector_Table*) memory.get_ptr(0x0)),
-    bda(*(Bios_Data_Area*) memory.get_ptr(0x400)),
-    ebda(*(Extended_Bios_Data_Area*) memory.get_ptr(0x9fc00)),
-    bios(memory.get_ptr(0xf0000)),
-    diskette_param_table2(*(Floppy_Extended_Disk_Base_Table*) bios)
+Machine::Machine(Memory &m)
+    : memory(m), cpu(*this), ivt(*(Interrupt_Vector_Table *)memory.get_ptr(0x0)),
+      bda(*(Bios_Data_Area *)memory.get_ptr(0x400)),
+      ebda(*(Extended_Bios_Data_Area *)memory.get_ptr(0x9fc00)), bios(memory.get_ptr(0xf0000)),
+      diskette_param_table2(*(Floppy_Extended_Disk_Base_Table *)bios)
 {
     // Set pointer to EBDA.
     bda.ebda_seg = 0x9fc00 >> 4;
@@ -158,7 +157,7 @@ Word Machine::mem_load_word(unsigned addr)
 //
 void Machine::port_out_byte(unsigned port, Byte val)
 {
-    //TODO: implement port_out
+    // TODO: implement port_out
     if (debug_all) {
         print_byte_access(port, val, "Port Out");
     }
@@ -169,7 +168,7 @@ void Machine::port_out_byte(unsigned port, Byte val)
 //
 Byte Machine::port_in_byte(unsigned port)
 {
-    //TODO: implement port_in
+    // TODO: implement port_in
     Word val = 0;
     if (debug_all) {
         print_byte_access(port, val, "Port In");
@@ -182,7 +181,7 @@ Byte Machine::port_in_byte(unsigned port)
 //
 void Machine::port_out_word(unsigned port, Word val)
 {
-    //TODO: implement port_out
+    // TODO: implement port_out
     if (debug_all) {
         print_word_access(port, val, "Outport");
     }
@@ -193,7 +192,7 @@ void Machine::port_out_word(unsigned port, Word val)
 //
 Word Machine::port_in_word(unsigned port)
 {
-    //TODO: implement port_in
+    // TODO: implement port_in
     Word val = 0;
     if (debug_all) {
         print_word_access(port, val, "Inport");

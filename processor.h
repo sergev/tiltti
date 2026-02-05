@@ -59,13 +59,14 @@ private:
 
     // Current opcode being executed.
     std::vector<Byte> opcode{};
-    unsigned plen{};  // prefix length
+    unsigned plen{}; // prefix length
 
     // Decode state (internal to step()).
     unsigned op{}, d{}, w{}, mod{}, reg{}, rm{};
     int ea{ -1 };   // effective address cache
     unsigned rep{}; // 0=none, 1=REP/REPE/REPZ, 2=REPNE/REPNZ
-    Word os{};      // segment override (default DS)
+    bool segment_override{};
+    Word os{}; // segment override (default DS)
 
     // Helpers: effective address, register/memory access, stack, ALU, flags.
     unsigned getAddr(Word seg, Word off) const;

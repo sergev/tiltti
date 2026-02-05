@@ -69,18 +69,19 @@ Processor::Processor(Machine &mach) : machine(mach)
 //
 void Processor::reset()
 {
-    core       = {};
-    core.ip    = 0x0000;
-    core.cs    = 0xffff;
-    core.ds    = 0x0000;
-    core.ss    = 0x0000;
-    core.es    = 0x0000;
-    core.flags = 0;
-    opcode     = {};
-    plen       = 0;
-    rep        = 0;
-    os         = core.ds;
-    ea         = -1;
+    core             = {};
+    core.ip          = 0x0000;
+    core.cs          = 0xffff;
+    core.ds          = 0x0000;
+    core.ss          = 0x0000;
+    core.es          = 0x0000;
+    core.flags       = 0;
+    opcode           = {};
+    plen             = 0;
+    rep              = 0;
+    segment_override = false;
+    os               = core.ds;
+    ea               = -1;
 
     // Show initial state.
     machine.trace_exception("Reset");
@@ -102,10 +103,10 @@ unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
 {
     int disp = 0;
     if (mod_val == 0b01) {
-        disp = static_cast<signed char>(opcode[plen+2]);
+        disp = static_cast<signed char>(opcode[plen + 2]);
     } else if (mod_val == 0b10) {
-        disp = static_cast<int>(static_cast<unsigned>(opcode[plen+2]) |
-                                (static_cast<unsigned>(opcode[plen+3]) << 8));
+        disp = static_cast<int>(static_cast<unsigned>(opcode[plen + 2]) |
+                                (static_cast<unsigned>(opcode[plen + 3]) << 8));
     }
     int ea_val = 0;
     switch (rm_val) {
@@ -129,7 +130,8 @@ unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
         break;
     case 0b110:
         if (mod_val == 0b00)
-            ea_val = static_cast<unsigned>(opcode[plen+2]) | (static_cast<unsigned>(opcode[plen+3]) << 8);
+            ea_val = static_cast<unsigned>(opcode[plen + 2]) |
+                     (static_cast<unsigned>(opcode[plen + 3]) << 8);
         else
             ea_val = (core.bp + disp) & 0xffff;
         break;
@@ -363,15 +365,18 @@ void Processor::setSegReg(unsigned r, Word val)
 //
 void Processor::decode()
 {
-    mod = (opcode[plen+1] >> 6) & 0b11;
-    reg = (opcode[plen+1] >> 3) & 0b111;
-    rm  = opcode[plen+1] & 0b111;
+    mod = (opcode[plen + 1] >> 6) & 0b11;
+    reg = (opcode[plen + 1] >> 3) & 0b111;
+    rm  = opcode[plen + 1] & 0b111;
     if (mod == 0b01)
         core.ip = (core.ip + 2) & 0xffff;
     else if ((mod == 0b00 && rm == 0b110) || mod == 0b10)
         core.ip = (core.ip + 3) & 0xffff;
     else
         core.ip = (core.ip + 1) & 0xffff;
+    // Default segment: use SS when effective address uses BP (no segment override).
+    if (!segment_override && mod != 0b11 && (rm == 2 || rm == 3 || (rm == 6 && mod != 0)))
+        os = core.ss;
 }
 
 //
@@ -547,25 +552,30 @@ bool Processor::msb(int width, int x)
 void Processor::step()
 {
     // Consume segment override and REP prefix bytes; set default segment and repetition mode.
-    os     = core.ds;
-    rep    = 0;
-    opcode = {};
-    plen   = 0;
+    os               = core.ds;
+    segment_override = false;
+    rep              = 0;
+    opcode           = {};
+    plen             = 0;
     for (;;) {
         unsigned addr = getAddr(core.cs, core.ip);
         Byte prefix   = machine.mem_fetch_byte(addr);
         switch (prefix) {
         case 0x26:
-            os = core.es;
+            segment_override = true;
+            os               = core.es;
             break;
         case 0x2e:
-            os = core.cs;
+            segment_override = true;
+            os               = core.cs;
             break;
         case 0x36:
-            os = core.ss;
+            segment_override = true;
+            os               = core.ss;
             break;
         case 0x3e:
-            os = core.ds;
+            segment_override = true;
+            os               = core.ds;
             break;
         case 0xf2:
             rep = 2;

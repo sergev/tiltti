@@ -29,11 +29,14 @@
 bool Machine::is_syscall(int type)
 {
     switch (type) {
-    case 0x00: case 0x01: // CPU exception
+    case 0x00:
+    case 0x01: // CPU exception
     case 0x02: // NMI
-    case 0x03: case 0x04: // CPU exception
+    case 0x03:
+    case 0x04: // CPU exception
     case 0x05: // Print Screen
-    case 0x06: case 0x07: // CPU exception
+    case 0x06:
+    case 0x07: // CPU exception
         return true;
     case 0x08: // IRQ0 Timer
     case 0x09: // IRQ1 Keyboard
@@ -163,39 +166,39 @@ void Machine::process_syscall(int type)
     case 0x04:
         throw std::runtime_error("Overflow");
     case 0x05:
-        //TODO: Print Screen
+        // TODO: Print Screen
         throw std::runtime_error("Unimplemented Print Screen Request");
     case 0x10:
-        //TODO: Video
+        // TODO: Video
         throw std::runtime_error("Unimplemented Video Request");
     case 0x11:
-        //TODO: Equipment List
+        // TODO: Equipment List
         throw std::runtime_error("Unimplemented Equipment List Request");
     case 0x12:
-        //TODO: Memory Size
+        // TODO: Memory Size
         throw std::runtime_error("Unimplemented Memory Size Request");
     case 0x13:
         // Disk
         handle_int13_disk();
         return;
     case 0x14:
-        //TODO: Serial
+        // TODO: Serial
         throw std::runtime_error("Unimplemented Serial Request");
     case 0x15:
-        //TODO: System Services
+        // TODO: System Services
         throw std::runtime_error("Unimplemented System Services Request");
     case 0x16:
-        //TODO: Keyboard
+        // TODO: Keyboard
         throw std::runtime_error("Unimplemented Keyboard Request");
     case 0x17:
-        //TODO: Printer
+        // TODO: Printer
         throw std::runtime_error("Unimplemented Printer Request");
     case 0x18:
         throw std::runtime_error("ROM BASIC Request");
     case 0x19:
         throw std::runtime_error("Boot Request");
     case 0x1A:
-        //TODO: RTC Timer
+        // TODO: RTC Timer
         throw std::runtime_error("Unimplemented RTC Timer Request");
     default:
         throw std::runtime_error("Unknown syscall 0x" + to_hex(type));
