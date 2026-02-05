@@ -23,25 +23,23 @@ add_definitions(-DBUILD_DIR="${CMAKE_BINARY_DIR}")
 set(TEST_SOURCES
     fixture.cpp
     machine_test.cpp
-    add_adc_test.cpp
-    and_or_xor_test.cpp
-    call_ret_test.cpp
-    cmp_test_test.cpp
-    esc_test.cpp
-    in_out_test.cpp
-    inc_dec_test.cpp
-    int_test.cpp
-    jump_cond_test.cpp
-    jump_loop_test.cpp
-    misc_test.cpp
-    mov_test.cpp
-    mul_div_neg_not_test.cpp
-    pop_test.cpp
-    push_test.cpp
-    shift_rotate_test.cpp
-    string_test.cpp
-    sub_sbb_test.cpp
-    xchg_test.cpp
+    add_adc.cpp
+    and_or_xor.cpp
+    call_ret_jmp_loop_int.cpp
+    cmp_test.cpp
+    flags_nop.cpp
+    in_out_esc.cpp
+    inc_dec.cpp
+    jump_cond.cpp
+    misc_arith.cpp
+    mov.cpp
+    mul_div_neg_not.cpp
+    pop.cpp
+    push.cpp
+    shift_rotate.cpp
+    string.cpp
+    sub_sbb.cpp
+    xchg_lea_lds_les.cpp
 )
 
 #
