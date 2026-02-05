@@ -1,6 +1,7 @@
 build/
 legacy/
 .idea
+.cursor
 .DS_Store
 *.trace
 *.cpp-

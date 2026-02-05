@@ -175,9 +175,9 @@ public:
     Word get_es() const { return core.es; }
     void set_es(Word val) { core.es = val; }
 
-    // Flags
+    // Flags (set_flags normalizes reserved bits to match POPF/8086)
     Word get_flags() const { return core.flags; }
-    void set_flags(Word val) { core.flags = val; }
+    void set_flags(Word val);
 
     // Print trace info.
     void print_instruction();

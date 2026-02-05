@@ -75,7 +75,7 @@ void Processor::reset()
     core.ds          = 0x0000;
     core.ss          = 0x0000;
     core.es          = 0x0000;
-    core.flags       = 0;
+    set_flags(0);
     opcode           = {};
     plen             = 0;
     rep              = 0;
@@ -501,9 +501,25 @@ bool Processor::getFlag(unsigned flag) const
 void Processor::setFlag(unsigned flag, bool set)
 {
     if (set)
-        core.flags |= flag;
+        set_flags(core.flags | flag);
     else
-        core.flags &= ~flag;
+        set_flags(core.flags & ~flag);
+}
+
+//
+// Set FLAGS register.
+//
+// Bits:  15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0
+//        -----------------------------------------------
+// Flags: 1  1  1  1  OF DF IF TF SF ZF 0  AF 0 PF  1  CF
+//
+void Processor::set_flags(Word val)
+{
+    // Bits 1,3,5 reserved (1,0,0).
+    static const unsigned FLAGS_WRITABLE = 0x0FD5; // bits 0,2,4,6-11 writable
+    static const unsigned FLAGS_ONES     = 0xF002; // bits 1,12-15 always 1
+
+    core.flags = (val & FLAGS_WRITABLE) | FLAGS_ONES;
 }
 
 void Processor::setFlags(int width, int res)
@@ -515,7 +531,9 @@ void Processor::setFlags(int width, int res)
 
 int Processor::signconv(int width, int x)
 {
-    return static_cast<int>(static_cast<unsigned>(x) << (32 - BITS[width]) >> (32 - BITS[width]));
+    if (width == B)
+        return static_cast<signed char>(x);
+    return static_cast<short>(x);
 }
 
 bool Processor::msb(int width, int x)
@@ -815,29 +833,29 @@ void Processor::exe_one()
         decode();
         src = getEA(mod, rm);
         setReg(w, reg, getMem(W, src));
-        core.ds = static_cast<Word>(getMem(W, src + 2) & 0xffff);
+        core.ds = getMem(W, src + 2);
         break;
     // LES
     case 0xc4:
         decode();
         src = getEA(mod, rm);
         setReg(w, reg, getMem(W, src));
-        core.es = static_cast<Word>(getMem(W, src + 2) & 0xffff);
+        core.es = getMem(W, src + 2);
         break;
     // LAHF
     case 0x9f:
-        core.ax = (core.ax & 0x00ff) | ((core.flags & 0xff) << 8);
+        set_ah(core.flags);
         break;
     // SAHF
     case 0x9e:
-        core.flags = (core.flags & 0xff00) | (core.ax >> 8);
+        set_flags((core.flags & 0xff00) | get_ah());
         break;
     // PUSHF / POPF
     case 0x9c:
-        push(static_cast<int>(core.flags));
+        push(core.flags);
         break;
     case 0x9d:
-        core.flags = static_cast<Word>(pop() & 0xffff);
+        set_flags(pop());
         break;
     // ADD reg/mem, reg and ADD reg, reg/mem
     case 0x00:
@@ -1400,9 +1418,9 @@ void Processor::exe_one()
         }
         break;
     case 0xcf: // IRET: pop IP, CS, FLAGS
-        core.ip    = pop();
-        core.cs    = pop();
-        core.flags = pop();
+        core.ip = pop();
+        core.cs = pop();
+        set_flags(pop());
         break;
     // Flag ops
     case 0xf8:
