@@ -411,12 +411,6 @@ void Processor::callInt(int type)
     }
     Word offset   = getMem(W, type * 4);
     Word seg      = getMem(W, type * 4 + 2);
-    unsigned addr = offset + (seg << 4);
-
-    if (addr < 0x500 || addr >= 0xa0000) {
-        // Address out of user memory.
-        throw std::runtime_error("Bad INT vector");
-    }
 
     // Take interrupt.
     push(core.flags);

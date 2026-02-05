@@ -28,6 +28,11 @@
 //
 bool Machine::is_syscall(int type)
 {
+    if (!mode_640k) {
+        // No syscalls in raw mode.
+        return false;
+    }
+
     switch (type) {
     case 0x00:
     case 0x01: // CPU exception
