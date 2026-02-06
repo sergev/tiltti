@@ -155,9 +155,11 @@ std::optional<TestCase> MooParser::next()
                         else
                             break;
                     }
-                    std::cout << "File MOO Chunk:\n  Version: " << version
-                              << "\n  Test Count: " << file_test_count
-                              << "\n  CPU type: " << cpu_name << "\n";
+                    if (false) {
+                        std::cout << "File MOO Chunk:\n  Version: " << version
+                                  << "\n  Test Count: " << file_test_count
+                                  << "\n  CPU type: " << cpu_name << "\n";
+                    }
                 }
                 header_printed_ = true;
             }

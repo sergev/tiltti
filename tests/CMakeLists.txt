@@ -40,6 +40,11 @@ set(TEST_SOURCES
     string.cpp
     sub_sbb.cpp
     xchg_lea_lds_les.cpp
+
+    div_batch2.cpp
+    misc_batch2.cpp
+    mul_batch2.cpp
+    shift_batch2.cpp
 )
 
 #

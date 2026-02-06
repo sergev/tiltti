@@ -1,5 +1,6 @@
 build/
 legacy/
+outdir/
 .idea
 .cursor
 .DS_Store

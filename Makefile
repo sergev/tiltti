@@ -42,3 +42,18 @@ build:
 debug:
 	mkdir build
 	cmake -Bbuild -DCMAKE_BUILD_TYPE=Debug
+
+#
+# Run 8086 test suite.
+#
+moo86:  all outdir
+	$(MAKE) -Coutdir -f ../Makefile run-moo86
+
+MOO     ?= $(PWD)/../8086-tests/v1_binary
+run-moo86:
+	for moo in $(MOO)/*.gz; do \
+	    ../build/moo_booth/moo-booth -run -limit=5 $$moo; \
+        done
+
+outdir:
+	mkdir $@
