@@ -237,7 +237,7 @@ TEST_F(MachineTest, rol_dh_cl)
 //
 // rol si, cl
 //
-TEST_F(MachineTest, rol_si_cl)
+TEST_F(MachineTest, rol_si_cl_batch2)
 {
     // Initial CPU State
     cpu.set_ax(0x780F);

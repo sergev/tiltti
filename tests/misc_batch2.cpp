@@ -3,7 +3,7 @@
 //
 // aaa
 //
-TEST_F(MachineTest, aaa)
+TEST_F(MachineTest, aaa_batch2)
 {
     // Initial CPU State
     cpu.set_ax(0x7B15);
@@ -421,7 +421,7 @@ TEST_F(MachineTest, aam_C6h)
 //
 // aas
 //
-TEST_F(MachineTest, aas)
+TEST_F(MachineTest, aas_batch2)
 {
     // Initial CPU State
     cpu.set_ax(0xCB1C);
@@ -468,7 +468,7 @@ TEST_F(MachineTest, aas)
 //
 // daa
 //
-TEST_F(MachineTest, daa)
+TEST_F(MachineTest, daa_batch2)
 {
     // Initial CPU State
     cpu.set_ax(0x8B2E);
@@ -515,7 +515,7 @@ TEST_F(MachineTest, daa)
 //
 // das
 //
-TEST_F(MachineTest, das)
+TEST_F(MachineTest, das_batch2)
 {
     // Initial CPU State
     cpu.set_ax(0x19CB);
