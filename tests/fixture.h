@@ -49,6 +49,8 @@ protected:
         // Show trace.
         Machine::enable_trace("r");
     }
+
+    std::string show_flags(unsigned expect);
 };
 
 //

@@ -85,6 +85,11 @@ void TestCase::emit_gtest() const
         if (final_regs[i]->has_value()) {
             ofs << "    EXPECT_EQ(cpu.get_" << REG_LUT[i] << "(), 0x";
             fmt_hex4(ofs, final_regs[i]->value());
+            if (i == REG_COUNT - 1) {
+                // Show mismatches in flags.
+                ofs << ") << show_flags(0x";
+                fmt_hex4(ofs, final_regs[i]->value());
+            }
             ofs << ");\n";
         }
     }

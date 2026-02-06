@@ -36,7 +36,7 @@ TEST_F(MachineTest, rcl_byte_ss_bp_si_0h_cl)
 
     // Final CPU State
     EXPECT_EQ(cpu.get_ip(), 0xC31D);
-    EXPECT_EQ(cpu.get_flags(), 0xF456);
+    EXPECT_EQ(cpu.get_flags(), 0xF456) << show_flags(0xF456);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0x06BDA), 0xD2);
@@ -84,7 +84,7 @@ TEST_F(MachineTest, rcr_byte_cs_bx_32A8h_cl)
 
     // Final CPU State
     EXPECT_EQ(cpu.get_ip(), 0xC323);
-    EXPECT_EQ(cpu.get_flags(), 0xF856);
+    EXPECT_EQ(cpu.get_flags(), 0xF856) << show_flags(0xF856);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0xC489E), 0x2E);
@@ -131,7 +131,7 @@ TEST_F(MachineTest, rcr_ch_cl)
     // Final CPU State
     EXPECT_EQ(cpu.get_cx(), 0x9518);
     EXPECT_EQ(cpu.get_ip(), 0x35D8);
-    EXPECT_EQ(cpu.get_flags(), 0xF8C6);
+    EXPECT_EQ(cpu.get_flags(), 0xF8C6) << show_flags(0xF8C6);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0xC2295), 0x26);
@@ -177,7 +177,7 @@ TEST_F(MachineTest, rol_byte_ss_bp_di_cl)
 
     // Final CPU State
     EXPECT_EQ(cpu.get_ip(), 0xAAB6);
-    EXPECT_EQ(cpu.get_flags(), 0xF042);
+    EXPECT_EQ(cpu.get_flags(), 0xF042) << show_flags(0xF042);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0x97914), 0xD2);
@@ -224,7 +224,7 @@ TEST_F(MachineTest, rol_dh_cl)
     // Final CPU State
     EXPECT_EQ(cpu.get_dx(), 0xB670);
     EXPECT_EQ(cpu.get_ip(), 0x1DD9);
-    EXPECT_EQ(cpu.get_flags(), 0xFC92);
+    EXPECT_EQ(cpu.get_flags(), 0xFC92) << show_flags(0xFC92);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0xA4B17), 0xD2);
@@ -269,7 +269,7 @@ TEST_F(MachineTest, rol_si_cl_batch2)
     // Final CPU State
     EXPECT_EQ(cpu.get_si(), 0xF788);
     EXPECT_EQ(cpu.get_ip(), 0x51E6);
-    EXPECT_EQ(cpu.get_flags(), 0xFC42);
+    EXPECT_EQ(cpu.get_flags(), 0xFC42) << show_flags(0xFC42);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0x81D83), 0x2E);
@@ -315,7 +315,7 @@ TEST_F(MachineTest, rol_word_ss_bp_41h_cl)
 
     // Final CPU State
     EXPECT_EQ(cpu.get_ip(), 0x3490);
-    EXPECT_EQ(cpu.get_flags(), 0xF083);
+    EXPECT_EQ(cpu.get_flags(), 0xF083) << show_flags(0xF083);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0x518ED), 0xD3);
@@ -363,7 +363,7 @@ TEST_F(MachineTest, ror_dl_cl)
     // Final CPU State
     EXPECT_EQ(cpu.get_dx(), 0xC85F);
     EXPECT_EQ(cpu.get_ip(), 0x220B);
-    EXPECT_EQ(cpu.get_flags(), 0xF8C6);
+    EXPECT_EQ(cpu.get_flags(), 0xF8C6) << show_flags(0xF8C6);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0xA32B8), 0x3E);
@@ -411,7 +411,7 @@ TEST_F(MachineTest, ror_word_ds_bx_di_2FC1h_cl)
 
     // Final CPU State
     EXPECT_EQ(cpu.get_ip(), 0xA8EE);
-    EXPECT_EQ(cpu.get_flags(), 0xFCC6);
+    EXPECT_EQ(cpu.get_flags(), 0xFCC6) << show_flags(0xFCC6);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0xBBABA), 0xD3);
@@ -459,7 +459,7 @@ TEST_F(MachineTest, sar_byte_ss_bp_7486h_cl)
 
     // Final CPU State
     EXPECT_EQ(cpu.get_ip(), 0xE3CA);
-    EXPECT_EQ(cpu.get_flags(), 0xF487);
+    EXPECT_EQ(cpu.get_flags(), 0xF487) << show_flags(0xF487);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0x2C785), 0x36);
@@ -505,7 +505,7 @@ TEST_F(MachineTest, sar_cx_cl)
     // Final CPU State
     EXPECT_EQ(cpu.get_cx(), 0x0027);
     EXPECT_EQ(cpu.get_ip(), 0x4998);
-    EXPECT_EQ(cpu.get_flags(), 0xF406);
+    EXPECT_EQ(cpu.get_flags(), 0xF406) << show_flags(0xF406);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0xCE355), 0x2E);
@@ -550,7 +550,7 @@ TEST_F(MachineTest, shl_byte_ds_bx_di)
 
     // Final CPU State
     EXPECT_EQ(cpu.get_ip(), 0xCB67);
-    EXPECT_EQ(cpu.get_flags(), 0xFC13);
+    EXPECT_EQ(cpu.get_flags(), 0xFC13) << show_flags(0xFC13);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0x34E95), 0xD0);
@@ -596,7 +596,7 @@ TEST_F(MachineTest, shl_cx_cl)
     // Final CPU State
     EXPECT_EQ(cpu.get_cx(), 0x0000);
     EXPECT_EQ(cpu.get_ip(), 0xFC85);
-    EXPECT_EQ(cpu.get_flags(), 0xF046);
+    EXPECT_EQ(cpu.get_flags(), 0xF046) << show_flags(0xF046);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0xDA043), 0xD3);
@@ -642,7 +642,7 @@ TEST_F(MachineTest, shl_dx_cl)
     // Final CPU State
     EXPECT_EQ(cpu.get_dx(), 0x0000);
     EXPECT_EQ(cpu.get_ip(), 0x79C2);
-    EXPECT_EQ(cpu.get_flags(), 0xF046);
+    EXPECT_EQ(cpu.get_flags(), 0xF046) << show_flags(0xF046);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0xD7C80), 0xD3);
@@ -690,7 +690,7 @@ TEST_F(MachineTest, shl_word_ds_di_6h)
 
     // Final CPU State
     EXPECT_EQ(cpu.get_ip(), 0x70C1);
-    EXPECT_EQ(cpu.get_flags(), 0xFC96);
+    EXPECT_EQ(cpu.get_flags(), 0xFC96) << show_flags(0xFC96);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0xD80BE), 0xD1);
@@ -740,7 +740,7 @@ TEST_F(MachineTest, shl_word_ss_bx_5Ch_cl)
 
     // Final CPU State
     EXPECT_EQ(cpu.get_ip(), 0x2914);
-    EXPECT_EQ(cpu.get_flags(), 0xF446);
+    EXPECT_EQ(cpu.get_flags(), 0xF446) << show_flags(0xF446);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0x8A2B0), 0x36);
@@ -789,7 +789,7 @@ TEST_F(MachineTest, shr_bx_cl)
     // Final CPU State
     EXPECT_EQ(cpu.get_bx(), 0x0000);
     EXPECT_EQ(cpu.get_ip(), 0x2DEB);
-    EXPECT_EQ(cpu.get_flags(), 0xF446);
+    EXPECT_EQ(cpu.get_flags(), 0xF446) << show_flags(0xF446);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0x55128), 0x2E);
@@ -835,7 +835,7 @@ TEST_F(MachineTest, shr_byte_ss_bp_di_6Eh_cl)
 
     // Final CPU State
     EXPECT_EQ(cpu.get_ip(), 0x05AA);
-    EXPECT_EQ(cpu.get_flags(), 0xF046);
+    EXPECT_EQ(cpu.get_flags(), 0xF046) << show_flags(0xF046);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0x97037), 0xD2);
@@ -883,7 +883,7 @@ TEST_F(MachineTest, shr_word_ds_bx_3BF8h_cl)
 
     // Final CPU State
     EXPECT_EQ(cpu.get_ip(), 0x9B5A);
-    EXPECT_EQ(cpu.get_flags(), 0xF402);
+    EXPECT_EQ(cpu.get_flags(), 0xF402) << show_flags(0xF402);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0x17666), 0xD3);
@@ -933,7 +933,7 @@ TEST_F(MachineTest, shr_word_es_bp_si_cl)
 
     // Final CPU State
     EXPECT_EQ(cpu.get_ip(), 0x4665);
-    EXPECT_EQ(cpu.get_flags(), 0xF446);
+    EXPECT_EQ(cpu.get_flags(), 0xF446) << show_flags(0xF446);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0xDB2B2), 0x26);
@@ -982,7 +982,7 @@ TEST_F(MachineTest, shr_word_ss_bp_si_6Dh_cl)
 
     // Final CPU State
     EXPECT_EQ(cpu.get_ip(), 0xE22A);
-    EXPECT_EQ(cpu.get_flags(), 0xF407);
+    EXPECT_EQ(cpu.get_flags(), 0xF407) << show_flags(0xF407);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0x6CC37), 0xD3);

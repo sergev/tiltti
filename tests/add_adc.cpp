@@ -78,7 +78,7 @@ TEST_F(MachineTest, adc_ax_3085h)
     // Final CPU State
     EXPECT_EQ(cpu.get_ax(), 0x1DD0);
     EXPECT_EQ(cpu.get_ip(), 0x9D49);
-    EXPECT_EQ(cpu.get_flags(), 0xF013);
+    EXPECT_EQ(cpu.get_flags(), 0xF013) << show_flags(0xF013);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0x93A05), 0x26);

@@ -27,6 +27,39 @@
 #include <fstream>
 
 //
+// Compare FLAGS register to expected value and
+// return a list of names of changed flags.
+//
+std::string MachineTest::show_flags(unsigned expect)
+{
+    unsigned changes = cpu.get_flags() ^ expect;
+    if (!changes)
+        return "";
+
+    std::string result = "Mismatch:";
+    if (changes & 0x800)
+        result += " OF";
+    if (changes & 0x400)
+        result += " DF";
+    if (changes & 0x200)
+        result += " IF";
+    if (changes & 0x100)
+        result += " TF";
+    if (changes & 0x80)
+        result += " SF";
+    if (changes & 0x40)
+        result += " ZF";
+    if (changes & 0x10)
+        result += " AF";
+    if (changes & 0x4)
+        result += " PF";
+    if (changes & 0x1)
+        result += " CF";
+
+    return result;
+}
+
+//
 // Get current test name, as specified in TEST() macro.
 //
 std::string get_test_name()
