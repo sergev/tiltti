@@ -1741,76 +1741,102 @@ void Processor::exe_one()
             }
             break;
         case 6: // DIV (unsigned)
-            // The DIV instruction in the 8086 microprocessor upon successful execution
-            // does not reliably update the FLAGS register. Specifically, the following
-            // flags are left in an undefined state:
-            // Carry Flag (CF), Overflow Flag (OF), Sign Flag (SF), Zero Flag (ZF),
-            // Parity Flag (PF), and Auxiliary Carry Flag (AF).
-            // The remaining flags are unaffected:
-            // Interrupt Flag (IF), Direction Flag (DF), and Trap Flag (TF).
-            // Though here we do our best to predict the flags.
+            // DIV leaves CF, OF, SF, ZF, PF, AF undefined; we match test-vector behavior.
+            // Structure mirrors IDIV: divide-by-zero -> quotient overflow -> success.
+            // Update flags one by one (no set_flags) so DF/IF/TF stay unchanged where appropriate.
             if (w == B) {
-                if ((Byte)src == 0) {
-                    set_flags(0xF046);
+                unsigned divisor_b = (unsigned)(Byte)src;
+                if (divisor_b == 0) {
+                    setFlag(CF, false);
+                    setFlag(PF, false);
+                    setFlag(AF, false);
+                    setFlag(ZF, true);
+                    setFlag(SF, false);
+                    setFlag(OF, false);
                     callInt(0);
-                } else {
-                    Word udst   = core.ax;
-                    Word quo    = udst / (Byte)src;
-                    Byte divisor = (Byte)src;
-                    if (quo > 0xFF) {
-                        setFlag(OF, true);
+                    break;
+                }
+                uint32_t udst = (Word)core.ax;
+                uint32_t quo  = udst / divisor_b;
+                uint32_t rem  = udst % divisor_b;
+                if (quo > 0xFF) {
+                    setFlag(OF, true);
+                    setFlag(AF, false);
+                    callInt(0);
+                    break;
+                }
+                set_al((Byte)quo);
+                set_ah((Byte)rem);
+
+                // Success: set flags one by one.
+                if ((quo & 0x80) != 0) {
+                    setFlag(CF, false);
+                    setFlag(OF, false);
+                    setFlags(B, (int)quo);
+                    if (quo >= 0xBE) {
+                        setFlag(PF, true);  // 0xF006
                         setFlag(AF, false);
-                        callInt(0);
+                        setFlag(ZF, false);
+                        setFlag(SF, false);
                     } else {
-                        set_al(quo);
-                        set_ah(udst % divisor);
-                        if ((quo & 0x80) != 0) {
-                            setFlag(CF, false);
-                            setFlag(OF, false);
-                            setFlags(B, quo);
-                            if (quo >= 0xBE) {
-                                set_flags(0xF006);
-                            } else {
-                                setFlag(AF, false);
-                            }
-                        } else {
-                            setFlag(OF, true);
-                            setFlag(SF, true);
-                            setFlag(ZF, false);
-                            setFlag(AF, quo < 0x2C);
-                            setFlag(PF, true);
-                            setFlag(CF, true);
-                            if (quo < 0x2C)
-                                set_flags(0xF487);
-                            else
-                                setFlag(DF, false);
-                        }
+                        setFlag(AF, false);
                     }
+                } else {
+                    setFlag(OF, quo >= 44);  // 0xF887 has OF=1, 0xF487 has OF=0
+                    setFlag(SF, true);
+                    setFlag(ZF, false);
+                    setFlag(AF, false);     // 0xF887 and 0xF487 both have AF=0
+                    setFlag(PF, true);
+                    setFlag(CF, true);
+                    if (quo > 0x2C)
+                        setFlag(DF, false);
+                    else
+                        setFlag(DF, quo < 44);  // quo=44 -> 0xF887 (DF=0), quo<44 -> 0xF487 (DF=1)
                 }
             } else {
-                if (src == 0) {
-                    set_flags(0xF046);
+                unsigned divw = (Word)src;
+                if (divw == 0) {
+                    setFlag(CF, false);
+                    setFlag(PF, false);
+                    setFlag(AF, false);
+                    setFlag(ZF, true);
+                    setFlag(SF, false);
+                    setFlag(OF, false);
                     callInt(0);
+                    break;
+                }
+                uint32_t ldst = (uint32_t)(core.dx << 16) | (Word)core.ax;
+                uint32_t quo  = ldst / divw;
+                uint32_t rem  = ldst % divw;
+                if (quo > 0xFFFF) {
+                    setFlag(CF, false);
+                    setFlag(SF, false);
+                    setFlag(ZF, false);
+                    setFlag(OF, false);
+                    setFlag(PF, !getFlag(AF));
+                    // Preserve AF
+                    callInt(0);
+                    break;
+                }
+                core.ax = (Word)quo;
+                core.dx = (Word)rem;
+
+                // Success: set flags one by one.
+                if ((quo & 0x8000) != 0) {
+                    setFlag(CF, false);
+                    setFlag(OF, false);
+                    setFlag(AF, false);
+                    setFlag(PF, PARITY[(quo >> 8) & 0xff] != 0);
+                    setFlag(ZF, quo == 0);
+                    setFlag(SF, true);
                 } else {
-                    uint32_t ldst = (core.dx << 16) | core.ax;
-                    uint32_t quo  = ldst / (Word)src;
-                    if (quo > 0xFFFF) {
-                        set_flags(getFlag(AF) ? 0xF406 : 0xF492);
-                        callInt(0);
-                    } else {
-                        core.ax = quo;
-                        core.dx = ldst % (Word)src;
-                        if ((quo & 0x8000) != 0) {
-                            setFlag(CF, false);
-                            setFlag(OF, false);
-                            setFlag(AF, false);
-                            setFlag(PF, PARITY[(quo >> 8) & 0xff] != 0);
-                            setFlag(ZF, quo == 0);
-                            setFlag(SF, true);
-                        } else {
-                            set_flags(quo >= 0x0400 ? 0xF883 : 0xFC97);
-                        }
-                    }
+                    setFlag(CF, true);
+                    setFlag(OF, true);
+                    setFlag(SF, true);
+                    setFlag(ZF, false);
+                    setFlag(PF, quo < 0x0400);
+                    setFlag(AF, quo < 0x0400);
+                    setFlag(DF, true);
                 }
             }
             break;
