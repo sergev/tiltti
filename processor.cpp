@@ -1719,8 +1719,8 @@ void Processor::exe_one()
                 int dval = signconv(B, get_al());
                 res      = (Word)(dval * s);
                 core.ax  = res;
-                setFlag(CF, (res != 0 && (res > 0x7f || res < (int)0xff80)));
-                setFlag(OF, (res != 0 && (res > 0x7f || res < (int)0xff80)));
+                setFlag(CF, (res != 0 && (res > 0x7f || res < -0x80)));
+                setFlag(OF, (res != 0 && (res > 0x7f || res < -0x80)));
             } else {
                 long ld = (long)signconv(W, core.ax) * (long)signconv(W, src);
                 core.ax = ld;
@@ -1748,6 +1748,7 @@ void Processor::exe_one()
             // Parity Flag (PF), and Auxiliary Carry Flag (AF).
             // The remaining flags are unaffected:
             // Interrupt Flag (IF), Direction Flag (DF), and Trap Flag (TF).
+            // Though here we do our best to predict the flags.
             if (w == B) {
                 if ((Byte)src == 0) {
                     set_flags(0xF046);
@@ -1782,41 +1783,51 @@ void Processor::exe_one()
                 }
             }
             break;
-        case 7: // IDIV
+        case 7: // IDIV (signed integer division)
+            // After the IDIV instruction in the 8086 processor, the arithmetic flags
+            // in the FLAGS register are left in an undefined state: CF, PF, AF, ZF, SF, OF.
+            // Though here we do our best to predict the flags.
             if (w == B) {
                 // Dividend is a signed 16-bit value in AX.
                 // Divisor is a signed 8-bit value (register or memory).
                 src = (int8_t)src;
                 if (src == 0) {
-                    // Divide by zero: 8086 pushes flags 0xF046
+                    // Divide by zero
                     setFlag(CF, false);
                     setFlag(PF, true);
-                    setFlag(AF, true);
-                    setFlag(ZF, false);
-                    setFlag(SF, true);
-                    setFlag(OF, true);
+                    setFlag(AF, false);
+                    setFlag(ZF, true);
+                    setFlag(SF, false);
+                    setFlag(OF, false);
                     callInt(0);
                 } else {
                     dst = (int16_t)core.ax;
                     res = dst / src;
                     if (res > 0x7f || res < -0x80) {
-                        // Quotient overflow (byte): OF=1; AF=1 when quotient positive; DF preserved
+                        // Quotient overflow (byte).
+                        // OF=1 only when quotient negative.
+                        // PF from quotient if neg else AX high.
                         setFlag(CF, false);
-                        setFlag(PF, true);
-                        setFlag(AF, res > 0);
+                        setFlag(PF,
+                                res < 0 ? (PARITY[res & 0xff] != 0) : (PARITY[(core.ax >> 8) & 0xff] != 0));
+                        setFlag(AF, true);
                         setFlag(ZF, false);
                         setFlag(SF, false);
-                        setFlag(OF, true);
+                        setFlag(OF, res < 0);
                         callInt(0);
                     } else {
+                        int rem = dst % src;
                         set_al(res);
-                        set_ah(dst % src);
-                        // Successful byte IDIV: SF from quotient, AF=0
+                        set_ah(rem);
+
+                        // Successful byte IDIV.
+                        // SF from remainder.
+                        // PF from remainder.
                         setFlag(CF, false);
                         setFlag(OF, false);
                         setFlag(ZF, false);
-                        setFlag(PF, true);
-                        setFlag(SF, (res & 0x80) != 0);
+                        setFlag(PF, PARITY[rem & 0xff] != 0);
+                        setFlag(SF, (rem & 0x80) != 0);
                         setFlag(AF, false);
                     }
                 }
@@ -1825,31 +1836,35 @@ void Processor::exe_one()
                 // Divisor is a signed 16-bit value (register or memory).
                 src = (int16_t)src;
                 if (src == 0) {
-                    // Divide by zero: 8086 pushes flags 0xF046
+                    // Divide by zero
                     setFlag(CF, false);
                     setFlag(PF, true);
-                    setFlag(AF, true);
-                    setFlag(ZF, false);
-                    setFlag(SF, true);
-                    setFlag(OF, true);
+                    setFlag(AF, false);
+                    setFlag(ZF, true);
+                    setFlag(SF, false);
+                    setFlag(OF, false);
                     callInt(0);
                 } else {
                     dst          = (int32_t)((core.dx << 16) | core.ax);
                     int64_t lres = (int64_t)dst / src;
 
                     if (lres > 0x7fff || lres < -0x8000) {
-                        // Quotient overflow (word): OF=1; AF inverted from initial
+                        // Quotient overflow (word).
+                        // PF from AX low byte.
+                        // AF inverted from initial.
                         setFlag(CF, false);
-                        setFlag(PF, true);
+                        setFlag(PF, PARITY[core.ax & 0xff] != 0);
                         setFlag(AF, !getFlag(AF));
                         setFlag(ZF, false);
                         setFlag(SF, false);
-                        setFlag(OF, true);
+                        setFlag(OF, false);
                         callInt(0);
                     } else {
                         core.ax = lres;
                         core.dx = dst % src;
-                        // Successful word IDIV: SF from quotient, AF=1
+
+                        // Successful word IDIV.
+                        // SF from quotient.
                         setFlag(CF, false);
                         setFlag(OF, false);
                         setFlag(ZF, false);
