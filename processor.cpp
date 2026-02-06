@@ -93,7 +93,7 @@ void Processor::reset()
 //
 unsigned Processor::getAddr(Word seg, Word off) const
 {
-    return ((static_cast<unsigned>(seg) << 4) + off) & 0xfffffu;
+    return ((seg << 4) + off) & 0xfffffu;
 }
 
 //
@@ -101,47 +101,43 @@ unsigned Processor::getAddr(Word seg, Word off) const
 //
 unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
 {
-    int disp = 0;
-    if (mod_val == 0b01) {
-        disp = static_cast<signed char>(opcode[plen + 2]);
-    } else if (mod_val == 0b10) {
-        disp = static_cast<int>(static_cast<unsigned>(opcode[plen + 2]) |
-                                (static_cast<unsigned>(opcode[plen + 3]) << 8));
+    int disp;
+    switch (mod_val) {
+    default:
+        disp = 0;
+        break;
+    case 1:
+        disp = (int8_t) opcode[plen + 2];
+        break;
+    case 2:
+        disp = opcode[plen + 2] | (opcode[plen + 3] << 8);
+        break;
     }
-    int ea_val = 0;
+
     switch (rm_val) {
     case 0b000:
-        ea_val = (core.bx + core.si + disp) & 0xffff;
-        break;
+        return getAddr(os, core.bx + core.si + disp);
     case 0b001:
-        ea_val = (core.bx + core.di + disp) & 0xffff;
-        break;
+        return getAddr(os, core.bx + core.di + disp);
     case 0b010:
-        ea_val = (core.bp + core.si + disp) & 0xffff;
-        break;
+        return getAddr(os, core.bp + core.si + disp);
     case 0b011:
-        ea_val = (core.bp + core.di + disp) & 0xffff;
-        break;
+        return getAddr(os, core.bp + core.di + disp);
     case 0b100:
-        ea_val = (core.si + disp) & 0xffff;
-        break;
+        return getAddr(os, core.si + disp);
     case 0b101:
-        ea_val = (core.di + disp) & 0xffff;
-        break;
+        return getAddr(os, core.di + disp);
     case 0b110:
-        if (mod_val == 0b00)
-            ea_val = static_cast<unsigned>(opcode[plen + 2]) |
-                     (static_cast<unsigned>(opcode[plen + 3]) << 8);
+        if (mod_val == 0)
+            return getAddr(os, opcode[plen + 2] | (opcode[plen + 3] << 8));
         else
-            ea_val = (core.bp + disp) & 0xffff;
-        break;
+            return getAddr(os, core.bp + disp);
     case 0b111:
-        ea_val = (core.bx + disp) & 0xffff;
-        break;
+        return getAddr(os, core.bx + disp);
     default:
-        break;
+        // Cannot happen
+        return getAddr(os, 0);
     }
-    return getAddr(os, static_cast<Word>(ea_val));
 }
 
 //
@@ -150,11 +146,13 @@ unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
 int Processor::getMem(int width)
 {
     unsigned addr = getAddr(core.cs, core.ip);
-    int val       = machine.mem_fetch_byte(addr);
+    Word val      = machine.mem_fetch_byte(addr);
+
     if (width == W)
         val |= machine.mem_fetch_byte(addr + 1) << 8;
-    core.ip = (core.ip + 1 + width) & 0xffff;
-    return val & (width == W ? 0xffff : 0xff);
+
+    core.ip += 1 + width;
+    return val;
 }
 
 //
@@ -186,42 +184,42 @@ int Processor::getReg(int width, unsigned r) const
     if (width == B) {
         switch (r) {
         case 0:
-            return core.ax & 0xff;
+            return get_al();
         case 1:
-            return core.cx & 0xff;
+            return get_cl();
         case 2:
-            return core.dx & 0xff;
+            return get_dl();
         case 3:
-            return core.bx & 0xff;
+            return get_bl();
         case 4:
-            return core.ax >> 8;
+            return get_ah();
         case 5:
-            return core.cx >> 8;
+            return get_ch();
         case 6:
-            return core.dx >> 8;
+            return get_dh();
         case 7:
-            return core.bx >> 8;
+            return get_bh();
         default:
             return 0;
         }
     } else {
         switch (r) {
         case 0:
-            return core.ax & 0xffff;
+            return core.ax;
         case 1:
-            return core.cx & 0xffff;
+            return core.cx;
         case 2:
-            return core.dx & 0xffff;
+            return core.dx;
         case 3:
-            return core.bx & 0xffff;
+            return core.bx;
         case 4:
-            return core.sp & 0xffff;
+            return core.sp;
         case 5:
-            return core.bp & 0xffff;
+            return core.bp;
         case 6:
-            return core.si & 0xffff;
+            return core.si;
         case 7:
-            return core.di & 0xffff;
+            return core.di;
         default:
             return 0;
         }
@@ -234,61 +232,59 @@ int Processor::getReg(int width, unsigned r) const
 void Processor::setReg(int width, unsigned r, int val)
 {
     if (width == B) {
-        val &= 0xff;
         switch (r) {
         case 0:
-            core.ax = (core.ax & 0xff00) | val;
+            set_al(val);
             break;
         case 1:
-            core.cx = (core.cx & 0xff00) | val;
+            set_cl(val);
             break;
         case 2:
-            core.dx = (core.dx & 0xff00) | val;
+            set_dl(val);
             break;
         case 3:
-            core.bx = (core.bx & 0xff00) | val;
+            set_bl(val);
             break;
         case 4:
-            core.ax = (core.ax & 0x00ff) | (val << 8);
+            set_ah(val);
             break;
         case 5:
-            core.cx = (core.cx & 0x00ff) | (val << 8);
+            set_ch(val);
             break;
         case 6:
-            core.dx = (core.dx & 0x00ff) | (val << 8);
+            set_dh(val);
             break;
         case 7:
-            core.bx = (core.bx & 0x00ff) | (val << 8);
+            set_bh(val);
             break;
         default:
             break;
         }
     } else {
-        val &= 0xffff;
         switch (r) {
         case 0:
-            core.ax = static_cast<Word>(val);
+            core.ax = val;
             break;
         case 1:
-            core.cx = static_cast<Word>(val);
+            core.cx = val;
             break;
         case 2:
-            core.dx = static_cast<Word>(val);
+            core.dx = val;
             break;
         case 3:
-            core.bx = static_cast<Word>(val);
+            core.bx = val;
             break;
         case 4:
-            core.sp = static_cast<Word>(val);
+            core.sp = val;
             break;
         case 5:
-            core.bp = static_cast<Word>(val);
+            core.bp = val;
             break;
         case 6:
-            core.si = static_cast<Word>(val);
+            core.si = val;
             break;
         case 7:
-            core.di = static_cast<Word>(val);
+            core.di = val;
             break;
         default:
             break;
@@ -341,7 +337,6 @@ Word Processor::getSegReg(unsigned r) const
 //
 void Processor::setSegReg(unsigned r, Word val)
 {
-    val &= 0xffff;
     switch (r & 3) {
     case 0:
         core.es = val;
@@ -368,12 +363,14 @@ void Processor::decode()
     mod = (opcode[plen + 1] >> 6) & 0b11;
     reg = (opcode[plen + 1] >> 3) & 0b111;
     rm  = opcode[plen + 1] & 0b111;
+
     if (mod == 0b01)
         core.ip = (core.ip + 2) & 0xffff;
     else if ((mod == 0b00 && rm == 0b110) || mod == 0b10)
         core.ip = (core.ip + 3) & 0xffff;
     else
         core.ip = (core.ip + 1) & 0xffff;
+
     // Default segment: use SS when effective address uses BP (no segment override).
     if (!segment_override && mod != 0b11 && (rm == 2 || rm == 3 || (rm == 6 && mod != 0)))
         os = core.ss;
@@ -386,7 +383,8 @@ int Processor::pop()
 {
     unsigned addr = getAddr(core.ss, core.sp);
     int val       = getMem(W, addr);
-    core.sp       = (core.sp + 2) & 0xffff;
+
+    core.sp += 2;
     return val;
 }
 
@@ -395,8 +393,8 @@ int Processor::pop()
 //
 void Processor::push(int val)
 {
-    core.sp = (core.sp - 2) & 0xffff;
-    setMem(W, getAddr(core.ss, core.sp), val & 0xffff);
+    core.sp -= 2;
+    setMem(W, getAddr(core.ss, core.sp), val);
 }
 
 //
@@ -792,12 +790,12 @@ void Processor::exe_one()
         reg = op & 0b111;
         dst = core.ax;
         src = getReg(W, reg);
-        setReg(W, AX, src);
+        core.ax = src;
         setReg(W, reg, dst);
         break;
     // SALC: Set AL from Carry (undocumented 8086)
     case 0xd6:
-        setReg(B, AX, getFlag(CF) ? 0xff : 0);
+        set_al(getFlag(CF) ? 0xff : 0);
         break;
     // XLAT
     case 0xd7: {
@@ -816,7 +814,7 @@ void Processor::exe_one()
         break;
     case 0xec:
     case 0xed:
-        src = getReg(W, 2); // DX
+        src = core.dx;
         if (w == B)
             res = machine.port_in_byte(src);
         else
@@ -835,7 +833,7 @@ void Processor::exe_one()
         break;
     case 0xee:
     case 0xef:
-        src = getReg(W, 2);
+        src = core.dx;
         res = getReg(w, AX);
         if (w == B)
             machine.port_out_byte(src, res);
@@ -940,7 +938,7 @@ void Processor::exe_one()
     // AAA
     case 0x37: {
         if ((get_al() & 0xf) > 9 || getFlag(AF)) {
-            setReg(B, AX, (get_al() + 6) & 0xff);
+            set_al(get_al() + 6);
             core.ax = (core.ax + 0x100) & 0xffff;
             setFlag(CF, true);
             setFlag(AF, true);
@@ -948,7 +946,7 @@ void Processor::exe_one()
             setFlag(CF, false);
             setFlag(AF, false);
         }
-        setReg(B, AX, get_al() & 0xf);
+        set_al(get_al() & 0xf);
         setFlag(PF, false); // 8086 AAA: PF=0 (match reference 0xF893)
         setFlag(ZF, false);
         setFlag(SF, (core.ax & 0xff00) != 0); // SF from AH non-zero
@@ -961,14 +959,15 @@ void Processor::exe_one()
             set_al(get_al() + 6);
             setFlag(CF, old_cf || (get_al() < 0));
             setFlag(AF, true);
-        } else
+        } else {
             setFlag(AF, false);
+        }
         if (get_al() > 0x99 || old_cf || ((get_al() >> 4) <= 9 && getFlag(AF))) {
             set_al(get_al() + 0x60);
             setFlag(CF, true);
-        } else
+        } else {
             setFlag(CF, false);
-        setReg(B, AX, get_al());
+        }
         setFlags(B, get_al());
         setFlag(OF, false); // 8086: OF undefined after DAA; test expects 0
         break;
@@ -1057,7 +1056,7 @@ void Processor::exe_one()
     // AAS
     case 0x3f: {
         if ((get_al() & 0xf) > 9 || getFlag(AF)) {
-            setReg(B, AX, (get_al() - 6) & 0xff);
+            set_al(get_al() - 6);
             core.ax = (core.ax - 0x100) & 0xffff;
             setFlag(CF, true);
             setFlag(AF, true);
@@ -1065,7 +1064,7 @@ void Processor::exe_one()
             setFlag(CF, false);
             setFlag(AF, false);
         }
-        setReg(B, AX, get_al() & 0xf);
+        set_al(get_al() & 0xf);
         setFlags(B, get_al()); // PF, ZF, SF from result AL
         break;
     }
@@ -1083,7 +1082,6 @@ void Processor::exe_one()
             setFlag(CF, true);
         } else
             setFlag(CF, false);
-        setReg(B, AX, get_al());
         setFlags(B, get_al());
         setFlag(OF, false); // 8086: OF undefined after DAS; test expects 0
         break;
@@ -1103,7 +1101,7 @@ void Processor::exe_one()
     case 0xd5: {
         src        = getMem(B);
         int ah_val = core.ax >> 8;
-        setReg(B, AX, (ah_val * src + get_al()) & 0xff);
+        set_al(ah_val * src + get_al());
         core.ax &= 0x00ff;
         setFlags(B, get_al());
         setFlag(CF, true);  // 8086 AAD: match reference 0xF403
@@ -1405,32 +1403,29 @@ void Processor::exe_one()
     // LOOP, LOOPE, LOOPNE, JCXZ
     case 0xe2: {
         dst = signconv(B, getMem(B));
-        src = (getReg(W, 1) - 1) & 0xffff; // CX
-        setReg(W, 1, src);
-        if (src != 0)
-            core.ip = (core.ip + dst) & 0xffff;
+        core.cx -= 1;
+        if (core.cx != 0)
+            core.ip += dst;
         break;
     }
     case 0xe1: {
         dst = signconv(B, getMem(B));
-        src = (getReg(W, 1) - 1) & 0xffff;
-        setReg(W, 1, src);
-        if (src != 0 && getFlag(ZF))
-            core.ip = (core.ip + dst) & 0xffff;
+        core.cx -= 1;
+        if (core.cx != 0 && getFlag(ZF))
+            core.ip += dst;
         break;
     }
     case 0xe0: {
         dst = signconv(B, getMem(B));
-        src = (getReg(W, 1) - 1) & 0xffff;
-        setReg(W, 1, src);
-        if (src != 0 && !getFlag(ZF))
-            core.ip = (core.ip + dst) & 0xffff;
+        core.cx -= 1;
+        if (core.cx != 0 && !getFlag(ZF))
+            core.ip += dst;
         break;
     }
     case 0xe3: {
         dst = signconv(B, getMem(B));
-        if (getReg(W, 1) == 0)
-            core.ip = (core.ip + dst) & 0xffff;
+        if (core.cx == 0)
+            core.ip += dst;
         break;
     }
     // INT3, INT, INTO: software interrupt
@@ -1565,15 +1560,14 @@ void Processor::exe_one()
         if (op == 0xd0 || op == 0xd1)
             src = 1;
         else {
-            int cl_val = getReg(B, 1) & 0xff;
             // 8086 RCL/RCR only: count mod 9 (byte) or mod 17 (word) - rotate through carry
             if (reg == 2 || reg == 3) {
                 int n = (w == B) ? 9 : 17;
-                src = cl_val % n;
+                src = get_cl() % n;
             }
             // 8086 shifts (SHR/SAR/SHL): count mask 5 bits (0-31) for both byte and word
             else
-                src = cl_val & 0x1f;
+                src = get_cl() & 0x1f;
         }
         bool temp_cf;
         switch (reg) {
@@ -1691,12 +1685,11 @@ void Processor::exe_one()
                 imm_off = 4;
             int imm;
             if (op == 0xf7) {
-                imm = static_cast<unsigned>(opcode[plen + imm_off]) |
-                      (static_cast<unsigned>(opcode[plen + imm_off + 1]) << 8);
-                core.ip = (core.ip + 2) & 0xffff;
+                imm = opcode[plen + imm_off] | (opcode[plen + imm_off + 1] << 8);
+                core.ip += 2;
             } else {
-                imm = static_cast<unsigned>(opcode[plen + imm_off]);
-                core.ip = (core.ip + 1) & 0xffff;
+                imm = opcode[plen + imm_off];
+                core.ip += 1;
             }
             logic(w, (imm & src));
             break;
@@ -1713,14 +1706,14 @@ void Processor::exe_one()
         case 4: // MUL
             if (w == B) {
                 dst = get_al();
-                res = (dst * src) & 0xffff;
-                setReg(W, AX, res);
+                res = (Word) (dst * src);
+                core.ax = res;
                 setFlag(CF, (res >> 8) != 0);
                 setFlag(OF, (res >> 8) != 0);
             } else {
-                long lres = (long)(core.ax & 0xffff) * (long)(src & 0xffff);
-                setReg(W, AX, lres & 0xffff);
-                setReg(W, 2, (lres >> 16) & 0xffff); // DX
+                uint32_t lres = (uint32_t)core.ax * (Word)src;
+                core.ax = lres;
+                core.dx = lres >> 16;
                 setFlag(CF, (lres >> 16) != 0);
                 setFlag(OF, (lres >> 16) != 0);
             }
@@ -1729,15 +1722,16 @@ void Processor::exe_one()
             break;
         case 5: // IMUL
             if (w == B) {
-                int s = signconv(B, src), dval = signconv(B, get_al());
-                res = (dval * s) & 0xffff;
-                setReg(W, AX, res);
+                int s    = signconv(B, src);
+                int dval = signconv(B, get_al());
+                res = (Word)(dval * s);
+                core.ax = res;
                 setFlag(CF, (res != 0 && (res > 0x7f || res < (int)0xff80)));
                 setFlag(OF, (res != 0 && (res > 0x7f || res < (int)0xff80)));
             } else {
                 long ld = (long)signconv(W, core.ax) * (long)signconv(W, src);
-                setReg(W, AX, ld & 0xffff);
-                setReg(W, 2, (ld >> 16) & 0xffff);
+                core.ax = ld;
+                core.dx = ld >> 16;
                 setFlag(CF, (ld >> 16) != 0 && (ld >> 16) != 0xffff);
                 setFlag(OF, (ld >> 16) != 0 && (ld >> 16) != 0xffff);
             }
@@ -1787,28 +1781,37 @@ void Processor::exe_one()
             }
             break;
         case 7: // IDIV
-            if (src == 0) {
-                callInt(0);
-            } else {
-                int s = signconv(w, src);
-                if (w == B) {
-                    dst = signconv(W, core.ax);
-                    res = dst / s;
-                    if (res > 0x7f || res < (int)0xff81) {
+            if (w == B) {
+                // Dividend is a signed 16-bit value in AX.
+                // Divisor is a signed 8-bit value (register or memory).
+                src = (int8_t) src;
+                if (src == 0) {
+                    callInt(0);
+                } else {
+                    dst = (int16_t) core.ax;
+                    res = dst / src;
+                    if (res > 0x7f || res < -0x80) {
                         callInt(0);
                     } else {
-                        setReg(B, AX, res);
-                        core.ax = (core.ax & 0x00ff) | ((dst % s) << 8);
+                        set_al(res);
+                        set_ah(dst % src);
                     }
+                }
+            } else {
+                // Dividend is a signed 32-bit value in DX:AX.
+                // Divisor is a signed 16-bit value (register or memory).
+                src = (int16_t) src;
+                if (src == 0) {
+                    callInt(0);
                 } else {
-                    long ldst = (long)(core.dx << 16) | (core.ax & 0xffff);
-                    ldst      = (ldst << 32) >> 32;
-                    long lres = ldst / s;
+                    dst = (int32_t) ((core.dx << 16) | core.ax);
+                    int64_t lres = (int64_t) dst / src;
+
                     if (lres > 0x7fff || lres < -0x8000) {
                         callInt(0);
                     } else {
-                        setReg(W, AX, lres & 0xffff);
-                        setReg(W, 2, ldst % s);
+                        core.ax = lres;
+                        core.dx = dst % src;
                     }
                 }
             }
@@ -1845,31 +1848,31 @@ void Processor::exe_one()
             setRM(w, mod, rm, dec(w, src));
             break;
         case 2:
-            push(static_cast<int>(core.ip));
-            core.ip = static_cast<Word>(src & 0xffff);
+            push(core.ip);
+            core.ip = src;
             break;
         case 3: {
             unsigned addr = getEA(mod, rm);
-            push(static_cast<int>(core.cs));
-            push(static_cast<int>(core.ip));
-            core.ip = static_cast<Word>(getMem(W, addr) & 0xffff);
-            core.cs = static_cast<Word>(getMem(W, addr + 2) & 0xffff);
+            push(core.cs);
+            push(core.ip);
+            core.ip = getMem(W, addr);
+            core.cs = getMem(W, addr + 2);
             break;
         }
         case 4:
-            core.ip = static_cast<Word>(src & 0xffff);
+            core.ip = src;
             break;
         case 5: {
             unsigned addr = getEA(mod, rm);
-            core.ip       = static_cast<Word>(getMem(W, addr) & 0xffff);
-            core.cs       = static_cast<Word>(getMem(W, addr + 2) & 0xffff);
+            core.ip       = getMem(W, addr);
+            core.cs       = getMem(W, addr + 2);
             break;
         }
         case 6:
         case 7:
             // 8086 PUSH r/m (FF/6 and FF/7). PUSH SP (mod=11, rm=4) pushes SP-2, not SP.
             if (mod == 0b11 && rm == 4)
-                src = (static_cast<int>(core.sp) - 2) & 0xffff;
+                src = core.sp - 2;
             push(src);
             break;
         default:
