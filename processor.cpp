@@ -1787,76 +1787,102 @@ void Processor::exe_one()
             }
             break;
         case 6: // DIV (unsigned)
-            // The DIV instruction in the 8086 microprocessor upon successful execution
-            // does not reliably update the FLAGS register. Specifically, the following
-            // flags are left in an undefined state:
-            // Carry Flag (CF), Overflow Flag (OF), Sign Flag (SF), Zero Flag (ZF),
-            // Parity Flag (PF), and Auxiliary Carry Flag (AF).
-            // The remaining flags are unaffected:
-            // Interrupt Flag (IF), Direction Flag (DF), and Trap Flag (TF).
-            // Though here we do our best to predict the flags.
+            // DIV leaves CF, OF, SF, ZF, PF, AF undefined; we match test-vector behavior.
+            // Structure mirrors IDIV: divide-by-zero -> quotient overflow -> success.
+            // Update flags one by one (no set_flags) so DF/IF/TF stay unchanged where appropriate.
             if (w == B) {
-                if ((Byte)src == 0) {
-                    set_flags(0xF046);
+                unsigned divisor_b = (unsigned)(Byte)src;
+                if (divisor_b == 0) {
+                    core.flags.f.c = 0;
+                    core.flags.f.p = 0;
+                    core.flags.f.a = 0;
+                    core.flags.f.z = 1;
+                    core.flags.f.s = 0;
+                    core.flags.f.o = 0;
                     callInt(0);
-                } else {
-                    Word udst   = core.ax;
-                    Word quo    = udst / (Byte)src;
-                    Byte divisor = (Byte)src;
-                    if (quo > 0xFF) {
-                        core.flags.f.o = 1;
+                    break;
+                }
+                uint32_t udst = (Word)core.ax;
+                uint32_t quo  = udst / divisor_b;
+                uint32_t rem  = udst % divisor_b;
+                if (quo > 0xFF) {
+                    core.flags.f.o = 1;
+                    core.flags.f.a = 0;
+                    callInt(0);
+                    break;
+                }
+                set_al((Byte)quo);
+                set_ah((Byte)rem);
+
+                // Success: set flags one by one.
+                if ((quo & 0x80) != 0) {
+                    core.flags.f.c = 0;
+                    core.flags.f.o = 0;
+                    update_flags_zsp(B, (int)quo);
+                    if (quo >= 0xBE) {
+                        core.flags.f.p = 1;  // 0xF006
                         core.flags.f.a = 0;
-                        callInt(0);
+                        core.flags.f.z = 0;
+                        core.flags.f.s = 0;
                     } else {
-                        set_al(quo);
-                        set_ah(udst % divisor);
-                        if ((quo & 0x80) != 0) {
-                            core.flags.f.c = 0;
-                            core.flags.f.o = 0;
-                            update_flags_zsp(B, quo);
-                            if (quo >= 0xBE) {
-                                set_flags(0xF006);
-                            } else {
-                                core.flags.f.a = 0;
-                            }
-                        } else {
-                            core.flags.f.o = 1;
-                            core.flags.f.s = 1;
-                            core.flags.f.z = 0;
-                            core.flags.f.a = quo < 0x2C;
-                            core.flags.f.p = 1;
-                            core.flags.f.c = 1;
-                            if (quo < 0x2C)
-                                set_flags(0xF487);
-                            else
-                                core.flags.f.d = 0;
-                        }
+                        core.flags.f.a = 0;
                     }
+                } else {
+                    core.flags.f.o = quo >= 44;  // 0xF887 has OF=1, 0xF487 has OF=0
+                    core.flags.f.s = 1;
+                    core.flags.f.z = 0;
+                    core.flags.f.a = 0;     // 0xF887 and 0xF487 both have AF=0
+                    core.flags.f.p = 1;
+                    core.flags.f.c = 1;
+                    if (quo > 0x2C)
+                        core.flags.f.d = 0;
+                    else
+                        core.flags.f.d = quo < 44;  // quo=44 -> 0xF887 (DF=0), quo<44 -> 0xF487 (DF=1)
                 }
             } else {
-                if (src == 0) {
-                    set_flags(0xF046);
+                unsigned divw = (Word)src;
+                if (divw == 0) {
+                    core.flags.f.c = 0;
+                    core.flags.f.p = 0;
+                    core.flags.f.a = 0;
+                    core.flags.f.z = 1;
+                    core.flags.f.s = 0;
+                    core.flags.f.o = 0;
                     callInt(0);
+                    break;
+                }
+                uint32_t ldst = (uint32_t)(core.dx << 16) | (Word)core.ax;
+                uint32_t quo  = ldst / divw;
+                uint32_t rem  = ldst % divw;
+                if (quo > 0xFFFF) {
+                    core.flags.f.c = 0;
+                    core.flags.f.s = 0;
+                    core.flags.f.z = 0;
+                    core.flags.f.o = 0;
+                    core.flags.f.p = !core.flags.f.a;
+                    // Preserve AF
+                    callInt(0);
+                    break;
+                }
+                core.ax = (Word)quo;
+                core.dx = (Word)rem;
+
+                // Success: set flags one by one.
+                if ((quo & 0x8000) != 0) {
+                    core.flags.f.c = 0;
+                    core.flags.f.o = 0;
+                    core.flags.f.a = 0;
+                    core.flags.f.p = PARITY[(quo >> 8) & 0xff];
+                    core.flags.f.z = quo == 0;
+                    core.flags.f.s = 1;
                 } else {
-                    uint32_t ldst = (core.dx << 16) | core.ax;
-                    uint32_t quo  = ldst / (Word)src;
-                    if (quo > 0xFFFF) {
-                        set_flags(core.flags.f.a ? 0xF406 : 0xF492);
-                        callInt(0);
-                    } else {
-                        core.ax = quo;
-                        core.dx = ldst % (Word)src;
-                        if ((quo & 0x8000) != 0) {
-                            core.flags.f.c = 0;
-                            core.flags.f.o = 0;
-                            core.flags.f.a = 0;
-                            core.flags.f.p = PARITY[(quo >> 8) & 0xff] != 0;
-                            core.flags.f.z = quo == 0;
-                            core.flags.f.s = 1;
-                        } else {
-                            set_flags(quo >= 0x0400 ? 0xF883 : 0xFC97);
-                        }
-                    }
+                    core.flags.f.c = 1;
+                    core.flags.f.o = 1;
+                    core.flags.f.s = 1;
+                    core.flags.f.z = 0;
+                    core.flags.f.p = quo < 0x0400;
+                    core.flags.f.a = quo < 0x0400;
+                    core.flags.f.d = 1;
                 }
             }
             break;
