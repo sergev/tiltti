@@ -24,22 +24,14 @@
 #include "machine.h"
 
 //
-// 8086 flag bits and size codes (B=byte, W=word).
+// 8086 size codes (B=byte, W=word).
 //
-static const unsigned CF      = 1;
-static const unsigned PF      = 1 << 2;
-static const unsigned AF      = 1 << 4;
-static const unsigned ZF      = 1 << 6;
-static const unsigned SF      = 1 << 7;
-static const unsigned TF      = 1 << 8;
-static const unsigned IF      = 1 << 9;
-static const unsigned DF      = 1 << 10;
-static const unsigned OF      = 1 << 11;
 static const int B            = 0;
 static const int W            = 1;
 static const int BITS[2]      = { 8, 16 };
 static const unsigned SIGN[2] = { 0x80u, 0x8000u };
 static const unsigned MASK[2] = { 0xffu, 0xffffu };
+
 static const int PARITY[256]  = {
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
     0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
@@ -413,11 +405,11 @@ void Processor::callInt(int type)
     Word seg    = getMem(W, type * 4 + 2);
 
     // Update flags.
-    setFlag(IF, false);
-    setFlag(TF, false);
+    core.flags.f.i = 0;
+    core.flags.f.t = 0;
 
     // Take interrupt.
-    push(core.flags);
+    push(core.flags.w);
     push(core.cs);
     push(core.ip);
     core.ip = offset;
@@ -430,20 +422,20 @@ void Processor::callInt(int type)
 int Processor::add(int width, int dst, int src)
 {
     int res = (dst + src) & MASK[width];
-    setFlag(CF, res < dst);
-    setFlag(AF, ((res ^ dst ^ src) & AF) != 0);
-    setFlag(OF, (shift((dst ^ src ^ -1) & (dst ^ res), 12 - BITS[width]) & OF) != 0);
+    core.flags.f.c = res < dst;
+    core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
+    core.flags.f.o = (shift((dst ^ src ^ -1) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
     setFlags(width, res);
     return res;
 }
 
 int Processor::adc(int width, int dst, int src)
 {
-    int carry = (core.flags & CF) ? 1 : 0;
+    int carry = core.flags.f.c;
     int res   = (dst + src + carry) & MASK[width];
-    setFlag(CF, carry ? (res <= dst) : (res < dst));
-    setFlag(AF, ((res ^ dst ^ src) & AF) != 0);
-    setFlag(OF, (shift((dst ^ src ^ -1) & (dst ^ res), 12 - BITS[width]) & OF) != 0);
+    core.flags.f.c = carry ? (res <= dst) : (res < dst);
+    core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
+    core.flags.f.o = (shift((dst ^ src ^ -1) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
     setFlags(width, res);
     return res;
 }
@@ -451,20 +443,20 @@ int Processor::adc(int width, int dst, int src)
 int Processor::sub(int width, int dst, int src)
 {
     int res = (dst - src) & MASK[width];
-    setFlag(CF, dst < src);
-    setFlag(AF, ((res ^ dst ^ src) & AF) != 0);
-    setFlag(OF, (shift((dst ^ src) & (dst ^ res), 12 - BITS[width]) & OF) != 0);
+    core.flags.f.c = dst < src;
+    core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
+    core.flags.f.o = (shift((dst ^ src) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
     setFlags(width, res);
     return res;
 }
 
 int Processor::sbb(int width, int dst, int src)
 {
-    int carry = (core.flags & CF) ? 1 : 0;
+    int carry = core.flags.f.c;
     int res   = (dst - src - carry) & MASK[width];
-    setFlag(CF, carry ? (dst <= src) : (dst < src));
-    setFlag(AF, ((res ^ dst ^ src) & AF) != 0);
-    setFlag(OF, (shift((dst ^ src) & (dst ^ res), 12 - BITS[width]) & OF) != 0);
+    core.flags.f.c = carry ? (dst <= src) : (dst < src);
+    core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
+    core.flags.f.o = (shift((dst ^ src) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
     setFlags(width, res);
     return res;
 }
@@ -472,8 +464,8 @@ int Processor::sbb(int width, int dst, int src)
 int Processor::inc(int width, int dst)
 {
     int res = (dst + 1) & MASK[width];
-    setFlag(AF, ((res ^ dst ^ 1) & AF) != 0);
-    setFlag(OF, res == static_cast<int>(SIGN[width]));
+    core.flags.f.a = ((res ^ dst ^ 1) & 0x10) != 0;
+    core.flags.f.o = res == static_cast<int>(SIGN[width]);
     setFlags(width, res);
     return res;
 }
@@ -481,39 +473,22 @@ int Processor::inc(int width, int dst)
 int Processor::dec(int width, int dst)
 {
     int res = (dst - 1) & MASK[width];
-    setFlag(AF, ((res ^ dst ^ 1) & AF) != 0);
-    setFlag(OF, res == static_cast<int>(SIGN[width]) - 1);
+    core.flags.f.a = ((res ^ dst ^ 1) & 0x10) != 0;
+    core.flags.f.o = res == static_cast<int>(SIGN[width]) - 1;
     setFlags(width, res);
     return res;
 }
 
 void Processor::logic(int width, int res)
 {
-    setFlag(CF, false);
-    setFlag(OF, false);
-    setFlag(AF, false); // undefined per Intel; real 8086 clears it
+    core.flags.f.c = 0;
+    core.flags.f.o = 0;
+    core.flags.f.a = 0; // undefined per Intel; real 8086 clears it
     setFlags(width, res);
-}
-
-bool Processor::getFlag(unsigned flag) const
-{
-    return (core.flags & flag) != 0;
-}
-
-void Processor::setFlag(unsigned flag, bool set)
-{
-    if (set)
-        set_flags(core.flags | flag);
-    else
-        set_flags(core.flags & ~flag);
 }
 
 //
 // Set FLAGS register.
-//
-// Bits:  15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0
-//        -----------------------------------------------
-// Flags: 1  1  1  1  OF DF IF TF SF ZF 0  AF 0 PF  1  CF
 //
 void Processor::set_flags(Word val)
 {
@@ -521,14 +496,14 @@ void Processor::set_flags(Word val)
     static const unsigned FLAGS_WRITABLE = 0x0FD5; // bits 0,2,4,6-11 writable
     static const unsigned FLAGS_ONES     = 0xF002; // bits 1,12-15 always 1
 
-    core.flags = (val & FLAGS_WRITABLE) | FLAGS_ONES;
+    core.flags.w = (val & FLAGS_WRITABLE) | FLAGS_ONES;
 }
 
 void Processor::setFlags(int width, int res)
 {
-    setFlag(PF, PARITY[res & 0xff] != 0);
-    setFlag(ZF, res == 0);
-    setFlag(SF, (shift(res, 8 - BITS[width]) & SF) != 0);
+    core.flags.f.p = PARITY[res & 0xff] != 0;
+    core.flags.f.z = res == 0;
+    core.flags.f.s = (shift(res, 8 - BITS[width]) & 0x80) != 0;
 }
 
 int Processor::signconv(int width, int x)
@@ -632,7 +607,7 @@ done_prefix:
             if (rep)
                 core.cx -= 1;
             exe_one();
-            if (rep && check_zf && ((rep == 1 && !getFlag(ZF)) || (rep == 2 && getFlag(ZF))))
+            if (rep && check_zf && ((rep == 1 && !core.flags.f.z) || (rep == 2 && core.flags.f.z)))
                 break;
         } while (rep != 0);
     } else {
@@ -786,7 +761,7 @@ void Processor::exe_one()
         break;
     // SALC: Set AL from Carry (undocumented 8086)
     case 0xd6:
-        set_al(getFlag(CF) ? 0xff : 0);
+        set_al(core.flags.f.c ? 0xff : 0);
         break;
     // XLAT
     case 0xd7: {
@@ -852,15 +827,15 @@ void Processor::exe_one()
         break;
     // LAHF
     case 0x9f:
-        set_ah(core.flags);
+        set_ah(core.flags.w);
         break;
     // SAHF
     case 0x9e:
-        set_flags((core.flags & 0xff00) | get_ah());
+        set_flags((core.flags.w & 0xff00) | get_ah());
         break;
     // PUSHF / POPF
     case 0x9c:
-        push(core.flags);
+        push(core.flags.w);
         break;
     case 0x9d:
         set_flags(pop());
@@ -928,39 +903,39 @@ void Processor::exe_one()
         break;
     // AAA
     case 0x37: {
-        if ((get_al() & 0xf) > 9 || getFlag(AF)) {
+        if ((get_al() & 0xf) > 9 || core.flags.f.a) {
             set_al(get_al() + 6);
             core.ax = (core.ax + 0x100) & 0xffff;
-            setFlag(CF, true);
-            setFlag(AF, true);
+            core.flags.f.c = 1;
+            core.flags.f.a = 1;
         } else {
-            setFlag(CF, false);
-            setFlag(AF, false);
+            core.flags.f.c = 0;
+            core.flags.f.a = 0;
         }
         set_al(get_al() & 0xf);
-        setFlag(PF, false); // 8086 AAA: PF=0 (match reference 0xF893)
-        setFlag(ZF, false);
-        setFlag(SF, (core.ax & 0xff00) != 0); // SF from AH non-zero
+        core.flags.f.p = 0; // 8086 AAA: PF=0 (match reference 0xF893)
+        core.flags.f.z = 0;
+        core.flags.f.s = (core.ax & 0xff00) != 0; // SF from AH non-zero
         break;
     }
     case 0x27: {
-        bool old_cf = getFlag(CF);
-        setFlag(CF, false);
-        if ((get_al() & 0xf) > 9 || getFlag(AF)) {
+        bool old_cf = core.flags.f.c;
+        core.flags.f.c = 0;
+        if ((get_al() & 0xf) > 9 || core.flags.f.a) {
             set_al(get_al() + 6);
-            setFlag(CF, old_cf || (get_al() < 0));
-            setFlag(AF, true);
+            core.flags.f.c = old_cf || (get_al() < 0);
+            core.flags.f.a = 1;
         } else {
-            setFlag(AF, false);
+            core.flags.f.a = 0;
         }
-        if (get_al() > 0x99 || old_cf || ((get_al() >> 4) <= 9 && getFlag(AF))) {
+        if (get_al() > 0x99 || old_cf || ((get_al() >> 4) <= 9 && core.flags.f.a)) {
             set_al(get_al() + 0x60);
-            setFlag(CF, true);
+            core.flags.f.c = 1;
         } else {
-            setFlag(CF, false);
+            core.flags.f.c = 0;
         }
         setFlags(B, get_al());
-        setFlag(OF, false); // 8086: OF undefined after DAA; test expects 0
+        core.flags.f.o = 0; // 8086: OF undefined after DAA; test expects 0
         break;
     }
     // --- SUB, SBB, CMP, INC, DEC: arithmetic and compare ---
@@ -1046,35 +1021,35 @@ void Processor::exe_one()
         break;
     // AAS
     case 0x3f: {
-        if ((get_al() & 0xf) > 9 || getFlag(AF)) {
+        if ((get_al() & 0xf) > 9 || core.flags.f.a) {
             set_al(get_al() - 6);
             core.ax = (core.ax - 0x100) & 0xffff;
-            setFlag(CF, true);
-            setFlag(AF, true);
+            core.flags.f.c = 1;
+            core.flags.f.a = 1;
         } else {
-            setFlag(CF, false);
-            setFlag(AF, false);
+            core.flags.f.c = 0;
+            core.flags.f.a = 0;
         }
         set_al(get_al() & 0xf);
         setFlags(B, get_al()); // PF, ZF, SF from result AL
         break;
     }
     case 0x2f: {
-        bool old_cf = getFlag(CF);
-        setFlag(CF, false);
-        if ((get_al() & 0xf) > 9 || getFlag(AF)) {
+        bool old_cf = core.flags.f.c;
+        core.flags.f.c = 0;
+        if ((get_al() & 0xf) > 9 || core.flags.f.a) {
             set_al(get_al() - 6);
-            setFlag(CF, old_cf || (get_al() > 0));
-            setFlag(AF, true);
+            core.flags.f.c = old_cf || (get_al() > 0);
+            core.flags.f.a = 1;
         } else
-            setFlag(AF, false);
-        if (get_al() > 0x99 || old_cf || ((get_al() >> 4) <= 9 && getFlag(AF))) {
+            core.flags.f.a = 0;
+        if (get_al() > 0x99 || old_cf || ((get_al() >> 4) <= 9 && core.flags.f.a)) {
             set_al(get_al() - 0x60);
-            setFlag(CF, true);
+            core.flags.f.c = 1;
         } else
-            setFlag(CF, false);
+            core.flags.f.c = 0;
         setFlags(B, get_al());
-        setFlag(OF, false); // 8086: OF undefined after DAS; test expects 0
+        core.flags.f.o = 0; // 8086: OF undefined after DAS; test expects 0
         break;
     }
     // AAM, AAD
@@ -1095,10 +1070,10 @@ void Processor::exe_one()
         set_al(ah_val * src + get_al());
         core.ax &= 0x00ff;
         setFlags(B, get_al());
-        setFlag(CF, true); // 8086 AAD: match reference 0xF403
-        setFlag(AF, false);
-        setFlag(OF, false);
-        setFlag(TF, false);
+        core.flags.f.c = 1; // 8086 AAD: match reference 0xF403
+        core.flags.f.a = 0;
+        core.flags.f.o = 0;
+        core.flags.f.t = 0;
         break;
     }
     // CBW, CWD
@@ -1207,34 +1182,34 @@ void Processor::exe_one()
     case 0xa5:
         src = getMem(w, getAddr(os, core.si));
         setMem(w, getAddr(core.es, core.di), src);
-        core.si = (core.si + (getFlag(DF) ? -1 : 1) * (1 + w)) & 0xffff;
-        core.di = (core.di + (getFlag(DF) ? -1 : 1) * (1 + w)) & 0xffff;
+        core.si = (core.si + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
+        core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
     case 0xa6:
     case 0xa7:
         dst = getMem(w, getAddr(core.es, core.di));
         src = getMem(w, getAddr(os, core.si));
         sub(w, src, dst);
-        core.si = (core.si + (getFlag(DF) ? -1 : 1) * (1 + w)) & 0xffff;
-        core.di = (core.di + (getFlag(DF) ? -1 : 1) * (1 + w)) & 0xffff;
+        core.si = (core.si + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
+        core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
     case 0xae:
     case 0xaf:
         dst = getMem(w, getAddr(core.es, core.di));
         src = getReg(w, AX);
         sub(w, src, dst);
-        core.di = (core.di + (getFlag(DF) ? -1 : 1) * (1 + w)) & 0xffff;
+        core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
     case 0xac:
     case 0xad:
         src = getMem(w, getAddr(os, core.si));
         setReg(w, AX, src);
-        core.si = (core.si + (getFlag(DF) ? -1 : 1) * (1 + w)) & 0xffff;
+        core.si = (core.si + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
     case 0xaa:
     case 0xab:
         setMem(w, getAddr(core.es, core.di), getReg(w, AX));
-        core.di = (core.di + (getFlag(DF) ? -1 : 1) * (1 + w)) & 0xffff;
+        core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
     // --- CALL, RET, JMP: transfer and conditional jumps ---
     case 0xe8: {
@@ -1298,97 +1273,97 @@ void Processor::exe_one()
     case 0x70: // JO - Overflow
     case 0x60: // Undocumented
         dst = signconv(B, getMem(B));
-        if (getFlag(OF))
+        if (core.flags.f.o)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x71: // JNO - No overflow
     case 0x61: // Undocumented
         dst = signconv(B, getMem(B));
-        if (!getFlag(OF))
+        if (!core.flags.f.o)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x72: // JB, JC, JNAE - Below / Carry
     case 0x62: // Undocumented
         dst = signconv(B, getMem(B));
-        if (getFlag(CF))
+        if (core.flags.f.c)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x73: // JNB, JNC, JAE - Above or equal / No carry
     case 0x63: // Undocumented
         dst = signconv(B, getMem(B));
-        if (!getFlag(CF))
+        if (!core.flags.f.c)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x74: // JE, JZ - Equal / Zero
     case 0x64: // Undocumented
         dst = signconv(B, getMem(B));
-        if (getFlag(ZF))
+        if (core.flags.f.z)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x75: // JNE, JNZ - Not equal / Not zero
     case 0x65: // Undocumented
         dst = signconv(B, getMem(B));
-        if (!getFlag(ZF))
+        if (!core.flags.f.z)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x76: // JBE, JNA - Below or equal
     case 0x66: // Undocumented
         dst = signconv(B, getMem(B));
-        if (getFlag(CF) || getFlag(ZF))
+        if (core.flags.f.c || core.flags.f.z)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x77: // JA, JNBE - Above
     case 0x67: // Undocumented
         dst = signconv(B, getMem(B));
-        if (!(getFlag(CF) || getFlag(ZF)))
+        if (!(core.flags.f.c || core.flags.f.z))
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x78: // JS - Sign
     case 0x68: // Undocumented
         dst = signconv(B, getMem(B));
-        if (getFlag(SF))
+        if (core.flags.f.s)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x79: // JNS - Not sign
     case 0x69: // Undocumented
         dst = signconv(B, getMem(B));
-        if (!getFlag(SF))
+        if (!core.flags.f.s)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x7a: // JP, JPE - Parity even
     case 0x6a: // Undocumented
         dst = signconv(B, getMem(B));
-        if (getFlag(PF))
+        if (core.flags.f.p)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x7b: // JNP, JPO - Parity odd
     case 0x6b: // Undocumented
         dst = signconv(B, getMem(B));
-        if (!getFlag(PF))
+        if (!core.flags.f.p)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x7c: // JL, JNGE - Less (signed)
     case 0x6c: // Undocumented
         dst = signconv(B, getMem(B));
-        if (getFlag(SF) != getFlag(OF))
+        if (core.flags.f.s != core.flags.f.o)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x7d: // JGE, JNL - Greater or equal (signed)
     case 0x6d: // Undocumented
         dst = signconv(B, getMem(B));
-        if (getFlag(SF) == getFlag(OF))
+        if (core.flags.f.s == core.flags.f.o)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x7e: // JLE, JNG - Less or equal (signed)
     case 0x6e: // Undocumented
         dst = signconv(B, getMem(B));
-        if (getFlag(ZF) || (getFlag(SF) != getFlag(OF)))
+        if (core.flags.f.z || (core.flags.f.s != core.flags.f.o))
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x7f: // JG, JNLE - Greater (signed)
     case 0x6f: // Undocumented
         dst = signconv(B, getMem(B));
-        if (!getFlag(ZF) && (getFlag(SF) == getFlag(OF)))
+        if (!core.flags.f.z && (core.flags.f.s == core.flags.f.o))
             core.ip = (core.ip + dst) & 0xffff;
         break;
     // LOOP, LOOPE, LOOPNE, JCXZ
@@ -1402,14 +1377,14 @@ void Processor::exe_one()
     case 0xe1: {
         dst = signconv(B, getMem(B));
         core.cx -= 1;
-        if (core.cx != 0 && getFlag(ZF))
+        if (core.cx != 0 && core.flags.f.z)
             core.ip += dst;
         break;
     }
     case 0xe0: {
         dst = signconv(B, getMem(B));
         core.cx -= 1;
-        if (core.cx != 0 && !getFlag(ZF))
+        if (core.cx != 0 && !core.flags.f.z)
             core.ip += dst;
         break;
     }
@@ -1427,7 +1402,7 @@ void Processor::exe_one()
         callInt(getMem(B));
         break;
     case 0xce:
-        if (getFlag(OF)) {
+        if (core.flags.f.o) {
             callInt(4);
         }
         break;
@@ -1438,25 +1413,25 @@ void Processor::exe_one()
         break;
     // Flag ops
     case 0xf8:
-        setFlag(CF, false);
+        core.flags.f.c = 0;
         break;
     case 0xf5:
-        setFlag(CF, !getFlag(CF));
+        core.flags.f.c = !core.flags.f.c;
         break;
     case 0xf9:
-        setFlag(CF, true);
+        core.flags.f.c = 1;
         break;
     case 0xfc:
-        setFlag(DF, false);
+        core.flags.f.d = 0;
         break;
     case 0xfd:
-        setFlag(DF, true);
+        core.flags.f.d = 1;
         break;
     case 0xfa:
-        setFlag(IF, false);
+        core.flags.f.i = 0;
         break;
     case 0xfb:
-        setFlag(IF, true);
+        core.flags.f.i = 1;
         break;
     case 0xf4: // HLT
         // Pause until an external interrupt is received.
@@ -1567,91 +1542,91 @@ void Processor::exe_one()
                 temp_cf = msb(w, dst);
                 dst     = ((dst << 1) | (temp_cf ? 1 : 0)) & MASK[w];
             }
-            setFlag(CF, (dst & 1) != 0);
+            core.flags.f.c = (dst & 1) != 0;
             if (src == 1)
-                setFlag(OF, msb(w, dst) != getFlag(CF));
+                core.flags.f.o = msb(w, dst) != core.flags.f.c;
             break;
         case 1: // ROR
             for (int cnt = 0; cnt < src; ++cnt) {
                 temp_cf = (dst & 1) != 0;
                 dst     = ((dst >> 1) | (temp_cf ? static_cast<int>(SIGN[w]) : 0)) & MASK[w];
             }
-            setFlag(CF, msb(w, dst));
+            core.flags.f.c = msb(w, dst);
             if (src == 1)
-                setFlag(OF, msb(w, dst) != msb(w, dst << 1));
+                core.flags.f.o = msb(w, dst) != msb(w, dst << 1);
             else if (src > 1)
-                setFlag(OF, false);
+                core.flags.f.o = 0;
             break;
         case 2: // RCL
             for (int cnt = 0; cnt < src; ++cnt) {
                 temp_cf = msb(w, dst);
-                dst     = ((dst << 1) | (getFlag(CF) ? 1 : 0)) & MASK[w];
-                setFlag(CF, temp_cf);
+                dst     = ((dst << 1) | core.flags.f.c) & MASK[w];
+                core.flags.f.c = temp_cf;
             }
             if (src == 1)
-                setFlag(OF, msb(w, dst) != getFlag(CF));
+                core.flags.f.o = msb(w, dst) != core.flags.f.c;
             break;
         case 3: // RCR
             if (src == 1)
-                setFlag(OF, msb(w, dst) != getFlag(CF));
+                core.flags.f.o = msb(w, dst) != core.flags.f.c;
             for (int cnt = 0; cnt < src; ++cnt) {
                 temp_cf = (dst & 1) != 0;
-                dst     = ((dst >> 1) | (getFlag(CF) ? static_cast<int>(SIGN[w]) : 0)) & MASK[w];
-                setFlag(CF, temp_cf);
+                dst     = ((dst >> 1) | (core.flags.f.c ? static_cast<int>(SIGN[w]) : 0)) & MASK[w];
+                core.flags.f.c = temp_cf;
             }
             if (src > 1)
-                setFlag(OF,
-                        w == W && (msb(w, dst) != (static_cast<unsigned>(dst) & (SIGN[w] >> 1))));
+                core.flags.f.o =
+                        w == W && (msb(w, dst) != (static_cast<unsigned>(dst) & (SIGN[w] >> 1)));
             break;
         case 4: // SAL/SHL
             for (int cnt = 0; cnt < src; ++cnt) {
-                setFlag(CF, (dst & static_cast<int>(SIGN[w])) != 0);
+                core.flags.f.c = (dst & static_cast<int>(SIGN[w])) != 0;
                 dst = (dst << 1) & MASK[w];
             }
             if (src == 1)
-                setFlag(OF, ((dst & static_cast<int>(SIGN[w])) != 0) != getFlag(CF));
+                core.flags.f.o = ((dst & static_cast<int>(SIGN[w])) != 0) != core.flags.f.c;
             else if (src > 0)
-                setFlag(OF, false);
+                core.flags.f.o = 0;
             if (src > 0) {
-                setFlag(AF, false);
+                core.flags.f.a = 0;
                 setFlags(w, dst);
             }
             break;
         case 6: // SETMO: real 8086 sets operand to all ones (0xFF/0xFFFF)
             dst = static_cast<int>(MASK[w]);
-            setFlag(CF, false);
-            setFlag(OF, false);
-            setFlag(AF, false);
+            core.flags.f.c = 0;
+            core.flags.f.o = 0;
+            core.flags.f.a = 0;
             setFlags(w, dst);
             break;
         case 5: // SHR
             if (src == 1)
-                setFlag(OF, (dst & static_cast<int>(SIGN[w])) != 0);
+                core.flags.f.o = (dst & static_cast<int>(SIGN[w])) != 0;
             for (int cnt = 0; cnt < src; ++cnt) {
-                setFlag(CF, (dst & 1) != 0);
+                core.flags.f.c = (dst & 1) != 0;
                 dst = (dst >> 1) & MASK[w];
             }
             if (src > 0) {
-                setFlag(AF, false);
+                core.flags.f.a = 0;
                 setFlags(w, dst);
             }
             break;
         case 7: // SAR - 8086 uses original sign bit for all shift-ins
             if (src == 1)
-                setFlag(OF, false);
+                core.flags.f.o = 0;
             if (src > 0) {
                 int signbit = (dst & static_cast<int>(SIGN[w]));
                 if (src >= 8) {
-                    setFlag(CF, signbit != 0);
-                    setFlag(OF, false);
+                    core.flags.f.c = signbit != 0;
+                    core.flags.f.o = 0;
                     dst = signbit ? static_cast<int>(MASK[w]) : 0;
                 } else {
                     for (int cnt = 0; cnt < src; ++cnt) {
-                        setFlag(CF, (dst & 1) != 0);
+                        core.flags.f.c = (dst & 1) != 0;
                         dst = ((dst >> 1) | signbit) & MASK[w];
                     }
                 }
-                setFlag(AF, false);
+                core.flags.f.a = 0;
                 setFlags(w, dst);
             }
             break;
@@ -1692,7 +1667,7 @@ void Processor::exe_one()
             break;
         case 3: {
             dst = sub(w, 0, src);
-            setFlag(CF, dst != 0);
+            core.flags.f.c = dst != 0;
             setRM(w, mod, rm, dst);
             break;
         }
@@ -1701,16 +1676,16 @@ void Processor::exe_one()
                 dst     = get_al();
                 res     = (Word)(dst * src);
                 core.ax = res;
-                setFlag(CF, (res >> 8) != 0);
-                setFlag(OF, (res >> 8) != 0);
+                core.flags.f.c = (res >> 8) != 0;
+                core.flags.f.o = (res >> 8) != 0;
             } else {
                 uint32_t lres = (uint32_t)core.ax * (Word)src;
                 core.ax       = lres;
                 core.dx       = lres >> 16;
-                setFlag(CF, (lres >> 16) != 0);
-                setFlag(OF, (lres >> 16) != 0);
+                core.flags.f.c = (lres >> 16) != 0;
+                core.flags.f.o = (lres >> 16) != 0;
             }
-            setFlag(AF, false);
+            core.flags.f.a = 0;
             setFlags(w, core.ax);
             break;
         case 5: // IMUL
@@ -1719,25 +1694,25 @@ void Processor::exe_one()
                 int dval = signconv(B, get_al());
                 res      = (Word)(dval * s);
                 core.ax  = res;
-                setFlag(CF, (res != 0 && (res > 0x7f || res < -0x80)));
-                setFlag(OF, (res != 0 && (res > 0x7f || res < -0x80)));
+                core.flags.f.c = (res != 0 && (res > 0x7f || res < -0x80));
+                core.flags.f.o = (res != 0 && (res > 0x7f || res < -0x80));
             } else {
                 long ld = (long)signconv(W, core.ax) * (long)signconv(W, src);
                 core.ax = ld;
                 core.dx = ld >> 16;
-                setFlag(CF, (ld >> 16) != 0 && (ld >> 16) != 0xffff);
-                setFlag(OF, (ld >> 16) != 0 && (ld >> 16) != 0xffff);
+                core.flags.f.c = (ld >> 16) != 0 && (ld >> 16) != 0xffff;
+                core.flags.f.o = (ld >> 16) != 0 && (ld >> 16) != 0xffff;
             }
-            setFlag(AF, false);
+            core.flags.f.a = 0;
             setFlags(w, core.ax);
             if (w == B) {
-                setFlag(SF, (core.ax & 0x8000) != 0);
+                core.flags.f.s = (core.ax & 0x8000) != 0;
                 // 8086 byte IMUL: PF=1 when result is zero or when AL has odd parity
-                setFlag(PF, (core.ax == 0) || (PARITY[core.ax & 0xff] == 0));
+                core.flags.f.p = (core.ax == 0) || (PARITY[core.ax & 0xff] == 0);
             } else if (w == W) {
                 // 8086 word IMUL: PF from high byte of DX when DX is even (per hardware vectors)
-                setFlag(PF, (PARITY[(core.dx >> 8) & 0xff] != 0) && ((core.dx & 1) == 0));
-                setFlag(SF, (core.dx & 0x8000) != 0);
+                core.flags.f.p = (PARITY[(core.dx >> 8) & 0xff] != 0) && ((core.dx & 1) == 0);
+                core.flags.f.s = (core.dx & 0x8000) != 0;
             }
             break;
         case 6: // DIV (unsigned)
@@ -1758,32 +1733,32 @@ void Processor::exe_one()
                     Word quo    = udst / (Byte)src;
                     Byte divisor = (Byte)src;
                     if (quo > 0xFF) {
-                        setFlag(OF, true);
-                        setFlag(AF, false);
+                        core.flags.f.o = 1;
+                        core.flags.f.a = 0;
                         callInt(0);
                     } else {
                         set_al(quo);
                         set_ah(udst % divisor);
                         if ((quo & 0x80) != 0) {
-                            setFlag(CF, false);
-                            setFlag(OF, false);
+                            core.flags.f.c = 0;
+                            core.flags.f.o = 0;
                             setFlags(B, quo);
                             if (quo >= 0xBE) {
                                 set_flags(0xF006);
                             } else {
-                                setFlag(AF, false);
+                                core.flags.f.a = 0;
                             }
                         } else {
-                            setFlag(OF, true);
-                            setFlag(SF, true);
-                            setFlag(ZF, false);
-                            setFlag(AF, quo < 0x2C);
-                            setFlag(PF, true);
-                            setFlag(CF, true);
+                            core.flags.f.o = 1;
+                            core.flags.f.s = 1;
+                            core.flags.f.z = 0;
+                            core.flags.f.a = quo < 0x2C;
+                            core.flags.f.p = 1;
+                            core.flags.f.c = 1;
                             if (quo < 0x2C)
                                 set_flags(0xF487);
                             else
-                                setFlag(DF, false);
+                                core.flags.f.d = 0;
                         }
                     }
                 }
@@ -1795,18 +1770,18 @@ void Processor::exe_one()
                     uint32_t ldst = (core.dx << 16) | core.ax;
                     uint32_t quo  = ldst / (Word)src;
                     if (quo > 0xFFFF) {
-                        set_flags(getFlag(AF) ? 0xF406 : 0xF492);
+                        set_flags(core.flags.f.a ? 0xF406 : 0xF492);
                         callInt(0);
                     } else {
                         core.ax = quo;
                         core.dx = ldst % (Word)src;
                         if ((quo & 0x8000) != 0) {
-                            setFlag(CF, false);
-                            setFlag(OF, false);
-                            setFlag(AF, false);
-                            setFlag(PF, PARITY[(quo >> 8) & 0xff] != 0);
-                            setFlag(ZF, quo == 0);
-                            setFlag(SF, true);
+                            core.flags.f.c = 0;
+                            core.flags.f.o = 0;
+                            core.flags.f.a = 0;
+                            core.flags.f.p = PARITY[(quo >> 8) & 0xff] != 0;
+                            core.flags.f.z = quo == 0;
+                            core.flags.f.s = 1;
                         } else {
                             set_flags(quo >= 0x0400 ? 0xF883 : 0xFC97);
                         }
@@ -1824,12 +1799,12 @@ void Processor::exe_one()
                 src = (int8_t)src;
                 if (src == 0) {
                     // Divide by zero
-                    setFlag(CF, false);
-                    setFlag(PF, true);
-                    setFlag(AF, false);
-                    setFlag(ZF, true);
-                    setFlag(SF, false);
-                    setFlag(OF, false);
+                    core.flags.f.c = 0;
+                    core.flags.f.p = 1;
+                    core.flags.f.a = 0;
+                    core.flags.f.z = 1;
+                    core.flags.f.s = 0;
+                    core.flags.f.o = 0;
                     callInt(0);
                 } else {
                     dst = (int16_t)core.ax;
@@ -1838,13 +1813,12 @@ void Processor::exe_one()
                         // Quotient overflow (byte).
                         // OF=1 only when quotient negative.
                         // PF from quotient if neg else AX high.
-                        setFlag(CF, false);
-                        setFlag(PF,
-                                res < 0 ? (PARITY[res & 0xff] != 0) : (PARITY[(core.ax >> 8) & 0xff] != 0));
-                        setFlag(AF, true);
-                        setFlag(ZF, false);
-                        setFlag(SF, false);
-                        setFlag(OF, res < 0);
+                        core.flags.f.c = 0;
+                        core.flags.f.p = res < 0 ? (PARITY[res & 0xff] != 0) : (PARITY[(core.ax >> 8) & 0xff] != 0);
+                        core.flags.f.a = 1;
+                        core.flags.f.z = 0;
+                        core.flags.f.s = 0;
+                        core.flags.f.o = res < 0;
                         callInt(0);
                     } else {
                         int rem = dst % src;
@@ -1854,12 +1828,12 @@ void Processor::exe_one()
                         // Successful byte IDIV.
                         // SF from remainder.
                         // PF from remainder.
-                        setFlag(CF, false);
-                        setFlag(OF, false);
-                        setFlag(ZF, false);
-                        setFlag(PF, PARITY[rem & 0xff] != 0);
-                        setFlag(SF, (rem & 0x80) != 0);
-                        setFlag(AF, false);
+                        core.flags.f.c = 0;
+                        core.flags.f.o = 0;
+                        core.flags.f.z = 0;
+                        core.flags.f.p = PARITY[rem & 0xff] != 0;
+                        core.flags.f.s = (rem & 0x80) != 0;
+                        core.flags.f.a = 0;
                     }
                 }
             } else {
@@ -1868,12 +1842,12 @@ void Processor::exe_one()
                 src = (int16_t)src;
                 if (src == 0) {
                     // Divide by zero
-                    setFlag(CF, false);
-                    setFlag(PF, true);
-                    setFlag(AF, false);
-                    setFlag(ZF, true);
-                    setFlag(SF, false);
-                    setFlag(OF, false);
+                    core.flags.f.c = 0;
+                    core.flags.f.p = 1;
+                    core.flags.f.a = 0;
+                    core.flags.f.z = 1;
+                    core.flags.f.s = 0;
+                    core.flags.f.o = 0;
                     callInt(0);
                 } else {
                     dst          = (int32_t)((core.dx << 16) | core.ax);
@@ -1883,12 +1857,12 @@ void Processor::exe_one()
                         // Quotient overflow (word).
                         // PF from AX low byte.
                         // AF inverted from initial.
-                        setFlag(CF, false);
-                        setFlag(PF, PARITY[core.ax & 0xff] != 0);
-                        setFlag(AF, !getFlag(AF));
-                        setFlag(ZF, false);
-                        setFlag(SF, false);
-                        setFlag(OF, false);
+                        core.flags.f.c = 0;
+                        core.flags.f.p = PARITY[core.ax & 0xff] != 0;
+                        core.flags.f.a = !core.flags.f.a;
+                        core.flags.f.z = 0;
+                        core.flags.f.s = 0;
+                        core.flags.f.o = 0;
                         callInt(0);
                     } else {
                         core.ax = lres;
@@ -1896,12 +1870,12 @@ void Processor::exe_one()
 
                         // Successful word IDIV.
                         // SF from quotient.
-                        setFlag(CF, false);
-                        setFlag(OF, false);
-                        setFlag(ZF, false);
-                        setFlag(PF, true);
-                        setFlag(SF, (core.ax & 0x8000) != 0);
-                        setFlag(AF, true);
+                        core.flags.f.c = 0;
+                        core.flags.f.o = 0;
+                        core.flags.f.z = 0;
+                        core.flags.f.p = 1;
+                        core.flags.f.s = (core.ax & 0x8000) != 0;
+                        core.flags.f.a = 1;
                     }
                 }
             }

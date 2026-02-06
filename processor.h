@@ -45,7 +45,31 @@ struct CoreState {
     Word sp{}, bp{}, si{}, di{}; // stack pointer, base, index
     Word cs{}, ds{}, ss{}, es{}; // segment registers
     Word ip{};                   // instruction pointer
-    Word flags{};                // CF, PF, AF, ZF, SF, TF, IF, DF, OF
+
+    // Bits:  15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0
+    //        -----------------------------------------------
+    // Flags: 1  1  1  1  OF DF IF TF SF ZF 0  AF 0 PF  1  CF
+    union {
+        Word w{};
+        struct {
+            unsigned c : 1;      // bit 0  - CF, Carry Flag
+            unsigned _bit1 : 1;  //
+            unsigned p : 1;      // bit 2  - PF, Parity Flag
+            unsigned _bit3 : 1;  //
+            unsigned a : 1;      // bit 4  - AF, Auxiliary Carry Flag
+            unsigned _bit5 : 1;  //
+            unsigned z : 1;      // bit 6  - ZF, Zero Flag
+            unsigned s : 1;      // bit 7  - SF, Sign Flag
+            unsigned t : 1;      // bit 8  - TF, Trap Flag
+            unsigned i : 1;      // bit 9  - IF, Interrupt Flag
+            unsigned d : 1;      // bit 10 - DF, Direction Flag
+            unsigned o : 1;      // bit 11 - OF, Overflow Flag
+            unsigned _bit12 : 1; //
+            unsigned _bit13 : 1; //
+            unsigned _bit14 : 1; //
+            unsigned _bit15 : 1; //
+        } f;
+    } flags;
 };
 
 //
@@ -176,7 +200,7 @@ public:
     void set_es(Word val) { core.es = val; }
 
     // Flags (set_flags normalizes reserved bits to match POPF/8086)
-    Word get_flags() const { return core.flags; }
+    Word get_flags() const { return core.flags.w; }
     void set_flags(Word val);
 
     // Print trace info.

@@ -254,8 +254,8 @@ void Processor::print_registers()
     if (core.es != prev.es)
         out << "      ES = " << std::hex << std::setfill('0') << std::setw(4) << core.es
             << std::endl;
-    if (core.flags != prev.flags)
-        out << "      Flags = " << std::hex << std::setfill('0') << std::setw(4) << core.flags
+    if (core.flags.w != prev.flags.w)
+        out << "      Flags = " << std::hex << std::setfill('0') << std::setw(4) << core.flags.w
             << std::endl;
 
     prev = core;
