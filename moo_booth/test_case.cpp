@@ -7,9 +7,9 @@
 #include <cctype>
 #include <cstring>
 #include <fstream>
-#include <stdexcept>
 #include <iomanip>
 #include <sstream>
+#include <stdexcept>
 
 const char *const TestCase::REG_LUT[] = { "ax", "bx", "cx", "dx", "cs", "ss", "ds",
                                           "es", "sp", "bp", "si", "di", "ip", "flags" };

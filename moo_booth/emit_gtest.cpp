@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Serge Vakulenko
 // Licensed under the MIT License.
 
-#include "test_case.h"
-
 #include <fstream>
+
+#include "test_case.h"
 
 //
 // Converts test name to a safe filename/base: replace every sequence of non-alphanumeric

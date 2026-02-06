@@ -1,8 +1,9 @@
 // Copyright (c) 2026 Serge Vakulenko
 // Licensed under the MIT License.
 
-#include "test_case.h"
 #include <iomanip>
+
+#include "test_case.h"
 
 //
 // Lets users inspect a test's name and initial/final CPU state (registers and RAM) for
