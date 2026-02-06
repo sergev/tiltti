@@ -21,6 +21,7 @@ public:
 
     void print(std::ostream &os) const;
     void emit_gtest() const;
+    void run() const;
 
 private:
     static const char *const REG_LUT[];

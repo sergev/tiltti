@@ -31,7 +31,8 @@ int main(int argc, char **argv)
 {
     int limit            = -1;
     int index            = -1;
-    bool use_gtest       = false;
+    bool emit_gtest      = false;
+    bool run             = false;
     const char *filename = nullptr;
 
     for (int i = 1; i < argc; i++) {
@@ -41,7 +42,11 @@ int main(int argc, char **argv)
         if (parse_uint_arg(arg, "-index=", index))
             continue;
         if (arg == "-gtest") {
-            use_gtest = true;
+            emit_gtest = true;
+            continue;
+        }
+        if (arg == "-run") {
+            run = true;
             continue;
         }
         if (filename == nullptr) {
@@ -53,7 +58,16 @@ int main(int argc, char **argv)
     }
 
     if (filename == nullptr) {
-        std::cerr << "Usage: " << argv[0] << " [-limit=N] [-index=N] [-gtest] <binary_test_file>\n";
+        std::cerr << "Usage:\n";
+        std::cerr << "    moo-booth [options] <test_file>\n";
+        std::cerr << "Test File:\n";
+        std::cerr << "    *.MOO      Machine Opcode Operation file\n";
+        std::cerr << "    *.MOO.gz   Gzipped MOO file\n";
+        std::cerr << "Options:\n";
+        std::cerr << "    -index=N   Use single test number N\n";
+        std::cerr << "    -limit=N   Iterate tests 1...N\n";
+        std::cerr << "    -gtest     Convert to C++ source for Googletest\n";
+        std::cerr << "    -run       Run and on failure emit C++ source\n";
         return 1;
     }
 
@@ -65,10 +79,14 @@ int main(int argc, char **argv)
                 count++;
                 continue;
             }
-            if (use_gtest)
+
+            if (run)
+                rec->run();
+            else if (emit_gtest)
                 rec->emit_gtest();
             else
                 rec->print(std::cout);
+
             count++;
             if (limit >= 0 && count >= limit)
                 break;
