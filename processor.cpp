@@ -1754,16 +1754,38 @@ void Processor::exe_one()
                     set_flags(0xF046);
                     callInt(0);
                 } else {
-                    Word udst = core.ax;
-
-                    set_al(udst / (Byte)src);
-                    set_ah(udst % (Byte)src);
-                    setFlag(OF, true);
-                    setFlag(SF, true);
-                    setFlag(ZF, false);
-                    setFlag(AF, false);
-                    setFlag(PF, true);
-                    setFlag(CF, true);
+                    Word udst   = core.ax;
+                    Word quo    = udst / (Byte)src;
+                    Byte divisor = (Byte)src;
+                    if (quo > 0xFF) {
+                        setFlag(OF, true);
+                        setFlag(AF, false);
+                        callInt(0);
+                    } else {
+                        set_al(quo);
+                        set_ah(udst % divisor);
+                        if ((quo & 0x80) != 0) {
+                            setFlag(CF, false);
+                            setFlag(OF, false);
+                            setFlags(B, quo);
+                            if (quo >= 0xBE) {
+                                set_flags(0xF006);
+                            } else {
+                                setFlag(AF, false);
+                            }
+                        } else {
+                            setFlag(OF, true);
+                            setFlag(SF, true);
+                            setFlag(ZF, false);
+                            setFlag(AF, quo < 0x2C);
+                            setFlag(PF, true);
+                            setFlag(CF, true);
+                            if (quo < 0x2C)
+                                set_flags(0xF487);
+                            else
+                                setFlag(DF, false);
+                        }
+                    }
                 }
             } else {
                 if (src == 0) {
@@ -1771,15 +1793,24 @@ void Processor::exe_one()
                     callInt(0);
                 } else {
                     uint32_t ldst = (core.dx << 16) | core.ax;
-
-                    core.ax = ldst / (Word)src;
-                    core.dx = ldst % (Word)src;
-                    setFlag(OF, false);
-                    setFlag(SF, true);
-                    setFlag(ZF, false);
-                    setFlag(AF, false);
-                    setFlag(PF, false);
-                    setFlag(CF, false);
+                    uint32_t quo  = ldst / (Word)src;
+                    if (quo > 0xFFFF) {
+                        set_flags(getFlag(AF) ? 0xF406 : 0xF492);
+                        callInt(0);
+                    } else {
+                        core.ax = quo;
+                        core.dx = ldst % (Word)src;
+                        if ((quo & 0x8000) != 0) {
+                            setFlag(CF, false);
+                            setFlag(OF, false);
+                            setFlag(AF, false);
+                            setFlag(PF, PARITY[(quo >> 8) & 0xff] != 0);
+                            setFlag(ZF, quo == 0);
+                            setFlag(SF, true);
+                        } else {
+                            set_flags(quo >= 0x0400 ? 0xF883 : 0xFC97);
+                        }
+                    }
                 }
             }
             break;
