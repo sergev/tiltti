@@ -6,15 +6,14 @@ For details on the binary format, see [MOO_File_Format_Specification.md](MOO_Fil
 
 ### Build
 
-Requires a C++17 compiler and zlib.
+Requires a C++17 compiler and zlib. Build from the repository root:
 
 ```bash
-make          # Release build
-make debug    # Debug build
-make clean    # Remove build artifacts
+cmake -S . -B build
+cmake --build build
 ```
 
-The output binary is `moo-booth`.
+The executable is `build/moo_booth/moo-booth`. For a debug build use `-DCMAKE_BUILD_TYPE=Debug` when configuring.
 
 ### Usage
 

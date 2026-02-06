@@ -1,6 +1,7 @@
 *.MOO
 *.gz
 moo-booth
+moo-booth-dbg
 build
 *.h-
 *.cpp-

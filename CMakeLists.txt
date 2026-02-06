@@ -68,4 +68,5 @@ install(TARGETS
     DESTINATION bin
 )
 
+add_subdirectory(moo_booth)
 add_subdirectory(tests)
