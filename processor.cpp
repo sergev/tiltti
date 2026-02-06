@@ -81,6 +81,25 @@ void Processor::reset()
 }
 
 //
+// Set FLAGS register.
+//
+void Processor::set_flags(Word val)
+{
+    // Bits 1,3,5 reserved (1,0,0).
+    static const unsigned FLAGS_WRITABLE = 0x0FD5; // bits 0,2,4,6-11 writable
+    static const unsigned FLAGS_ONES     = 0xF002; // bits 1,12-15 always 1
+
+    core.flags.w = (val & FLAGS_WRITABLE) | FLAGS_ONES;
+}
+
+void Processor::update_flags(int width, int res)
+{
+    core.flags.f.p = PARITY[res & 0xff] != 0;
+    core.flags.f.z = res == 0;
+    core.flags.f.s = (shift(res, 8 - BITS[width]) & 0x80) != 0;
+}
+
+//
 // Linear address from segment:offset (8086 real mode).
 //
 unsigned Processor::getAddr(Word seg, Word off) const
@@ -425,7 +444,7 @@ int Processor::add(int width, int dst, int src)
     core.flags.f.c = res < dst;
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
     core.flags.f.o = (shift((dst ^ src ^ -1) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
-    setFlags(width, res);
+    update_flags(width, res);
     return res;
 }
 
@@ -436,7 +455,7 @@ int Processor::adc(int width, int dst, int src)
     core.flags.f.c = carry ? (res <= dst) : (res < dst);
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
     core.flags.f.o = (shift((dst ^ src ^ -1) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
-    setFlags(width, res);
+    update_flags(width, res);
     return res;
 }
 
@@ -446,7 +465,7 @@ int Processor::sub(int width, int dst, int src)
     core.flags.f.c = dst < src;
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
     core.flags.f.o = (shift((dst ^ src) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
-    setFlags(width, res);
+    update_flags(width, res);
     return res;
 }
 
@@ -457,7 +476,7 @@ int Processor::sbb(int width, int dst, int src)
     core.flags.f.c = carry ? (dst <= src) : (dst < src);
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
     core.flags.f.o = (shift((dst ^ src) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
-    setFlags(width, res);
+    update_flags(width, res);
     return res;
 }
 
@@ -466,7 +485,7 @@ int Processor::inc(int width, int dst)
     int res = (dst + 1) & MASK[width];
     core.flags.f.a = ((res ^ dst ^ 1) & 0x10) != 0;
     core.flags.f.o = res == static_cast<int>(SIGN[width]);
-    setFlags(width, res);
+    update_flags(width, res);
     return res;
 }
 
@@ -475,7 +494,7 @@ int Processor::dec(int width, int dst)
     int res = (dst - 1) & MASK[width];
     core.flags.f.a = ((res ^ dst ^ 1) & 0x10) != 0;
     core.flags.f.o = res == static_cast<int>(SIGN[width]) - 1;
-    setFlags(width, res);
+    update_flags(width, res);
     return res;
 }
 
@@ -484,26 +503,7 @@ void Processor::logic(int width, int res)
     core.flags.f.c = 0;
     core.flags.f.o = 0;
     core.flags.f.a = 0; // undefined per Intel; real 8086 clears it
-    setFlags(width, res);
-}
-
-//
-// Set FLAGS register.
-//
-void Processor::set_flags(Word val)
-{
-    // Bits 1,3,5 reserved (1,0,0).
-    static const unsigned FLAGS_WRITABLE = 0x0FD5; // bits 0,2,4,6-11 writable
-    static const unsigned FLAGS_ONES     = 0xF002; // bits 1,12-15 always 1
-
-    core.flags.w = (val & FLAGS_WRITABLE) | FLAGS_ONES;
-}
-
-void Processor::setFlags(int width, int res)
-{
-    core.flags.f.p = PARITY[res & 0xff] != 0;
-    core.flags.f.z = res == 0;
-    core.flags.f.s = (shift(res, 8 - BITS[width]) & 0x80) != 0;
+    update_flags(width, res);
 }
 
 int Processor::signconv(int width, int x)
@@ -934,7 +934,7 @@ void Processor::exe_one()
         } else {
             core.flags.f.c = 0;
         }
-        setFlags(B, get_al());
+        update_flags(B, get_al());
         core.flags.f.o = 0; // 8086: OF undefined after DAA; test expects 0
         break;
     }
@@ -1031,7 +1031,7 @@ void Processor::exe_one()
             core.flags.f.a = 0;
         }
         set_al(get_al() & 0xf);
-        setFlags(B, get_al()); // PF, ZF, SF from result AL
+        update_flags(B, get_al()); // PF, ZF, SF from result AL
         break;
     }
     case 0x2f: {
@@ -1048,7 +1048,7 @@ void Processor::exe_one()
             core.flags.f.c = 1;
         } else
             core.flags.f.c = 0;
-        setFlags(B, get_al());
+        update_flags(B, get_al());
         core.flags.f.o = 0; // 8086: OF undefined after DAS; test expects 0
         break;
     }
@@ -1060,7 +1060,7 @@ void Processor::exe_one()
         } else {
             set_ah(get_al() / src);
             set_al(get_al() % src);
-            setFlags(W, core.ax);
+            update_flags(W, core.ax);
         }
         break;
     }
@@ -1069,7 +1069,7 @@ void Processor::exe_one()
         int ah_val = core.ax >> 8;
         set_al(ah_val * src + get_al());
         core.ax &= 0x00ff;
-        setFlags(B, get_al());
+        update_flags(B, get_al());
         core.flags.f.c = 1; // 8086 AAD: match reference 0xF403
         core.flags.f.a = 0;
         core.flags.f.o = 0;
@@ -1589,7 +1589,7 @@ void Processor::exe_one()
                 core.flags.f.o = 0;
             if (src > 0) {
                 core.flags.f.a = 0;
-                setFlags(w, dst);
+                update_flags(w, dst);
             }
             break;
         case 6: // SETMO: real 8086 sets operand to all ones (0xFF/0xFFFF)
@@ -1597,7 +1597,7 @@ void Processor::exe_one()
             core.flags.f.c = 0;
             core.flags.f.o = 0;
             core.flags.f.a = 0;
-            setFlags(w, dst);
+            update_flags(w, dst);
             break;
         case 5: // SHR
             if (src == 1)
@@ -1608,7 +1608,7 @@ void Processor::exe_one()
             }
             if (src > 0) {
                 core.flags.f.a = 0;
-                setFlags(w, dst);
+                update_flags(w, dst);
             }
             break;
         case 7: // SAR - 8086 uses original sign bit for all shift-ins
@@ -1627,7 +1627,7 @@ void Processor::exe_one()
                     }
                 }
                 core.flags.f.a = 0;
-                setFlags(w, dst);
+                update_flags(w, dst);
             }
             break;
         default:
@@ -1686,7 +1686,7 @@ void Processor::exe_one()
                 core.flags.f.o = (lres >> 16) != 0;
             }
             core.flags.f.a = 0;
-            setFlags(w, core.ax);
+            update_flags(w, core.ax);
             break;
         case 5: // IMUL
             if (w == B) {
@@ -1704,7 +1704,7 @@ void Processor::exe_one()
                 core.flags.f.o = (ld >> 16) != 0 && (ld >> 16) != 0xffff;
             }
             core.flags.f.a = 0;
-            setFlags(w, core.ax);
+            update_flags(w, core.ax);
             if (w == B) {
                 core.flags.f.s = (core.ax & 0x8000) != 0;
                 // 8086 byte IMUL: PF=1 when result is zero or when AL has odd parity
@@ -1742,7 +1742,7 @@ void Processor::exe_one()
                         if ((quo & 0x80) != 0) {
                             core.flags.f.c = 0;
                             core.flags.f.o = 0;
-                            setFlags(B, quo);
+                            update_flags(B, quo);
                             if (quo >= 0xBE) {
                                 set_flags(0xF006);
                             } else {

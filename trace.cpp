@@ -254,9 +254,28 @@ void Processor::print_registers()
     if (core.es != prev.es)
         out << "      ES = " << std::hex << std::setfill('0') << std::setw(4) << core.es
             << std::endl;
-    if (core.flags.w != prev.flags.w)
-        out << "      Flags = " << std::hex << std::setfill('0') << std::setw(4) << core.flags.w
-            << std::endl;
+    if (core.flags.w != prev.flags.w) {
+        out << "      Flags = " << std::hex << std::setfill('0') << std::setw(4) << core.flags.w;
+        if (core.flags.w & 0x800)
+            out << " OF";
+        if (core.flags.w & 0x400)
+            out << " DF";
+        if (core.flags.w & 0x200)
+            out << " IF";
+        if (core.flags.w & 0x100)
+            out << " TF";
+        if (core.flags.w & 0x80)
+            out << " SF";
+        if (core.flags.w & 0x40)
+            out << " ZF";
+        if (core.flags.w & 0x10)
+            out << " AF";
+        if (core.flags.w & 0x4)
+            out << " PF";
+        if (core.flags.w & 0x1)
+            out << " CF";
+        out << std::endl;
+    }
 
     prev = core;
     out.flags(save_flags);

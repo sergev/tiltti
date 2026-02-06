@@ -115,9 +115,6 @@ private:
     int inc(int width, int dst);
     int dec(int width, int dst);
     void logic(int width, int res);
-    bool getFlag(unsigned flag) const;
-    void setFlag(unsigned flag, bool set);
-    void setFlags(int width, int res);
     static int signconv(int width, int x);
     static bool msb(int width, int x);
 
@@ -202,6 +199,7 @@ public:
     // Flags (set_flags normalizes reserved bits to match POPF/8086)
     Word get_flags() const { return core.flags.w; }
     void set_flags(Word val);
+    void update_flags(int width, int res);
 
     // Print trace info.
     void print_instruction();
