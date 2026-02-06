@@ -69,12 +69,12 @@ Processor::Processor(Machine &mach) : machine(mach)
 //
 void Processor::reset()
 {
-    core             = {};
-    core.ip          = 0x0000;
-    core.cs          = 0xffff;
-    core.ds          = 0x0000;
-    core.ss          = 0x0000;
-    core.es          = 0x0000;
+    core    = {};
+    core.ip = 0x0000;
+    core.cs = 0xffff;
+    core.ds = 0x0000;
+    core.ss = 0x0000;
+    core.es = 0x0000;
     set_flags(0);
     opcode           = {};
     plen             = 0;
@@ -107,7 +107,7 @@ unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
         disp = 0;
         break;
     case 1:
-        disp = (int8_t) opcode[plen + 2];
+        disp = (int8_t)opcode[plen + 2];
         break;
     case 2:
         disp = opcode[plen + 2] | (opcode[plen + 3] << 8);
@@ -787,9 +787,9 @@ void Processor::exe_one()
     case 0x95:
     case 0x96:
     case 0x97:
-        reg = op & 0b111;
-        dst = core.ax;
-        src = getReg(W, reg);
+        reg     = op & 0b111;
+        dst     = core.ax;
+        src     = getReg(W, reg);
         core.ax = src;
         setReg(W, reg, dst);
         break;
@@ -1104,7 +1104,7 @@ void Processor::exe_one()
         set_al(ah_val * src + get_al());
         core.ax &= 0x00ff;
         setFlags(B, get_al());
-        setFlag(CF, true);  // 8086 AAD: match reference 0xF403
+        setFlag(CF, true); // 8086 AAD: match reference 0xF403
         setFlag(AF, false);
         setFlag(OF, false);
         setFlag(TF, false);
@@ -1302,7 +1302,7 @@ void Processor::exe_one()
         core.cs = static_cast<Word>(src & 0xffff);
         break;
     }
-    // Conditional jumps (Jcc)
+        // Conditional jumps (Jcc)
 
     case 0x70: // JO - Overflow
     case 0x60: // Undocumented
@@ -1563,7 +1563,7 @@ void Processor::exe_one()
             // 8086 RCL/RCR only: count mod 9 (byte) or mod 17 (word) - rotate through carry
             if (reg == 2 || reg == 3) {
                 int n = (w == B) ? 9 : 17;
-                src = get_cl() % n;
+                src   = get_cl() % n;
             }
             // 8086 shifts (SHR/SAR/SHL): count mask 5 bits (0-31) for both byte and word
             else
@@ -1609,7 +1609,8 @@ void Processor::exe_one()
                 setFlag(CF, temp_cf);
             }
             if (src > 1)
-                setFlag(OF, w == W && (msb(w, dst) != (static_cast<unsigned>(dst) & (SIGN[w] >> 1))));
+                setFlag(OF,
+                        w == W && (msb(w, dst) != (static_cast<unsigned>(dst) & (SIGN[w] >> 1))));
             break;
         case 4: // SAL/SHL
             for (int cnt = 0; cnt < src; ++cnt) {
@@ -1677,7 +1678,8 @@ void Processor::exe_one()
         switch (reg) {
         case 0:
         case 1: {
-            // TEST r/m, imm (reg 0 and 1 on real 8086). Immediate follows ModR/M and any displacement.
+            // TEST r/m, imm (reg 0 and 1 on real 8086). Immediate follows ModR/M and any
+            // displacement.
             int imm_off = 2;
             if (mod == 0b01)
                 imm_off = 3;
@@ -1705,15 +1707,15 @@ void Processor::exe_one()
         }
         case 4: // MUL
             if (w == B) {
-                dst = get_al();
-                res = (Word) (dst * src);
+                dst     = get_al();
+                res     = (Word)(dst * src);
                 core.ax = res;
                 setFlag(CF, (res >> 8) != 0);
                 setFlag(OF, (res >> 8) != 0);
             } else {
                 uint32_t lres = (uint32_t)core.ax * (Word)src;
-                core.ax = lres;
-                core.dx = lres >> 16;
+                core.ax       = lres;
+                core.dx       = lres >> 16;
                 setFlag(CF, (lres >> 16) != 0);
                 setFlag(OF, (lres >> 16) != 0);
             }
@@ -1724,8 +1726,8 @@ void Processor::exe_one()
             if (w == B) {
                 int s    = signconv(B, src);
                 int dval = signconv(B, get_al());
-                res = (Word)(dval * s);
-                core.ax = res;
+                res      = (Word)(dval * s);
+                core.ax  = res;
                 setFlag(CF, (res != 0 && (res > 0x7f || res < (int)0xff80)));
                 setFlag(OF, (res != 0 && (res > 0x7f || res < (int)0xff80)));
             } else {
@@ -1737,8 +1739,15 @@ void Processor::exe_one()
             }
             setFlag(AF, false);
             setFlags(w, core.ax);
-            if (w == W)
-                setFlag(PF, (PARITY[core.ax & 0xff] != 0) == (PARITY[core.ax >> 8] != 0));
+            if (w == B) {
+                setFlag(SF, (core.ax & 0x8000) != 0);
+                // 8086 byte IMUL: PF=1 when result is zero or when AL has odd parity
+                setFlag(PF, (core.ax == 0) || (PARITY[core.ax & 0xff] == 0));
+            } else if (w == W) {
+                // 8086 word IMUL: PF from high byte of DX when DX is even (per hardware vectors)
+                setFlag(PF, (PARITY[(core.dx >> 8) & 0xff] != 0) && ((core.dx & 1) == 0));
+                setFlag(SF, (core.dx & 0x8000) != 0);
+            }
             break;
         case 6: // DIV (unsigned)
             // The DIV instruction in the 8086 microprocessor upon successful execution
@@ -1784,11 +1793,11 @@ void Processor::exe_one()
             if (w == B) {
                 // Dividend is a signed 16-bit value in AX.
                 // Divisor is a signed 8-bit value (register or memory).
-                src = (int8_t) src;
+                src = (int8_t)src;
                 if (src == 0) {
                     callInt(0);
                 } else {
-                    dst = (int16_t) core.ax;
+                    dst = (int16_t)core.ax;
                     res = dst / src;
                     if (res > 0x7f || res < -0x80) {
                         callInt(0);
@@ -1800,12 +1809,12 @@ void Processor::exe_one()
             } else {
                 // Dividend is a signed 32-bit value in DX:AX.
                 // Divisor is a signed 16-bit value (register or memory).
-                src = (int16_t) src;
+                src = (int16_t)src;
                 if (src == 0) {
                     callInt(0);
                 } else {
-                    dst = (int32_t) ((core.dx << 16) | core.ax);
-                    int64_t lres = (int64_t) dst / src;
+                    dst          = (int32_t)((core.dx << 16) | core.ax);
+                    int64_t lres = (int64_t)dst / src;
 
                     if (lres > 0x7fff || lres < -0x8000) {
                         callInt(0);
