@@ -409,13 +409,26 @@ void Processor::callInt(int type)
         machine.process_syscall(type);
         return;
     }
-    Word offset   = getMem(W, type * 4);
-    Word seg      = getMem(W, type * 4 + 2);
+
+    // Fetch interrupt vector.
+    Word offset = getMem(W, type * 4);
+    Word seg    = getMem(W, type * 4 + 2);
+
+    // Update flags.
+    setFlag(IF, false);
+    setFlag(TF, false);
+    if (type == 0) {
+        // Divide exception
+        setFlag(CF, false);
+        setFlag(PF, true);
+        setFlag(AF, true);
+        setFlag(ZF, false);
+        setFlag(SF, false);
+        setFlag(OF, false);
+    }
 
     // Take interrupt.
     push(core.flags);
-    setFlag(IF, false);
-    setFlag(TF, false);
     push(core.cs);
     push(core.ip);
     core.ip = offset;
@@ -625,10 +638,10 @@ done_prefix:
         // For MOVS/LODS/STOS, repeat until CX==0 regardless of ZF.
         bool check_zf = (op == 0xa6 || op == 0xa7 || op == 0xae || op == 0xaf);
         do {
-            if (getReg(W, 1) == 0) // CX
+            if (core.cx == 0) // CX
                 break;
             if (rep)
-                setReg(W, 1, getReg(W, 1) - 1);
+                core.cx -= 1;
             exe_one();
             if (rep && check_zf && ((rep == 1 && !getFlag(ZF)) || (rep == 2 && getFlag(ZF))))
                 break;
@@ -777,7 +790,7 @@ void Processor::exe_one()
     case 0x96:
     case 0x97:
         reg = op & 0b111;
-        dst = getReg(W, AX);
+        dst = core.ax;
         src = getReg(W, reg);
         setReg(W, AX, src);
         setReg(W, reg, dst);
@@ -788,8 +801,7 @@ void Processor::exe_one()
         break;
     // XLAT
     case 0xd7: {
-        int al_val = getReg(B, AX);
-        setReg(B, AX, getMem(B, getAddr(os, (getReg(W, 3) + al_val) & 0xffff))); // BX = reg 3
+        set_al(getMem(B, getAddr(os, core.bx + get_al())));
         break;
     }
     // IN accum, port (immed and DX)
@@ -927,9 +939,8 @@ void Processor::exe_one()
         break;
     // AAA
     case 0x37: {
-        int al_val = getReg(B, AX);
-        if ((al_val & 0xf) > 9 || getFlag(AF)) {
-            setReg(B, AX, (al_val + 6) & 0xff);
+        if ((get_al() & 0xf) > 9 || getFlag(AF)) {
+            setReg(B, AX, (get_al() + 6) & 0xff);
             core.ax = (core.ax + 0x100) & 0xffff;
             setFlag(CF, true);
             setFlag(AF, true);
@@ -937,29 +948,28 @@ void Processor::exe_one()
             setFlag(CF, false);
             setFlag(AF, false);
         }
-        setReg(B, AX, getReg(B, AX) & 0xf);
+        setReg(B, AX, get_al() & 0xf);
         setFlag(PF, false); // 8086 AAA: PF=0 (match reference 0xF893)
         setFlag(ZF, false);
         setFlag(SF, (core.ax & 0xff00) != 0); // SF from AH non-zero
         break;
     }
     case 0x27: {
-        int al_val  = getReg(B, AX);
         bool old_cf = getFlag(CF);
         setFlag(CF, false);
-        if ((al_val & 0xf) > 9 || getFlag(AF)) {
-            al_val = (al_val + 6) & 0xff;
-            setFlag(CF, old_cf || (al_val < 0));
+        if ((get_al() & 0xf) > 9 || getFlag(AF)) {
+            set_al(get_al() + 6);
+            setFlag(CF, old_cf || (get_al() < 0));
             setFlag(AF, true);
         } else
             setFlag(AF, false);
-        if (al_val > 0x99 || old_cf || ((al_val >> 4) <= 9 && getFlag(AF))) {
-            al_val = (al_val + 0x60) & 0xff;
+        if (get_al() > 0x99 || old_cf || ((get_al() >> 4) <= 9 && getFlag(AF))) {
+            set_al(get_al() + 0x60);
             setFlag(CF, true);
         } else
             setFlag(CF, false);
-        setReg(B, AX, al_val);
-        setFlags(B, al_val);
+        setReg(B, AX, get_al());
+        setFlags(B, get_al());
         setFlag(OF, false); // 8086: OF undefined after DAA; test expects 0
         break;
     }
@@ -1046,9 +1056,8 @@ void Processor::exe_one()
         break;
     // AAS
     case 0x3f: {
-        int al_val = getReg(B, AX);
-        if ((al_val & 0xf) > 9 || getFlag(AF)) {
-            setReg(B, AX, (al_val - 6) & 0xff);
+        if ((get_al() & 0xf) > 9 || getFlag(AF)) {
+            setReg(B, AX, (get_al() - 6) & 0xff);
             core.ax = (core.ax - 0x100) & 0xffff;
             setFlag(CF, true);
             setFlag(AF, true);
@@ -1056,27 +1065,26 @@ void Processor::exe_one()
             setFlag(CF, false);
             setFlag(AF, false);
         }
-        setReg(B, AX, getReg(B, AX) & 0xf);
-        setFlags(B, getReg(B, AX)); // PF, ZF, SF from result AL
+        setReg(B, AX, get_al() & 0xf);
+        setFlags(B, get_al()); // PF, ZF, SF from result AL
         break;
     }
     case 0x2f: {
-        int al_val  = getReg(B, AX);
         bool old_cf = getFlag(CF);
         setFlag(CF, false);
-        if ((al_val & 0xf) > 9 || getFlag(AF)) {
-            al_val = (al_val - 6) & 0xff;
-            setFlag(CF, old_cf || (al_val > 0));
+        if ((get_al() & 0xf) > 9 || getFlag(AF)) {
+            set_al(get_al() - 6);
+            setFlag(CF, old_cf || (get_al() > 0));
             setFlag(AF, true);
         } else
             setFlag(AF, false);
-        if (al_val > 0x99 || old_cf || ((al_val >> 4) <= 9 && getFlag(AF))) {
-            al_val = (al_val - 0x60) & 0xff;
+        if (get_al() > 0x99 || old_cf || ((get_al() >> 4) <= 9 && getFlag(AF))) {
+            set_al(get_al() - 0x60);
             setFlag(CF, true);
         } else
             setFlag(CF, false);
-        setReg(B, AX, al_val);
-        setFlags(B, al_val);
+        setReg(B, AX, get_al());
+        setFlags(B, get_al());
         setFlag(OF, false); // 8086: OF undefined after DAS; test expects 0
         break;
     }
@@ -1086,9 +1094,8 @@ void Processor::exe_one()
         if (src == 0) {
             callInt(0);
         } else {
-            int al_val = getReg(B, AX);
-            core.ax    = (core.ax & 0x00ff) | ((al_val / src) & 0xff) << 8;
-            setReg(B, AX, al_val % src);
+            set_ah(get_al() / src);
+            set_al(get_al() % src);
             setFlags(W, core.ax);
         }
         break;
@@ -1096,9 +1103,9 @@ void Processor::exe_one()
     case 0xd5: {
         src        = getMem(B);
         int ah_val = core.ax >> 8;
-        setReg(B, AX, (ah_val * src + getReg(B, AX)) & 0xff);
+        setReg(B, AX, (ah_val * src + get_al()) & 0xff);
         core.ax &= 0x00ff;
-        setFlags(B, getReg(B, AX));
+        setFlags(B, get_al());
         setFlag(CF, true);  // 8086 AAD: match reference 0xF403
         setFlag(AF, false);
         setFlag(OF, false);
@@ -1107,7 +1114,7 @@ void Processor::exe_one()
     }
     // CBW, CWD
     case 0x98:
-        if (getReg(B, AX) & 0x80)
+        if (get_al() & 0x80)
             core.ax |= 0xff00;
         else
             core.ax &= 0x00ff;
@@ -1555,7 +1562,19 @@ void Processor::exe_one()
     case 0xd3: {
         decode();
         dst = getRM(w, mod, rm);
-        src = (op == 0xd0 || op == 0xd1) ? 1 : (getReg(B, 1) & 0x1f); // CL
+        if (op == 0xd0 || op == 0xd1)
+            src = 1;
+        else {
+            int cl_val = getReg(B, 1) & 0xff;
+            // 8086 RCL/RCR only: count mod 9 (byte) or mod 17 (word) - rotate through carry
+            if (reg == 2 || reg == 3) {
+                int n = (w == B) ? 9 : 17;
+                src = cl_val % n;
+            }
+            // 8086 shifts (SHR/SAR/SHL): count mask 5 bits (0-31) for both byte and word
+            else
+                src = cl_val & 0x1f;
+        }
         bool temp_cf;
         switch (reg) {
         case 0: // ROL
@@ -1575,6 +1594,8 @@ void Processor::exe_one()
             setFlag(CF, msb(w, dst));
             if (src == 1)
                 setFlag(OF, msb(w, dst) != msb(w, dst << 1));
+            else if (src > 1)
+                setFlag(OF, false);
             break;
         case 2: // RCL
             for (int cnt = 0; cnt < src; ++cnt) {
@@ -1593,6 +1614,8 @@ void Processor::exe_one()
                 dst     = ((dst >> 1) | (getFlag(CF) ? static_cast<int>(SIGN[w]) : 0)) & MASK[w];
                 setFlag(CF, temp_cf);
             }
+            if (src > 1)
+                setFlag(OF, w == W && (msb(w, dst) != (static_cast<unsigned>(dst) & (SIGN[w] >> 1))));
             break;
         case 4: // SAL/SHL
             for (int cnt = 0; cnt < src; ++cnt) {
@@ -1601,8 +1624,19 @@ void Processor::exe_one()
             }
             if (src == 1)
                 setFlag(OF, ((dst & static_cast<int>(SIGN[w])) != 0) != getFlag(CF));
-            if (src > 0)
+            else if (src > 0)
+                setFlag(OF, false);
+            if (src > 0) {
+                setFlag(AF, false);
                 setFlags(w, dst);
+            }
+            break;
+        case 6: // SETMO: real 8086 sets operand to all ones (0xFF/0xFFFF)
+            dst = static_cast<int>(MASK[w]);
+            setFlag(CF, false);
+            setFlag(OF, false);
+            setFlag(AF, false);
+            setFlags(w, dst);
             break;
         case 5: // SHR
             if (src == 1)
@@ -1611,18 +1645,29 @@ void Processor::exe_one()
                 setFlag(CF, (dst & 1) != 0);
                 dst = (dst >> 1) & MASK[w];
             }
-            if (src > 0)
+            if (src > 0) {
+                setFlag(AF, false);
                 setFlags(w, dst);
+            }
             break;
-        case 7: // SAR
+        case 7: // SAR - 8086 uses original sign bit for all shift-ins
             if (src == 1)
                 setFlag(OF, false);
-            for (int cnt = 0; cnt < src; ++cnt) {
-                setFlag(CF, (dst & 1) != 0);
-                dst = (signconv(w, dst) >> 1) & MASK[w];
-            }
-            if (src > 0)
+            if (src > 0) {
+                int signbit = (dst & static_cast<int>(SIGN[w]));
+                if (src >= 8) {
+                    setFlag(CF, signbit != 0);
+                    setFlag(OF, false);
+                    dst = signbit ? static_cast<int>(MASK[w]) : 0;
+                } else {
+                    for (int cnt = 0; cnt < src; ++cnt) {
+                        setFlag(CF, (dst & 1) != 0);
+                        dst = ((dst >> 1) | signbit) & MASK[w];
+                    }
+                }
+                setFlag(AF, false);
                 setFlags(w, dst);
+            }
             break;
         default:
             break;
@@ -1637,8 +1682,25 @@ void Processor::exe_one()
         src = getRM(w, mod, rm);
         switch (reg) {
         case 0:
-            logic(w, getMem(w) & src);
+        case 1: {
+            // TEST r/m, imm (reg 0 and 1 on real 8086). Immediate follows ModR/M and any displacement.
+            int imm_off = 2;
+            if (mod == 0b01)
+                imm_off = 3;
+            else if (mod == 0b10 || (mod == 0b00 && rm == 0b110))
+                imm_off = 4;
+            int imm;
+            if (op == 0xf7) {
+                imm = static_cast<unsigned>(opcode[plen + imm_off]) |
+                      (static_cast<unsigned>(opcode[plen + imm_off + 1]) << 8);
+                core.ip = (core.ip + 2) & 0xffff;
+            } else {
+                imm = static_cast<unsigned>(opcode[plen + imm_off]);
+                core.ip = (core.ip + 1) & 0xffff;
+            }
+            logic(w, (imm & src));
             break;
+        }
         case 2:
             setRM(w, mod, rm, ~src);
             break;
@@ -1650,54 +1712,77 @@ void Processor::exe_one()
         }
         case 4: // MUL
             if (w == B) {
-                dst = getReg(B, AX);
+                dst = get_al();
                 res = (dst * src) & 0xffff;
                 setReg(W, AX, res);
                 setFlag(CF, (res >> 8) != 0);
                 setFlag(OF, (res >> 8) != 0);
             } else {
-                long lres = (long)(getReg(W, AX) & 0xffff) * (long)(src & 0xffff);
+                long lres = (long)(core.ax & 0xffff) * (long)(src & 0xffff);
                 setReg(W, AX, lres & 0xffff);
                 setReg(W, 2, (lres >> 16) & 0xffff); // DX
                 setFlag(CF, (lres >> 16) != 0);
                 setFlag(OF, (lres >> 16) != 0);
             }
+            setFlag(AF, false);
+            setFlags(w, core.ax);
             break;
         case 5: // IMUL
             if (w == B) {
-                int s = signconv(B, src), dval = signconv(B, getReg(B, AX));
+                int s = signconv(B, src), dval = signconv(B, get_al());
                 res = (dval * s) & 0xffff;
                 setReg(W, AX, res);
                 setFlag(CF, (res != 0 && (res > 0x7f || res < (int)0xff80)));
                 setFlag(OF, (res != 0 && (res > 0x7f || res < (int)0xff80)));
             } else {
-                long ld = (long)signconv(W, getReg(W, AX)) * (long)signconv(W, src);
+                long ld = (long)signconv(W, core.ax) * (long)signconv(W, src);
                 setReg(W, AX, ld & 0xffff);
                 setReg(W, 2, (ld >> 16) & 0xffff);
                 setFlag(CF, (ld >> 16) != 0 && (ld >> 16) != 0xffff);
                 setFlag(OF, (ld >> 16) != 0 && (ld >> 16) != 0xffff);
             }
+            setFlag(AF, false);
+            setFlags(w, core.ax);
+            if (w == W)
+                setFlag(PF, (PARITY[core.ax & 0xff] != 0) == (PARITY[core.ax >> 8] != 0));
             break;
-        case 6: // DIV
-            if (src == 0) {
-                callInt(0);
-            } else if (w == B) {
-                dst = getReg(W, AX);
-                res = dst / src;
-                if (res > 0xff) {
+        case 6: // DIV (unsigned)
+            // The DIV instruction in the 8086 microprocessor upon successful execution
+            // does not reliably update the FLAGS register. Specifically, the following
+            // flags are left in an undefined state:
+            // Carry Flag (CF), Overflow Flag (OF), Sign Flag (SF), Zero Flag (ZF),
+            // Parity Flag (PF), and Auxiliary Carry Flag (AF).
+            // The remaining flags are unaffected:
+            // Interrupt Flag (IF), Direction Flag (DF), and Trap Flag (TF).
+            if (w == B) {
+                if ((Byte)src == 0) {
                     callInt(0);
                 } else {
-                    setReg(B, AX, res);
-                    core.ax = (core.ax & 0x00ff) | ((dst % src) << 8);
+                    Word udst = core.ax;
+
+                    set_al(udst / (Byte)src);
+                    set_ah(udst % (Byte)src);
+                    setFlag(OF, true);
+                    setFlag(SF, true);
+                    setFlag(ZF, false);
+                    setFlag(AF, false);
+                    setFlag(PF, true);
+                    setFlag(CF, true);
                 }
             } else {
-                long ldst = (long)(core.dx << 16) | getReg(W, AX);
-                long lres = ldst / src;
-                if (lres > 0xffff) {
+                if (src == 0) {
                     callInt(0);
                 } else {
-                    setReg(W, AX, lres & 0xffff);
-                    setReg(W, 2, ldst % src);
+                    uint32_t ldst = (core.dx << 16) | core.ax;
+
+                    core.ax = ldst / (Word)src;
+                    core.dx = ldst % (Word)src;
+                    setFlag(OF, false);
+                    setFlag(SF, true);
+                    setFlag(ZF, false);
+                    setFlag(AF, false);
+                    setFlag(PF, false);
+                    setFlag(CF, false);
                 }
             }
             break;
@@ -1707,7 +1792,7 @@ void Processor::exe_one()
             } else {
                 int s = signconv(w, src);
                 if (w == B) {
-                    dst = signconv(W, getReg(W, AX));
+                    dst = signconv(W, core.ax);
                     res = dst / s;
                     if (res > 0x7f || res < (int)0xff81) {
                         callInt(0);
@@ -1716,7 +1801,7 @@ void Processor::exe_one()
                         core.ax = (core.ax & 0x00ff) | ((dst % s) << 8);
                     }
                 } else {
-                    long ldst = (long)(core.dx << 16) | (getReg(W, AX) & 0xffff);
+                    long ldst = (long)(core.dx << 16) | (core.ax & 0xffff);
                     ldst      = (ldst << 32) >> 32;
                     long lres = ldst / s;
                     if (lres > 0x7fff || lres < -0x8000) {
@@ -1781,7 +1866,8 @@ void Processor::exe_one()
             break;
         }
         case 6:
-            // 8086 PUSH SP (mod=11, rm=4) pushes SP-2, not SP
+        case 7:
+            // 8086 PUSH r/m (FF/6 and FF/7). PUSH SP (mod=11, rm=4) pushes SP-2, not SP.
             if (mod == 0b11 && rm == 4)
                 src = (static_cast<int>(core.sp) - 2) & 0xffff;
             push(src);
