@@ -415,15 +415,6 @@ void Processor::callInt(int type)
     // Update flags.
     setFlag(IF, false);
     setFlag(TF, false);
-    if (type == 0) {
-        // Divide exception
-        setFlag(CF, false);
-        setFlag(PF, true);
-        setFlag(AF, true);
-        setFlag(ZF, false);
-        setFlag(SF, false);
-        setFlag(OF, false);
-    }
 
     // Take interrupt.
     push(core.flags);
@@ -1759,6 +1750,7 @@ void Processor::exe_one()
             // Interrupt Flag (IF), Direction Flag (DF), and Trap Flag (TF).
             if (w == B) {
                 if ((Byte)src == 0) {
+                    set_flags(0xF046);
                     callInt(0);
                 } else {
                     Word udst = core.ax;
@@ -1774,6 +1766,7 @@ void Processor::exe_one()
                 }
             } else {
                 if (src == 0) {
+                    set_flags(0xF046);
                     callInt(0);
                 } else {
                     uint32_t ldst = (core.dx << 16) | core.ax;
@@ -1795,15 +1788,36 @@ void Processor::exe_one()
                 // Divisor is a signed 8-bit value (register or memory).
                 src = (int8_t)src;
                 if (src == 0) {
+                    // Divide by zero: 8086 pushes flags 0xF046
+                    setFlag(CF, false);
+                    setFlag(PF, true);
+                    setFlag(AF, true);
+                    setFlag(ZF, false);
+                    setFlag(SF, true);
+                    setFlag(OF, true);
                     callInt(0);
                 } else {
                     dst = (int16_t)core.ax;
                     res = dst / src;
                     if (res > 0x7f || res < -0x80) {
+                        // Quotient overflow (byte): OF=1; AF=1 when quotient positive; DF preserved
+                        setFlag(CF, false);
+                        setFlag(PF, true);
+                        setFlag(AF, res > 0);
+                        setFlag(ZF, false);
+                        setFlag(SF, false);
+                        setFlag(OF, true);
                         callInt(0);
                     } else {
                         set_al(res);
                         set_ah(dst % src);
+                        // Successful byte IDIV: SF from quotient, AF=0
+                        setFlag(CF, false);
+                        setFlag(OF, false);
+                        setFlag(ZF, false);
+                        setFlag(PF, true);
+                        setFlag(SF, (res & 0x80) != 0);
+                        setFlag(AF, false);
                     }
                 }
             } else {
@@ -1811,16 +1825,37 @@ void Processor::exe_one()
                 // Divisor is a signed 16-bit value (register or memory).
                 src = (int16_t)src;
                 if (src == 0) {
+                    // Divide by zero: 8086 pushes flags 0xF046
+                    setFlag(CF, false);
+                    setFlag(PF, true);
+                    setFlag(AF, true);
+                    setFlag(ZF, false);
+                    setFlag(SF, true);
+                    setFlag(OF, true);
                     callInt(0);
                 } else {
                     dst          = (int32_t)((core.dx << 16) | core.ax);
                     int64_t lres = (int64_t)dst / src;
 
                     if (lres > 0x7fff || lres < -0x8000) {
+                        // Quotient overflow (word): OF=1; AF inverted from initial
+                        setFlag(CF, false);
+                        setFlag(PF, true);
+                        setFlag(AF, !getFlag(AF));
+                        setFlag(ZF, false);
+                        setFlag(SF, false);
+                        setFlag(OF, true);
                         callInt(0);
                     } else {
                         core.ax = lres;
                         core.dx = dst % src;
+                        // Successful word IDIV: SF from quotient, AF=1
+                        setFlag(CF, false);
+                        setFlag(OF, false);
+                        setFlag(ZF, false);
+                        setFlag(PF, true);
+                        setFlag(SF, (core.ax & 0x8000) != 0);
+                        setFlag(AF, true);
                     }
                 }
             }
