@@ -1256,15 +1256,18 @@ void Processor::exe_one()
         core.cs = static_cast<Word>(src & 0xffff);
         break;
     }
-    case 0xc3:
-        core.ip = static_cast<Word>(pop() & 0xffff);
-        break;
+    case 0xc0: // 8086 undocumented: same as C2 (RET imm16)
     case 0xc2: {
         src     = getMem(W);
         core.ip = static_cast<Word>(pop() & 0xffff);
         core.sp = (core.sp + src) & 0xffff;
         break;
     }
+    case 0xc1: // 8086 undocumented: same as C3 (RET near)
+    case 0xc3:
+        core.ip = static_cast<Word>(pop() & 0xffff);
+        break;
+    case 0xc9: // 8086 undocumented: same as CB (RETF)
     case 0xcb:
         core.ip = static_cast<Word>(pop() & 0xffff);
         core.cs = static_cast<Word>(pop() & 0xffff);
