@@ -6,8 +6,8 @@ RELEASE_FLAGS = -O2 -DNDEBUG
 DEBUG_FLAGS   = -O0 -g3
 
 BUILD_DIR = build
-SRCS      = main.cpp moo_parser.cpp test_case.cpp
-OBJS      = $(addprefix $(BUILD_DIR)/, main.o moo_parser.o test_case.o)
+SRCS      = main.cpp moo_parser.cpp test_case.cpp print.cpp emit_gtest.cpp
+OBJS      = $(addprefix $(BUILD_DIR)/, main.o moo_parser.o test_case.o print.o emit_gtest.o)
 DEP       = $(OBJS:.o=.d)
 TARGET    = moo-booth
 TARGET_DBG = moo-booth-dbg

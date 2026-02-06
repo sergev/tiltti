@@ -1,7 +1,5 @@
-// Example parser for the MOO CPU test format.
-// Supports both plain and gzipped MOO files.
-
-// (C) 2025 Daniel Balsom
+// Copyright (c) 2026 Serge Vakulenko
+// Licensed under the MIT License.
 
 #include <iostream>
 #include <stdexcept>

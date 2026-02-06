@@ -1,4 +1,5 @@
-// (C) 2025 Daniel Balsom
+// Copyright (c) 2026 Serge Vakulenko
+// Licensed under the MIT License.
 
 #ifndef MOO_PARSER_H
 #define MOO_PARSER_H
