@@ -621,13 +621,16 @@ done_prefix:
     // For REP string instructions: full REP loop in one step (match legacy cycle_opcode).
     if (rep != 0 && (op == 0xa4 || op == 0xa5 || op == 0xa6 || op == 0xa7 || op == 0xaa ||
                      op == 0xab || op == 0xac || op == 0xad || op == 0xae || op == 0xaf)) {
+        // REPE/REPZ (rep==1) and REPNE/REPNZ (rep==2) only check ZF for CMPS/SCAS (A6,A7,AE,AF).
+        // For MOVS/LODS/STOS, repeat until CX==0 regardless of ZF.
+        bool check_zf = (op == 0xa6 || op == 0xa7 || op == 0xae || op == 0xaf);
         do {
             if (getReg(W, 1) == 0) // CX
                 break;
             if (rep)
                 setReg(W, 1, getReg(W, 1) - 1);
             exe_one();
-            if (rep && ((rep == 1 && !getFlag(ZF)) || (rep == 2 && getFlag(ZF))))
+            if (rep && check_zf && ((rep == 1 && !getFlag(ZF)) || (rep == 2 && getFlag(ZF))))
                 break;
         } while (rep != 0);
     } else {
@@ -661,14 +664,12 @@ void Processor::exe_one()
             setReg(w, reg, src);
         }
         break;
-    // MOV reg/mem, immediate
+    // MOV reg/mem, immediate (real 8086 executes for all reg values, e.g. ModR/M 3E)
     case 0xc6:
     case 0xc7:
         decode();
-        if (reg == 0) {
-            src = getMem(w);
-            setRM(w, mod, rm, src);
-        }
+        src = getMem(w);
+        setRM(w, mod, rm, src);
         break;
     // MOV reg, immediate (B0-BF)
     case 0xb0:
@@ -726,7 +727,9 @@ void Processor::exe_one()
     case 0x56:
     case 0x57:
         reg = op & 0b111;
-        push(getReg(W, reg));
+        // 8086 PUSH SP pushes the value SP will have after the push (SP-2), not pre-decrement SP
+        src = (reg == 4) ? (static_cast<int>(core.sp) - 2) & 0xffff : getReg(W, reg);
+        push(src);
         break;
     // PUSH segment register
     case 0x06:
@@ -832,18 +835,18 @@ void Processor::exe_one()
         decode();
         setReg(w, reg, (getEA(mod, rm) - (static_cast<unsigned>(os) << 4)) & 0xffff);
         break;
-    // LDS
+    // LDS (always loads 16-bit offset into reg)
     case 0xc5:
         decode();
         src = getEA(mod, rm);
-        setReg(w, reg, getMem(W, src));
+        setReg(W, reg, getMem(W, src));
         core.ds = getMem(W, src + 2);
         break;
-    // LES
+    // LES (always loads 16-bit offset into reg)
     case 0xc4:
         decode();
         src = getEA(mod, rm);
-        setReg(w, reg, getMem(W, src));
+        setReg(W, reg, getMem(W, src));
         core.es = getMem(W, src + 2);
         break;
     // LAHF
@@ -1266,6 +1269,7 @@ void Processor::exe_one()
         core.ip = static_cast<Word>(pop() & 0xffff);
         core.cs = static_cast<Word>(pop() & 0xffff);
         break;
+    case 0xc8: // 8086: same as CA (RETF imm16); ENTER is 186+
     case 0xca: {
         src     = getMem(W);
         core.ip = static_cast<Word>(pop() & 0xffff);
@@ -1536,11 +1540,10 @@ void Processor::exe_one()
         }
         break;
     }
-    // POP reg/mem
+    // POP reg/mem (real 8086 executes for all reg values, e.g. ModR/M 57)
     case 0x8f:
         decode();
-        if (reg == 0)
-            setRM(W, mod, rm, pop());
+        setRM(W, mod, rm, pop());
         break;
     // Shift/rotate group D0-D3
     case 0xd0:
@@ -1775,6 +1778,9 @@ void Processor::exe_one()
             break;
         }
         case 6:
+            // 8086 PUSH SP (mod=11, rm=4) pushes SP-2, not SP
+            if (mod == 0b11 && rm == 4)
+                src = (static_cast<int>(core.sp) - 2) & 0xffff;
             push(src);
             break;
         default:
