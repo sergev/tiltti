@@ -9,4 +9,5 @@ add_executable(moo-booth
     emit_gtest.cpp
     run.cpp
 )
-target_link_libraries(moo-booth PRIVATE ZLIB::ZLIB)
+include_directories(BEFORE ..)
+target_link_libraries(moo-booth PRIVATE simulator ${CAPSTONE_LIBRARIES} ZLIB::ZLIB)
