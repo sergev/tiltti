@@ -144,6 +144,18 @@ void Machine::handle_int13_disk()
     }
 }
 
+//
+// AH=00h — Reset disk system
+//
+// Reset the disk controller/drive.
+// Often used before or after other INT 13h calls to recover from errors.
+// Inputs:
+//      DL = drive number
+// Outputs:
+//      CF = 0 on success.
+//      AH = status 0 on success; otherwise CF=1.
+//      BDA last-status updated.
+//
 void Machine::int13_reset_disk_system()
 {
     if (Machine::trace_enabled()) {
@@ -175,6 +187,28 @@ void Machine::int13_read_disk_status()
     throw std::runtime_error("Unimplemented: Read disk status");
 }
 
+//
+// Read disk sectors (CHS)
+//
+// Read one or more sectors from the disk using CHS addressing.
+// Same CHS→LBA and buffer rules as AH=03h, 04h.
+// For LBA and large disks use AH=42h.
+// CHS is validated against logical geometry and converted to LBA.
+// Sector count > 128 or 0, or sector 0, or CHS out of range yields EPARAM.
+// Total transfer size is limited by 64 KiB boundary.
+// Inputs:
+//      DL = drive
+//      DH = head
+//      CH = cylinder low 8 bits
+//      CL = bits 6–7 = cylinder high 2 bits, bits 0–5 = sector number (1-based)
+//      AL = sector count
+//      ES:BX = data buffer
+// Outputs:
+//      On success: CF=0, AH=0, AL = number of sectors read.
+//      On error: CF=1, AH = status.
+//      BDA last-status updated.
+//      Buffer filled with sector data.
+//
 void Machine::int13_read_sectors()
 {
     unsigned cylinder = cpu.get_ch() | ((cpu.get_cl() & 0xC0) << 2); // 10 bits, 0-based
@@ -192,6 +226,39 @@ void Machine::int13_read_sectors()
             << std::endl;
         out.flags(save);
     }
+
+#if 0
+    unsigned drive    = cpu.get_dl();
+    unsigned nsectors = cpu.get_al();
+    unsigned addr     = pc86_linear_addr(cpu.get_es(), cpu.get_bx());
+
+    //TODO
+    if (count > 128 || count == 0 || sector == 0) {
+        disk_ret(regs, DISK_RET_EPARAM);
+        return;
+    }
+    dop.count = count;
+
+    struct chs_s chs = getLCHS(drive_fl);
+    u16 nlc=chs.cylinder, nlh=chs.head, nls=chs.sector;
+
+    // sanity check on cyl heads, sec
+    if (cylinder >= nlc || head >= nlh || sector > nls) {
+        warn_invalid(regs);
+        disk_ret(regs, DISK_RET_EPARAM);
+        return;
+    }
+
+    // translate lchs to lba
+    dop.lba = (((((u32)cylinder * (u32)nlh) + (u32)head) * (u32)nls)
+               + (u32)sector - 1);
+
+    dop.buf_fl = MAKE_FLATPTR(regs->es, regs->bx);
+
+    int status = send_disk_op(&dop);
+
+    regs->al = dop.count;
+#endif
     throw std::runtime_error("Unimplemented: Read sectors (CHS)");
 }
 

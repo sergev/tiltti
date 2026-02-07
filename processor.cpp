@@ -100,14 +100,6 @@ void Processor::update_flags(int width, int res)
 }
 
 //
-// Linear address from segment:offset (8086 real mode).
-//
-unsigned Processor::getAddr(Word seg, Word off) const
-{
-    return ((seg << 4) + off) & 0xfffffu;
-}
-
-//
 // Effective address from ModR/M and displacement; 8086 addressing modes.
 //
 unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
@@ -127,27 +119,27 @@ unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
 
     switch (rm_val) {
     case 0b000:
-        return getAddr(os, core.bx + core.si + disp);
+        return pc86_linear_addr(os, core.bx + core.si + disp);
     case 0b001:
-        return getAddr(os, core.bx + core.di + disp);
+        return pc86_linear_addr(os, core.bx + core.di + disp);
     case 0b010:
-        return getAddr(os, core.bp + core.si + disp);
+        return pc86_linear_addr(os, core.bp + core.si + disp);
     case 0b011:
-        return getAddr(os, core.bp + core.di + disp);
+        return pc86_linear_addr(os, core.bp + core.di + disp);
     case 0b100:
-        return getAddr(os, core.si + disp);
+        return pc86_linear_addr(os, core.si + disp);
     case 0b101:
-        return getAddr(os, core.di + disp);
+        return pc86_linear_addr(os, core.di + disp);
     case 0b110:
         if (mod_val == 0)
-            return getAddr(os, opcode[plen + 2] | (opcode[plen + 3] << 8));
+            return pc86_linear_addr(os, opcode[plen + 2] | (opcode[plen + 3] << 8));
         else
-            return getAddr(os, core.bp + disp);
+            return pc86_linear_addr(os, core.bp + disp);
     case 0b111:
-        return getAddr(os, core.bx + disp);
+        return pc86_linear_addr(os, core.bx + disp);
     default:
         // Cannot happen
-        return getAddr(os, 0);
+        return pc86_linear_addr(os, 0);
     }
 }
 
@@ -156,7 +148,7 @@ unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
 //
 int Processor::getMem(int width)
 {
-    unsigned addr = getAddr(core.cs, core.ip);
+    unsigned addr = pc86_linear_addr(core.cs, core.ip);
     Word val      = machine.mem_fetch_byte(addr);
 
     if (width == W)
@@ -392,7 +384,7 @@ void Processor::decode()
 //
 int Processor::pop()
 {
-    unsigned addr = getAddr(core.ss, core.sp);
+    unsigned addr = pc86_linear_addr(core.ss, core.sp);
     int val       = getMem(W, addr);
 
     core.sp += 2;
@@ -405,7 +397,7 @@ int Processor::pop()
 void Processor::push(int val)
 {
     core.sp -= 2;
-    setMem(W, getAddr(core.ss, core.sp), val);
+    setMem(W, pc86_linear_addr(core.ss, core.sp), val);
 }
 
 //
@@ -548,7 +540,7 @@ void Processor::step()
     opcode           = {};
     plen             = 0;
     for (;;) {
-        unsigned addr = getAddr(core.cs, core.ip);
+        unsigned addr = pc86_linear_addr(core.cs, core.ip);
         Byte prefix   = machine.mem_fetch_byte(addr);
         switch (prefix) {
         case 0x26:
@@ -584,7 +576,7 @@ done_prefix:
 
     // Prefetch 6 bytes at CS:IP for decode.
     for (int i = 0; i < 6; ++i) {
-        opcode.push_back(machine.mem_fetch_byte(getAddr(core.cs, (core.ip + i) & 0xffff)));
+        opcode.push_back(machine.mem_fetch_byte(pc86_linear_addr(core.cs, (core.ip + i) & 0xffff)));
     }
 
     // Show instruction: address, opcode and mnemonics.
@@ -677,11 +669,11 @@ void Processor::exe_one()
     case 0xa3:
         dst = getMem(W);
         if (d == 0) {
-            src = getMem(w, getAddr(os, static_cast<Word>(dst)));
+            src = getMem(w, pc86_linear_addr(os, static_cast<Word>(dst)));
             setReg(w, AX, src);
         } else {
             src = getReg(w, AX);
-            setMem(w, getAddr(os, static_cast<Word>(dst)), src);
+            setMem(w, pc86_linear_addr(os, static_cast<Word>(dst)), src);
         }
         break;
     // MOV reg/mem, segreg and MOV segreg, reg/mem
@@ -765,7 +757,7 @@ void Processor::exe_one()
         break;
     // XLAT
     case 0xd7: {
-        set_al(getMem(B, getAddr(os, core.bx + get_al())));
+        set_al(getMem(B, pc86_linear_addr(os, core.bx + get_al())));
         break;
     }
     // IN accum, port (immed and DX)
@@ -1180,35 +1172,35 @@ void Processor::exe_one()
     // String ops (one iteration each)
     case 0xa4: // MOVS
     case 0xa5:
-        src = getMem(w, getAddr(os, core.si));
-        setMem(w, getAddr(core.es, core.di), src);
+        src = getMem(w, pc86_linear_addr(os, core.si));
+        setMem(w, pc86_linear_addr(core.es, core.di), src);
         core.si = (core.si + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
     case 0xa6:
     case 0xa7:
-        dst = getMem(w, getAddr(core.es, core.di));
-        src = getMem(w, getAddr(os, core.si));
+        dst = getMem(w, pc86_linear_addr(core.es, core.di));
+        src = getMem(w, pc86_linear_addr(os, core.si));
         sub(w, src, dst);
         core.si = (core.si + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
     case 0xae:
     case 0xaf:
-        dst = getMem(w, getAddr(core.es, core.di));
+        dst = getMem(w, pc86_linear_addr(core.es, core.di));
         src = getReg(w, AX);
         sub(w, src, dst);
         core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
     case 0xac:
     case 0xad:
-        src = getMem(w, getAddr(os, core.si));
+        src = getMem(w, pc86_linear_addr(os, core.si));
         setReg(w, AX, src);
         core.si = (core.si + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
     case 0xaa:
     case 0xab:
-        setMem(w, getAddr(core.es, core.di), getReg(w, AX));
+        setMem(w, pc86_linear_addr(core.es, core.di), getReg(w, AX));
         core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
     // --- CALL, RET, JMP: transfer and conditional jumps ---
