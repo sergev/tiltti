@@ -733,9 +733,17 @@ void Processor::exe_one()
     case 0x87:
         decode();
         dst = getReg(w, reg);
-        src = getRM(w, mod, rm);
-        setReg(w, reg, src);
-        setRM(w, mod, rm, dst);
+        if (mod == 0b11) {
+            src = getRM(w, mod, rm);
+            setReg(w, reg, src);
+            setRM(w, mod, rm, dst);
+        } else {
+            // Compute EA once for memory so store uses same address as load.
+            unsigned addr = getEA(mod, rm);
+            src = getMem(w, addr);
+            setReg(w, reg, src);
+            setMem(w, addr, dst);
+        }
         break;
     // XCHG AX, reg
     case 0x91:
