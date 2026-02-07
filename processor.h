@@ -201,6 +201,16 @@ public:
     void set_flags(Word val);
     void update_flags(int width, int res);
 
+    void set_cf(bool bit) { core.flags.f.c = bit; } // CF, Carry Flag
+    void set_pf(bool bit) { core.flags.f.p = bit; } // PF, Parity Flag
+    void set_af(bool bit) { core.flags.f.a = bit; } // AF, Auxiliary Carry Flag
+    void set_zf(bool bit) { core.flags.f.z = bit; } // ZF, Zero Flag
+    void set_sf(bool bit) { core.flags.f.s = bit; } // SF, Sign Flag
+    void set_tf(bool bit) { core.flags.f.t = bit; } // TF, Trap Flag
+    void set_if(bool bit) { core.flags.f.i = bit; } // IF, Interrupt Flag
+    void set_df(bool bit) { core.flags.f.d = bit; } // DF, Direction Flag
+    void set_of(bool bit) { core.flags.f.o = bit; } // OF, Overflow Flag
+
     // Print trace info.
     void print_instruction();
     void print_registers();

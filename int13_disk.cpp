@@ -155,7 +155,11 @@ void Machine::int13_reset_disk_system()
             << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
         out.flags(save);
     }
-    throw std::runtime_error("Unimplemented: Reset disk system");
+
+    // Nothing to do.
+    // Return Success.
+    cpu.set_cf(0);
+    cpu.set_ah(0);
 }
 
 void Machine::int13_read_disk_status()
