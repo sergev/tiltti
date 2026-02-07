@@ -424,12 +424,10 @@ void Processor::callInt(int type)
     Word offset = getMem(W, type * 4);
     Word seg    = getMem(W, type * 4 + 2);
 
-    // Update flags.
+    // Take interrupt: push FLAGS first (with IF/TF as-is), then clear them.
+    push(core.flags.w);
     core.flags.f.i = 0;
     core.flags.f.t = 0;
-
-    // Take interrupt.
-    push(core.flags.w);
     push(core.cs);
     push(core.ip);
     core.ip = offset;
@@ -1855,12 +1853,13 @@ void Processor::exe_one()
                 uint32_t quo  = ldst / divw;
                 uint32_t rem  = ldst % divw;
                 if (quo > 0xFFFF) {
+                    bool sf = (quo >> 16) >= 16;
                     core.flags.f.c = 0;
-                    core.flags.f.s = 0;
                     core.flags.f.z = 0;
                     core.flags.f.o = 0;
-                    core.flags.f.p = !core.flags.f.a;
-                    // Preserve AF
+                    core.flags.f.a = sf;
+                    core.flags.f.p = !sf;
+                    core.flags.f.s = sf;
                     callInt(0);
                     break;
                 }
@@ -1882,7 +1881,6 @@ void Processor::exe_one()
                     core.flags.f.z = 0;
                     core.flags.f.p = quo < 0x0400;
                     core.flags.f.a = quo < 0x0400;
-                    core.flags.f.d = 1;
                 }
             }
             break;
