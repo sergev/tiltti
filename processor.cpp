@@ -626,6 +626,7 @@ void Processor::exe_one()
     const int AX = 0; // accumulator index for getReg/setReg
 
     switch (op) {
+
     // --- MOV: register/memory and immediate, accum, segment ---
     case 0x88:
     case 0x89:
@@ -640,6 +641,7 @@ void Processor::exe_one()
             setReg(w, reg, src);
         }
         break;
+
     // MOV reg/mem, immediate (real 8086 executes for all reg values, e.g. ModR/M 3E)
     case 0xc6:
     case 0xc7:
@@ -647,6 +649,7 @@ void Processor::exe_one()
         src = getMem(w);
         setRM(w, mod, rm, src);
         break;
+
     // MOV reg, immediate (B0-BF)
     case 0xb0:
     case 0xb1:
@@ -669,6 +672,7 @@ void Processor::exe_one()
         src = getMem(w);
         setReg(w, reg, src);
         break;
+
     // MOV accum, mem and MOV mem, accum
     case 0xa0:
     case 0xa1:
@@ -683,6 +687,7 @@ void Processor::exe_one()
             setMem(w, pc86_linear_addr(os, static_cast<Word>(dst)), src);
         }
         break;
+
     // MOV reg/mem, segreg and MOV segreg, reg/mem
     case 0x8c:
     case 0x8e:
@@ -693,6 +698,7 @@ void Processor::exe_one()
             setSegReg(reg, static_cast<Word>(getRM(W, mod, rm)));
         }
         break;
+
     // --- PUSH/POP: general and segment registers ---
     case 0x50:
     case 0x51:
@@ -707,6 +713,7 @@ void Processor::exe_one()
         src = (reg == 4) ? (static_cast<int>(core.sp) - 2) & 0xffff : getReg(W, reg);
         push(src);
         break;
+
     // PUSH segment register
     case 0x06:
     case 0x0e:
@@ -715,6 +722,7 @@ void Processor::exe_one()
         reg = (op >> 3) & 0b111;
         push(static_cast<int>(getSegReg(reg)));
         break;
+
     // POP general register
     case 0x58:
     case 0x59:
@@ -727,6 +735,7 @@ void Processor::exe_one()
         reg = op & 0b111;
         setReg(W, reg, pop());
         break;
+
     // POP segment register
     case 0x07:
     case 0x0f:
@@ -735,6 +744,7 @@ void Processor::exe_one()
         reg = (op >> 3) & 0b111;
         setSegReg(reg, static_cast<Word>(pop()));
         break;
+
     // XCHG reg, reg/mem
     case 0x86:
     case 0x87:
@@ -752,6 +762,7 @@ void Processor::exe_one()
             setMem(w, addr, dst);
         }
         break;
+
     // XCHG AX, reg
     case 0x91:
     case 0x92:
@@ -766,15 +777,17 @@ void Processor::exe_one()
         core.ax = src;
         setReg(W, reg, dst);
         break;
+
     // SALC: Set AL from Carry (undocumented 8086)
     case 0xd6:
         set_al(core.flags.f.c ? 0xff : 0);
         break;
+
     // XLAT
-    case 0xd7: {
+    case 0xd7:
         set_al(getMem(B, pc86_linear_addr(os, core.bx + get_al())));
         break;
-    }
+
     // IN accum, port (immed and DX)
     case 0xe4:
     case 0xe5:
@@ -794,6 +807,7 @@ void Processor::exe_one()
             res = machine.port_in_word(src);
         setReg(w, AX, res);
         break;
+
     // OUT port, accum
     case 0xe6:
     case 0xe7:
@@ -813,11 +827,13 @@ void Processor::exe_one()
         else
             machine.port_out_word(src, res);
         break;
+
     // LEA
     case 0x8d:
         decode();
         setReg(w, reg, (getEA(mod, rm) - (static_cast<unsigned>(os) << 4)) & 0xffff);
         break;
+
     // LDS (always loads 16-bit offset into reg)
     case 0xc5:
         decode();
@@ -825,6 +841,7 @@ void Processor::exe_one()
         setReg(W, reg, getMem(W, src));
         core.ds = getMem(W, src + 2);
         break;
+
     // LES (always loads 16-bit offset into reg)
     case 0xc4:
         decode();
@@ -832,14 +849,17 @@ void Processor::exe_one()
         setReg(W, reg, getMem(W, src));
         core.es = getMem(W, src + 2);
         break;
+
     // LAHF
     case 0x9f:
         set_ah(core.flags.w);
         break;
+
     // SAHF
     case 0x9e:
         set_flags((core.flags.w & 0xff00) | get_ah());
         break;
+
     // PUSHF / POPF
     case 0x9c:
         push(core.flags.w);
@@ -847,6 +867,7 @@ void Processor::exe_one()
     case 0x9d:
         set_flags(pop());
         break;
+
     // ADD reg/mem, reg and ADD reg, reg/mem
     case 0x00:
     case 0x01:
@@ -865,6 +886,7 @@ void Processor::exe_one()
             setReg(w, reg, res);
         }
         break;
+
     // ADD accum, immediate
     case 0x04:
     case 0x05:
@@ -872,6 +894,7 @@ void Processor::exe_one()
         src = getMem(w);
         setReg(w, AX, add(w, dst, src));
         break;
+
     // ADC (same pattern)
     case 0x10:
     case 0x11:
@@ -896,6 +919,7 @@ void Processor::exe_one()
         src = getMem(w);
         setReg(w, AX, adc(w, dst, src));
         break;
+
     // INC general register
     case 0x40:
     case 0x41:
@@ -908,6 +932,7 @@ void Processor::exe_one()
         reg = op & 0b111;
         setReg(W, reg, inc(W, getReg(W, reg)));
         break;
+
     // AAA: ASCII adjust for addition
     case 0x37: {
         Byte al = get_al();
@@ -928,6 +953,7 @@ void Processor::exe_one()
         core.flags.f.o = al <= 9;
         break;
     }
+
     // DAA: Decimal adjust for addition
     case 0x27: {
         Byte al = get_al();
@@ -949,6 +975,7 @@ void Processor::exe_one()
         core.flags.f.o = !core.flags.f.p; // Undefined: let's guess
         break;
     }
+
     // --- SUB, SBB, CMP, INC, DEC: arithmetic and compare ---
     case 0x28:
     case 0x29:
@@ -973,6 +1000,7 @@ void Processor::exe_one()
         src = getMem(w);
         setReg(w, AX, sub(w, dst, src));
         break;
+
     // SBB
     case 0x18:
     case 0x19:
@@ -997,6 +1025,7 @@ void Processor::exe_one()
         src = getMem(w);
         setReg(w, AX, sbb(w, dst, src));
         break;
+
     // DEC general register
     case 0x48:
     case 0x49:
@@ -1009,6 +1038,7 @@ void Processor::exe_one()
         reg = op & 0b111;
         setReg(W, reg, dec(W, getReg(W, reg)));
         break;
+
     // CMP
     case 0x38:
     case 0x39:
@@ -1030,6 +1060,7 @@ void Processor::exe_one()
         src = getMem(w);
         sub(w, dst, src);
         break;
+
     // AAS: ASCII adjust for subtraction
     case 0x3f: {
         Byte al = get_al();
@@ -1049,6 +1080,7 @@ void Processor::exe_one()
         core.flags.f.p = al < 1 | al > 9;
         break;
     }
+
     // DAS: Decimal adjust for subtraction
     case 0x2f: {
         Byte al = get_al();
@@ -1070,8 +1102,9 @@ void Processor::exe_one()
         update_flags_zsp(B, al);
         break;
     }
+
     // AAM: ASCII adjust for multiply
-    case 0xd4: {
+    case 0xd4:
         src = getMem(B);
         if (src == 0) {
             callInt(0);
@@ -1084,7 +1117,7 @@ void Processor::exe_one()
             core.flags.f.a = 0;
         }
         break;
-    }
+
     // AAD: ASCII adjust for division
     case 0xd5: {
         src          = getMem(B);
@@ -1101,6 +1134,7 @@ void Processor::exe_one()
         core.flags.f.t = 0;
         break;
     }
+
     // CBW
     case 0x98:
         if (get_al() & 0x80)
@@ -1108,6 +1142,7 @@ void Processor::exe_one()
         else
             core.ax &= 0x00ff;
         break;
+
     // CWD
     case 0x99:
         if (core.ax & 0x8000)
@@ -1115,6 +1150,7 @@ void Processor::exe_one()
         else
             core.dx = 0;
         break;
+
     // AND, OR, XOR, TEST (logic)
     case 0x20:
     case 0x21:
@@ -1203,6 +1239,7 @@ void Processor::exe_one()
     case 0xa9:
         logic(w, getReg(w, AX) & getMem(w));
         break;
+
     // String ops (one iteration each)
     case 0xa4: // MOVS
     case 0xa5:
@@ -1237,14 +1274,14 @@ void Processor::exe_one()
         setMem(w, pc86_linear_addr(core.es, core.di), getReg(w, AX));
         core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
+
     // --- CALL, RET, JMP: transfer and conditional jumps ---
-    case 0xe8: {
+    case 0xe8:
         dst = signconv(W, getMem(W));
         push(static_cast<int>(core.ip));
         core.ip = (core.ip + dst) & 0xffff;
         break;
-    }
-    case 0x9a: {
+    case 0x9a:
         dst = getMem(W);
         src = getMem(W);
         push(static_cast<int>(core.cs));
@@ -1252,14 +1289,12 @@ void Processor::exe_one()
         core.ip = static_cast<Word>(dst & 0xffff);
         core.cs = static_cast<Word>(src & 0xffff);
         break;
-    }
     case 0xc0: // 8086 undocumented: same as C2 (RET imm16)
-    case 0xc2: {
+    case 0xc2:
         src     = getMem(W);
         core.ip = static_cast<Word>(pop() & 0xffff);
         core.sp = (core.sp + src) & 0xffff;
         break;
-    }
     case 0xc1: // 8086 undocumented: same as C3 (RET near)
     case 0xc3:
         core.ip = static_cast<Word>(pop() & 0xffff);
@@ -1270,32 +1305,28 @@ void Processor::exe_one()
         core.cs = static_cast<Word>(pop() & 0xffff);
         break;
     case 0xc8: // 8086: same as CA (RETF imm16); ENTER is 186+
-    case 0xca: {
+    case 0xca:
         src     = getMem(W);
         core.ip = static_cast<Word>(pop() & 0xffff);
         core.cs = static_cast<Word>(pop() & 0xffff);
         core.sp = (core.sp + src) & 0xffff;
         break;
-    }
-    case 0xe9: {
+    case 0xe9:
         dst     = signconv(W, getMem(W));
         core.ip = (core.ip + dst) & 0xffff;
         break;
-    }
-    case 0xeb: {
+    case 0xeb:
         dst     = signconv(B, getMem(B));
         core.ip = (core.ip + dst) & 0xffff;
         break;
-    }
-    case 0xea: {
+    case 0xea:
         dst     = getMem(W);
         src     = getMem(W);
         core.ip = static_cast<Word>(dst & 0xffff);
         core.cs = static_cast<Word>(src & 0xffff);
         break;
-    }
-        // Conditional jumps (Jcc)
 
+    // Conditional jumps (Jcc)
     case 0x70: // JO - Overflow
     case 0x60: // Undocumented
         dst = signconv(B, getMem(B));
@@ -1392,34 +1423,32 @@ void Processor::exe_one()
         if (!core.flags.f.z && (core.flags.f.s == core.flags.f.o))
             core.ip = (core.ip + dst) & 0xffff;
         break;
+
     // LOOP, LOOPE, LOOPNE, JCXZ
-    case 0xe2: {
+    case 0xe2:
         dst = signconv(B, getMem(B));
         core.cx -= 1;
         if (core.cx != 0)
             core.ip += dst;
         break;
-    }
-    case 0xe1: {
+    case 0xe1:
         dst = signconv(B, getMem(B));
         core.cx -= 1;
         if (core.cx != 0 && core.flags.f.z)
             core.ip += dst;
         break;
-    }
-    case 0xe0: {
+    case 0xe0:
         dst = signconv(B, getMem(B));
         core.cx -= 1;
         if (core.cx != 0 && !core.flags.f.z)
             core.ip += dst;
         break;
-    }
-    case 0xe3: {
+    case 0xe3:
         dst = signconv(B, getMem(B));
         if (core.cx == 0)
             core.ip += dst;
         break;
-    }
+
     // INT3, INT, INTO: software interrupt
     case 0xcc:
         callInt(3);
@@ -1432,11 +1461,14 @@ void Processor::exe_one()
             callInt(4);
         }
         break;
-    case 0xcf: // IRET: pop IP, CS, FLAGS
+
+    // IRET: pop IP, CS, FLAGS
+    case 0xcf:
         core.ip = pop();
         core.cs = pop();
         set_flags(pop());
         break;
+
     // Flag ops
     case 0xf8:
         core.flags.f.c = 0;
@@ -1459,11 +1491,16 @@ void Processor::exe_one()
     case 0xfb:
         core.flags.f.i = 1;
         break;
-    case 0xf4: // HLT
-        // Pause until an external interrupt is received.
+
+    // HLT: Pause until an external interrupt is received
+    case 0xf4:
         break;
-    case 0x9b: // WAIT
+
+    // WAIT
+    case 0x9b:
         break;
+
+    // ESC: Escape
     case 0xd8:
     case 0xd9:
     case 0xda:
@@ -1474,10 +1511,15 @@ void Processor::exe_one()
     case 0xdf:
         decode();
         break;
-    case 0xf0: // LOCK
+
+    // LOCK
+    case 0xf0:
         break;
-    case 0x90: // NOP
+
+     // NOP
+    case 0x90:
         break;
+
     // --- Group 80/81/82/83: ALU with immediate; D0-D3: shift/rotate; F6/F7: TEST/NOT/NEG/MUL/DIV;
     // FE/FF: INC/DEC/CALL/JMP/PUSH ---
     case 0x80:
@@ -1537,11 +1579,13 @@ void Processor::exe_one()
         }
         break;
     }
+
     // POP reg/mem (real 8086 executes for all reg values, e.g. ModR/M 57)
     case 0x8f:
         decode();
         setRM(W, mod, rm, pop());
         break;
+
     // Shift/rotate group D0-D3
     case 0xd0:
     case 0xd1:
@@ -1690,7 +1734,8 @@ void Processor::exe_one()
         setRM(w, mod, rm, dst);
         break;
     }
-    // F6/F7: TEST imm, NOT, NEG, MUL, IMUL, DIV, IDIV
+
+    // TEST imm, NOT, NEG, MUL, IMUL, DIV, IDIV
     case 0xf6:
     case 0xf7: {
         decode();
@@ -1785,9 +1830,9 @@ void Processor::exe_one()
             }
             break;
         case 6: // DIV (unsigned)
-            // DIV leaves CF, OF, SF, ZF, PF, AF undefined; we match test-vector behavior.
-            // Structure mirrors IDIV: divide-by-zero -> quotient overflow -> success.
-            // Update flags one by one (no set_flags) so DF/IF/TF stay unchanged where appropriate.
+            // In 8086 documentation, DIV leaves CF, OF, SF, ZF, PF, AF undefined.
+            // We match test-vector behavior.
+            // Flags DF/IF/TF stay unchanged.
             if (w == B) {
                 unsigned divisor_b = (unsigned)(Byte)src;
                 if (divisor_b == 0) {
@@ -1871,7 +1916,7 @@ void Processor::exe_one()
                     core.flags.f.c = 0;
                     core.flags.f.o = 0;
                     core.flags.f.a = 0;
-                    core.flags.f.p = PARITY[(quo >> 8) & 0xff];
+                    core.flags.f.p = PARITY[(Byte)(quo >> 8)];
                     core.flags.f.z = quo == 0;
                     core.flags.f.s = 1;
                 } else {
@@ -1885,8 +1930,8 @@ void Processor::exe_one()
             }
             break;
         case 7: // IDIV (signed integer division)
-            // After the IDIV instruction in the 8086 processor, the arithmetic flags
-            // in the FLAGS register are left in an undefined state: CF, PF, AF, ZF, SF, OF.
+            // According to the 8086 manual, the arithmetic flags are left
+            // in an undefined state: CF, PF, AF, ZF, SF, OF.
             // Though here we do our best to predict the flags.
             if (w == B) {
                 // Dividend is a signed 16-bit value in AX.
@@ -1909,7 +1954,7 @@ void Processor::exe_one()
                         // OF=1 only when quotient negative.
                         // PF from quotient if neg else AX high.
                         core.flags.f.c = 0;
-                        core.flags.f.p = res < 0 ? (PARITY[res & 0xff] != 0) : (PARITY[(core.ax >> 8) & 0xff] != 0);
+                        core.flags.f.p = res < 0 ? PARITY[(Byte)res] : PARITY[(Byte)(core.ax >> 8)];
                         core.flags.f.a = 1;
                         core.flags.f.z = 0;
                         core.flags.f.s = 0;
@@ -1926,8 +1971,8 @@ void Processor::exe_one()
                         core.flags.f.c = 0;
                         core.flags.f.o = 0;
                         core.flags.f.z = 0;
-                        core.flags.f.p = PARITY[rem & 0xff] != 0;
-                        core.flags.f.s = (rem & 0x80) != 0;
+                        core.flags.f.p = PARITY[(Byte)rem];
+                        core.flags.f.s = (int8_t)rem < 0;
                         core.flags.f.a = 0;
                     }
                 }
@@ -1953,7 +1998,7 @@ void Processor::exe_one()
                         // PF from AX low byte.
                         // AF inverted from initial.
                         core.flags.f.c = 0;
-                        core.flags.f.p = PARITY[core.ax & 0xff] != 0;
+                        core.flags.f.p = PARITY[(Byte)core.ax];
                         core.flags.f.a = !core.flags.f.a;
                         core.flags.f.z = 0;
                         core.flags.f.s = 0;
@@ -1969,7 +2014,7 @@ void Processor::exe_one()
                         core.flags.f.o = 0;
                         core.flags.f.z = 0;
                         core.flags.f.p = 1;
-                        core.flags.f.s = (core.ax & 0x8000) != 0;
+                        core.flags.f.s = (int16_t)core.ax < 0;
                         core.flags.f.a = 1;
                     }
                 }
@@ -1980,7 +2025,8 @@ void Processor::exe_one()
         }
         break;
     }
-    // FE: INC/DEC byte
+
+    // INC/DEC byte
     case 0xfe:
         decode();
         src = getRM(w, mod, rm);
@@ -1995,7 +2041,8 @@ void Processor::exe_one()
             break;
         }
         break;
-    // FF: INC/DEC word, CALL, JMP, PUSH
+
+    // INC/DEC word, CALL, JMP, PUSH
     case 0xff:
         decode();
         src = getRM(w, mod, rm);

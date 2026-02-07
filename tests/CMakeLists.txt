@@ -45,6 +45,8 @@ set(TEST_SOURCES
     misc_batch2.cpp
     mul_batch2.cpp
     shift_batch2.cpp
+
+    batch3.cpp
 )
 
 #
