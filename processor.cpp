@@ -1742,7 +1742,22 @@ void Processor::exe_one()
                 core.flags.f.o = (lres >> 16) != 0;
             }
             core.flags.f.a = 0;
-            update_flags_zsp(w, core.ax);
+            if (w == B) {
+                core.flags.f.z = (core.ax == 0);
+                if ((res >> 8) != 0) {
+                    core.flags.f.s = 0;
+                    core.flags.f.p = PARITY[(Byte)(res >> 8)];
+                } else {
+                    core.flags.f.s = (int8_t)core.ax < 0;
+                    core.flags.f.p = PARITY[core.ax & 0xff];
+                }
+            } else {
+                core.flags.f.z = (core.dx == 0 && core.ax == 0);
+                core.flags.f.s = (int16_t)core.dx < 0;
+                // 8086 word MUL: when DX even PF from parity of high byte; when DX odd PF from bit 0 of high byte
+                core.flags.f.p = (core.dx & 1) ? (core.dx >> 8) & 1
+                                               : PARITY[(Byte)(core.dx >> 8)];
+            }
             break;
         case 5: // IMUL
             if (w == B) {
@@ -1762,13 +1777,13 @@ void Processor::exe_one()
             core.flags.f.a = 0;
             update_flags_zsp(w, core.ax);
             if (w == B) {
-                core.flags.f.s = (core.ax & 0x8000) != 0;
+                core.flags.f.s = (int16_t)core.ax < 0;
                 // 8086 byte IMUL: PF=1 when result is zero or when AL has odd parity
-                core.flags.f.p = (core.ax == 0) || (PARITY[core.ax & 0xff] == 0);
+                core.flags.f.p = (core.ax == 0) || (PARITY[(Byte)core.ax] == 0);
             } else if (w == W) {
                 // 8086 word IMUL: PF from high byte of DX when DX is even (per hardware vectors)
-                core.flags.f.p = (PARITY[(core.dx >> 8) & 0xff] != 0) && ((core.dx & 1) == 0);
-                core.flags.f.s = (core.dx & 0x8000) != 0;
+                core.flags.f.p = PARITY[(Byte)(core.dx >> 8)] && ((core.dx & 1) == 0);
+                core.flags.f.s = (int16_t)core.dx < 0;
             }
             break;
         case 6: // DIV (unsigned)
