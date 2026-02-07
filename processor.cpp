@@ -92,11 +92,20 @@ void Processor::set_flags(Word val)
     core.flags.w = (val & FLAGS_WRITABLE) | FLAGS_ONES;
 }
 
-void Processor::update_flags(int width, int res)
+void Processor::update_flags_zsp(int width, int res)
 {
-    core.flags.f.p = PARITY[res & 0xff] != 0;
+    // Zero flag.
     core.flags.f.z = res == 0;
-    core.flags.f.s = (shift(res, 8 - BITS[width]) & 0x80) != 0;
+
+    // Sign flag.
+    if (width == B) {
+        core.flags.f.s = (int8_t)res < 0;
+    } else {
+        core.flags.f.s = (int16_t)res < 0;
+    }
+
+    // Parity flag.
+    core.flags.f.p = PARITY[(Byte)res];
 }
 
 //
@@ -436,7 +445,7 @@ int Processor::add(int width, int dst, int src)
     core.flags.f.c = res < dst;
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
     core.flags.f.o = (shift((dst ^ src ^ -1) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
-    update_flags(width, res);
+    update_flags_zsp(width, res);
     return res;
 }
 
@@ -447,7 +456,7 @@ int Processor::adc(int width, int dst, int src)
     core.flags.f.c = carry ? (res <= dst) : (res < dst);
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
     core.flags.f.o = (shift((dst ^ src ^ -1) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
-    update_flags(width, res);
+    update_flags_zsp(width, res);
     return res;
 }
 
@@ -457,7 +466,7 @@ int Processor::sub(int width, int dst, int src)
     core.flags.f.c = dst < src;
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
     core.flags.f.o = (shift((dst ^ src) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
-    update_flags(width, res);
+    update_flags_zsp(width, res);
     return res;
 }
 
@@ -468,7 +477,7 @@ int Processor::sbb(int width, int dst, int src)
     core.flags.f.c = carry ? (dst <= src) : (dst < src);
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
     core.flags.f.o = (shift((dst ^ src) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
-    update_flags(width, res);
+    update_flags_zsp(width, res);
     return res;
 }
 
@@ -477,7 +486,7 @@ int Processor::inc(int width, int dst)
     int res = (dst + 1) & MASK[width];
     core.flags.f.a = ((res ^ dst ^ 1) & 0x10) != 0;
     core.flags.f.o = res == static_cast<int>(SIGN[width]);
-    update_flags(width, res);
+    update_flags_zsp(width, res);
     return res;
 }
 
@@ -486,7 +495,7 @@ int Processor::dec(int width, int dst)
     int res = (dst - 1) & MASK[width];
     core.flags.f.a = ((res ^ dst ^ 1) & 0x10) != 0;
     core.flags.f.o = res == static_cast<int>(SIGN[width]) - 1;
-    update_flags(width, res);
+    update_flags_zsp(width, res);
     return res;
 }
 
@@ -495,7 +504,7 @@ void Processor::logic(int width, int res)
     core.flags.f.c = 0;
     core.flags.f.o = 0;
     core.flags.f.a = 0; // undefined per Intel; real 8086 clears it
-    update_flags(width, res);
+    update_flags_zsp(width, res);
 }
 
 int Processor::signconv(int width, int x)
@@ -901,41 +910,45 @@ void Processor::exe_one()
         reg = op & 0b111;
         setReg(W, reg, inc(W, getReg(W, reg)));
         break;
-    // AAA
+    // AAA: ASCII adjust for addition
     case 0x37: {
-        if ((get_al() & 0xf) > 9 || core.flags.f.a) {
-            set_al(get_al() + 6);
-            core.ax = (core.ax + 0x100) & 0xffff;
+        Byte al = get_al();
+        if (core.flags.f.a || (al & 0xf) > 9) {
+            al += 6;
+            al &= 0xf;
+            set_al(al);
+            set_ah(get_ah() + 1);
             core.flags.f.c = 1;
             core.flags.f.a = 1;
         } else {
             core.flags.f.c = 0;
             core.flags.f.a = 0;
         }
-        set_al(get_al() & 0xf);
-        core.flags.f.p = 0; // 8086 AAA: PF=0 (match reference 0xF893)
-        core.flags.f.z = 0;
-        core.flags.f.s = (core.ax & 0xff00) != 0; // SF from AH non-zero
+        core.flags.f.z = al == 0;
+        core.flags.f.s = al <= 9;
+        core.flags.f.p = al > 9;
+        core.flags.f.o = al <= 9;
         break;
     }
+    // DAA: Decimal adjust for addition
     case 0x27: {
-        bool old_cf = core.flags.f.c;
-        core.flags.f.c = 0;
-        if ((get_al() & 0xf) > 9 || core.flags.f.a) {
-            set_al(get_al() + 6);
-            core.flags.f.c = old_cf || (get_al() < 0);
+        Byte al = get_al();
+        if (core.flags.f.a || (al & 0xf) > 9) {
+            al += 6;
+            set_al(al);
             core.flags.f.a = 1;
         } else {
             core.flags.f.a = 0;
         }
-        if (get_al() > 0x99 || old_cf || ((get_al() >> 4) <= 9 && core.flags.f.a)) {
-            set_al(get_al() + 0x60);
+        if (core.flags.f.c || al > 0x99 || (al <= 0x9f && core.flags.f.a)) {
+            al += 0x60;
+            set_al(al);
             core.flags.f.c = 1;
         } else {
             core.flags.f.c = 0;
         }
-        update_flags(B, get_al());
-        core.flags.f.o = 0; // 8086: OF undefined after DAA; test expects 0
+        update_flags_zsp(B, al);
+        core.flags.f.o = !core.flags.f.p; // Undefined: let's guess
         break;
     }
     // --- SUB, SBB, CMP, INC, DEC: arithmetic and compare ---
@@ -1019,40 +1032,47 @@ void Processor::exe_one()
         src = getMem(w);
         sub(w, dst, src);
         break;
-    // AAS
+    // AAS: ASCII adjust for subtraction
     case 0x3f: {
-        if ((get_al() & 0xf) > 9 || core.flags.f.a) {
-            set_al(get_al() - 6);
-            core.ax = (core.ax - 0x100) & 0xffff;
+        Byte al = get_al();
+        if (core.flags.f.a || (al & 0xf) > 9) {
+            al -= 6;
+            al &= 0xf;
+            set_al(al);
+            set_ah(get_ah() - 1);
             core.flags.f.c = 1;
             core.flags.f.a = 1;
         } else {
             core.flags.f.c = 0;
             core.flags.f.a = 0;
         }
-        set_al(get_al() & 0xf);
-        update_flags(B, get_al()); // PF, ZF, SF from result AL
+        core.flags.f.z = al == 0;
+        core.flags.f.s = (int8_t)al < 0;
+        core.flags.f.p = al < 1 | al > 9;
         break;
     }
+    // DAS: Decimal adjust for subtraction
     case 0x2f: {
-        bool old_cf = core.flags.f.c;
-        core.flags.f.c = 0;
-        if ((get_al() & 0xf) > 9 || core.flags.f.a) {
-            set_al(get_al() - 6);
-            core.flags.f.c = old_cf || (get_al() > 0);
+        Byte al = get_al();
+        core.flags.f.o = !core.flags.f.c; // Undefined: let's guess
+        if (core.flags.f.a || (al & 0xf) > 9) {
+            al -= 6;
+            set_al(al);
             core.flags.f.a = 1;
-        } else
+        } else {
             core.flags.f.a = 0;
-        if (get_al() > 0x99 || old_cf || ((get_al() >> 4) <= 9 && core.flags.f.a)) {
-            set_al(get_al() - 0x60);
+        }
+        if (core.flags.f.c || al > 0x99 || (al <= 0x9f && core.flags.f.a)) {
+            al -= 0x60;
+            set_al(al);
             core.flags.f.c = 1;
-        } else
+        } else {
             core.flags.f.c = 0;
-        update_flags(B, get_al());
-        core.flags.f.o = 0; // 8086: OF undefined after DAS; test expects 0
+        }
+        update_flags_zsp(B, al);
         break;
     }
-    // AAM, AAD
+    // AAM: ASCII adjust for multiply
     case 0xd4: {
         src = getMem(B);
         if (src == 0) {
@@ -1060,29 +1080,37 @@ void Processor::exe_one()
         } else {
             set_ah(get_al() / src);
             set_al(get_al() % src);
-            update_flags(W, core.ax);
+            update_flags_zsp(B, get_al());
+            core.flags.f.o = 0;
+            core.flags.f.c = 0;
+            core.flags.f.a = 0;
         }
         break;
     }
+    // AAD: ASCII adjust for division
     case 0xd5: {
-        src        = getMem(B);
-        int ah_val = core.ax >> 8;
-        set_al(ah_val * src + get_al());
-        core.ax &= 0x00ff;
-        update_flags(B, get_al());
-        core.flags.f.c = 1; // 8086 AAD: match reference 0xF403
-        core.flags.f.a = 0;
-        core.flags.f.o = 0;
+        src          = getMem(B);
+        int ah_orig  = get_ah();
+        int al_orig  = get_al();
+        int sum      = al_orig + (Byte)(ah_orig * src);
+        int half_sum = (al_orig & 0x0F) + ((ah_orig * src) & 0x0F);
+        set_al(sum);
+        set_ah(0);
+        update_flags_zsp(B, get_al());
+        core.flags.f.c = (sum >= 256);
+        core.flags.f.a = (half_sum > 15);
+        core.flags.f.o = (get_al() >= 0xF0);
         core.flags.f.t = 0;
         break;
     }
-    // CBW, CWD
+    // CBW
     case 0x98:
         if (get_al() & 0x80)
             core.ax |= 0xff00;
         else
             core.ax &= 0x00ff;
         break;
+    // CWD
     case 0x99:
         if (core.ax & 0x8000)
             core.dx = 0xffff;
@@ -1589,7 +1617,7 @@ void Processor::exe_one()
                 core.flags.f.o = 0;
             if (src > 0) {
                 core.flags.f.a = 0;
-                update_flags(w, dst);
+                update_flags_zsp(w, dst);
             }
             break;
         case 6: // SETMO: real 8086 sets operand to all ones (0xFF/0xFFFF)
@@ -1597,7 +1625,7 @@ void Processor::exe_one()
             core.flags.f.c = 0;
             core.flags.f.o = 0;
             core.flags.f.a = 0;
-            update_flags(w, dst);
+            update_flags_zsp(w, dst);
             break;
         case 5: // SHR
             if (src == 1)
@@ -1608,7 +1636,7 @@ void Processor::exe_one()
             }
             if (src > 0) {
                 core.flags.f.a = 0;
-                update_flags(w, dst);
+                update_flags_zsp(w, dst);
             }
             break;
         case 7: // SAR - 8086 uses original sign bit for all shift-ins
@@ -1627,7 +1655,7 @@ void Processor::exe_one()
                     }
                 }
                 core.flags.f.a = 0;
-                update_flags(w, dst);
+                update_flags_zsp(w, dst);
             }
             break;
         default:
@@ -1686,7 +1714,7 @@ void Processor::exe_one()
                 core.flags.f.o = (lres >> 16) != 0;
             }
             core.flags.f.a = 0;
-            update_flags(w, core.ax);
+            update_flags_zsp(w, core.ax);
             break;
         case 5: // IMUL
             if (w == B) {
@@ -1704,7 +1732,7 @@ void Processor::exe_one()
                 core.flags.f.o = (ld >> 16) != 0 && (ld >> 16) != 0xffff;
             }
             core.flags.f.a = 0;
-            update_flags(w, core.ax);
+            update_flags_zsp(w, core.ax);
             if (w == B) {
                 core.flags.f.s = (core.ax & 0x8000) != 0;
                 // 8086 byte IMUL: PF=1 when result is zero or when AL has odd parity
@@ -1742,7 +1770,7 @@ void Processor::exe_one()
                         if ((quo & 0x80) != 0) {
                             core.flags.f.c = 0;
                             core.flags.f.o = 0;
-                            update_flags(B, quo);
+                            update_flags_zsp(B, quo);
                             if (quo >= 0xBE) {
                                 set_flags(0xF006);
                             } else {

@@ -199,7 +199,7 @@ public:
     // Flags (set_flags normalizes reserved bits to match POPF/8086)
     Word get_flags() const { return core.flags.w; }
     void set_flags(Word val);
-    void update_flags(int width, int res);
+    void update_flags_zsp(int width, int res);
 
     void set_cf(bool bit) { core.flags.f.c = bit; } // CF, Carry Flag
     void set_pf(bool bit) { core.flags.f.p = bit; } // PF, Parity Flag
