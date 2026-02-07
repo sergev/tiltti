@@ -405,7 +405,7 @@ TEST_F(MachineTest, iret)
     EXPECT_EQ(cpu.get_cs(), 0x00CB);
     EXPECT_EQ(cpu.get_sp(), 0xA242);
     EXPECT_EQ(cpu.get_ip(), 0x32BE);
-    EXPECT_EQ(cpu.get_flags(), 0xF8D7);
+    EXPECT_EQ(cpu.get_flags(), 0xF8D7) << show_flags(0xF8D7);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0xDA499), 0xCF);

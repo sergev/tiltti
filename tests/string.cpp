@@ -39,7 +39,7 @@ TEST_F(MachineTest, cmpsw)
     EXPECT_EQ(cpu.get_si(), 0x76FB);
     EXPECT_EQ(cpu.get_di(), 0xF8A6);
     EXPECT_EQ(cpu.get_ip(), 0x981C);
-    EXPECT_EQ(cpu.get_flags(), 0xF097);
+    EXPECT_EQ(cpu.get_flags(), 0xF097) << show_flags(0xF097);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0xB366B), 0xA7);
@@ -440,7 +440,7 @@ TEST_F(MachineTest, cs_repne_cmpsb)
     EXPECT_EQ(cpu.get_si(), 0x1B36);
     EXPECT_EQ(cpu.get_di(), 0xFFD9);
     EXPECT_EQ(cpu.get_ip(), 0x97A3);
-    EXPECT_EQ(cpu.get_flags(), 0xF446);
+    EXPECT_EQ(cpu.get_flags(), 0xF446) << show_flags(0xF446);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0x451F0), 0x2E);
@@ -1102,7 +1102,7 @@ TEST_F(MachineTest, ds_repe_scasb)
     EXPECT_EQ(cpu.get_cx(), 0x0035);
     EXPECT_EQ(cpu.get_di(), 0xFA21);
     EXPECT_EQ(cpu.get_ip(), 0x1ECF);
-    EXPECT_EQ(cpu.get_flags(), 0xF002);
+    EXPECT_EQ(cpu.get_flags(), 0xF002) << show_flags(0xF002);
 
     // Final RAM entries
     EXPECT_EQ(memory.load8(0x610AC), 0x3E);
