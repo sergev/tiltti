@@ -1559,9 +1559,14 @@ void Processor::exe_one()
                 int n = (w == B) ? 9 : 17;
                 src   = get_cl() % n;
             }
-            // 8086 shifts (SHR/SAR/SHL): count mask 5 bits (0-31) for both byte and word
+            // 8086 ROL/ROR: count mod 8 (byte) or mod 16 (word)
+            else if (reg == 0 || reg == 1) {
+                int n = (w == B) ? 8 : 16;
+                src   = get_cl() % n;
+            }
+            // 8086 shifts (SHR/SAR/SHL): no masking - full CL; count >= operand bits yields 0
             else
-                src = get_cl() & 0x1f;
+                src = get_cl();
         }
         bool temp_cf;
         switch (reg) {
@@ -1571,8 +1576,7 @@ void Processor::exe_one()
                 dst     = ((dst << 1) | (temp_cf ? 1 : 0)) & MASK[w];
             }
             core.flags.f.c = (dst & 1) != 0;
-            if (src == 1)
-                core.flags.f.o = msb(w, dst) != core.flags.f.c;
+            core.flags.f.o = msb(w, dst) != core.flags.f.c;  // 8086: same for count>=1
             break;
         case 1: // ROR
             for (int cnt = 0; cnt < src; ++cnt) {
@@ -1580,10 +1584,7 @@ void Processor::exe_one()
                 dst     = ((dst >> 1) | (temp_cf ? static_cast<int>(SIGN[w]) : 0)) & MASK[w];
             }
             core.flags.f.c = msb(w, dst);
-            if (src == 1)
-                core.flags.f.o = msb(w, dst) != msb(w, dst << 1);
-            else if (src > 1)
-                core.flags.f.o = 0;
+            core.flags.f.o = msb(w, dst) != msb(w, dst << 1);  // 8086: same for count>=1
             break;
         case 2: // RCL
             for (int cnt = 0; cnt < src; ++cnt) {
@@ -1593,6 +1594,8 @@ void Processor::exe_one()
             }
             if (src == 1)
                 core.flags.f.o = msb(w, dst) != core.flags.f.c;
+            else if (src > 1)
+                core.flags.f.o = 0;
             break;
         case 3: // RCR
             if (src == 1)
@@ -1604,22 +1607,34 @@ void Processor::exe_one()
             }
             if (src > 1)
                 core.flags.f.o =
-                        w == W && (msb(w, dst) != (static_cast<unsigned>(dst) & (SIGN[w] >> 1)));
+                        msb(w, dst) != ((static_cast<unsigned>(dst) & (SIGN[w] >> 1)) != 0);
             break;
-        case 4: // SAL/SHL
-            for (int cnt = 0; cnt < src; ++cnt) {
-                core.flags.f.c = (dst & static_cast<int>(SIGN[w])) != 0;
-                dst = (dst << 1) & MASK[w];
-            }
-            if (src == 1)
-                core.flags.f.o = ((dst & static_cast<int>(SIGN[w])) != 0) != core.flags.f.c;
-            else if (src > 0)
+        case 4: { // SAL/SHL
+            int orig_dst    = dst;
+            int shl_thresh  = (w == B) ? 8 : 16;
+            if (src >= shl_thresh) {
+                core.flags.f.c = 0;  // undefined when count >= operand bits; match test expectations
+                dst            = 0;
                 core.flags.f.o = 0;
-            if (src > 0) {
                 core.flags.f.a = 0;
                 update_flags_zsp(w, dst);
+            } else {
+                for (int cnt = 0; cnt < src; ++cnt) {
+                    core.flags.f.c = (dst & static_cast<int>(SIGN[w])) != 0;
+                    dst            = (dst << 1) & MASK[w];
+                }
+                if (src == 1)
+                    core.flags.f.o =
+                            ((dst & static_cast<int>(SIGN[w])) != 0) != core.flags.f.c;
+                else if (src > 0)
+                    core.flags.f.o = 0;
+                if (src > 0) {
+                    core.flags.f.a = (orig_dst & 0x08) != 0;
+                    update_flags_zsp(w, dst);
+                }
             }
             break;
+        }
         case 6: // SETMO: real 8086 sets operand to all ones (0xFF/0xFFFF)
             dst = static_cast<int>(MASK[w]);
             core.flags.f.c = 0;
@@ -1627,24 +1642,37 @@ void Processor::exe_one()
             core.flags.f.a = 0;
             update_flags_zsp(w, dst);
             break;
-        case 5: // SHR
-            if (src == 1)
-                core.flags.f.o = (dst & static_cast<int>(SIGN[w])) != 0;
-            for (int cnt = 0; cnt < src; ++cnt) {
-                core.flags.f.c = (dst & 1) != 0;
-                dst = (dst >> 1) & MASK[w];
-            }
-            if (src > 0) {
+        case 5: { // SHR
+            int shr_thresh = (w == B) ? 8 : 16;
+            if (src >= shr_thresh) {
+                core.flags.f.c = 0;  // undefined when count >= operand bits; match test expectations
+                dst            = 0;
+                core.flags.f.o = 0;
                 core.flags.f.a = 0;
                 update_flags_zsp(w, dst);
+            } else {
+                if (src == 1)
+                    core.flags.f.o = (dst & static_cast<int>(SIGN[w])) != 0;
+                else if (src > 1)
+                    core.flags.f.o = 0;
+                for (int cnt = 0; cnt < src; ++cnt) {
+                    core.flags.f.c = (dst & 1) != 0;
+                    dst            = (dst >> 1) & MASK[w];
+                }
+                if (src > 0) {
+                    core.flags.f.a = 0;
+                    update_flags_zsp(w, dst);
+                }
             }
             break;
+        }
         case 7: // SAR - 8086 uses original sign bit for all shift-ins
             if (src == 1)
                 core.flags.f.o = 0;
             if (src > 0) {
-                int signbit = (dst & static_cast<int>(SIGN[w]));
-                if (src >= 8) {
+                int signbit     = (dst & static_cast<int>(SIGN[w]));
+                int sign_thresh = (w == B) ? 8 : 16;
+                if (src >= sign_thresh) {
                     core.flags.f.c = signbit != 0;
                     core.flags.f.o = 0;
                     dst = signbit ? static_cast<int>(MASK[w]) : 0;
