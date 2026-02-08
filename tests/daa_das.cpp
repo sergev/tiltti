@@ -91,3 +91,93 @@ TEST_F(MachineTest, das_batch8)
     EXPECT_EQ(memory.load8(0x4F866), 0x90);
     EXPECT_EQ(memory.load8(0x4F867), 0x90);
 }
+
+//
+// daa
+//
+TEST_F(MachineTest, daa_batch9)
+{
+    // Initial CPU State
+    cpu.set_ax(0x2BAF);
+    cpu.set_bx(0x3EE1);
+    cpu.set_cx(0xA66A);
+    cpu.set_dx(0x45C2);
+    cpu.set_cs(0xC512);
+    cpu.set_ss(0xD705);
+    cpu.set_ds(0x119B);
+    cpu.set_es(0x1390);
+    cpu.set_sp(0x0E05);
+    cpu.set_bp(0x91AE);
+    cpu.set_si(0xE516);
+    cpu.set_di(0xE66D);
+    cpu.set_ip(0x6BD5);
+    cpu.set_flags(0xF4D6);
+    machine.trace_registers();
+
+    // Initial RAM entries
+    machine.mem_store_byte(0xCBCF5, 0x27);
+    machine.mem_store_byte(0xCBCF6, 0x90);
+    machine.mem_store_byte(0xCBCF7, 0x90);
+    machine.mem_store_byte(0xCBCF8, 0x90);
+    machine.mem_store_byte(0xCBCF9, 0x90);
+
+    // Single-step.
+    cpu.step();
+
+    // Final CPU State
+    EXPECT_EQ(cpu.get_ax(), 0x2B15);
+    EXPECT_EQ(cpu.get_ip(), 0x6BD6);
+    EXPECT_FLAGS(0xF413);
+
+    // Final RAM entries
+    EXPECT_EQ(memory.load8(0xCBCF5), 0x27);
+    EXPECT_EQ(memory.load8(0xCBCF6), 0x90);
+    EXPECT_EQ(memory.load8(0xCBCF7), 0x90);
+    EXPECT_EQ(memory.load8(0xCBCF8), 0x90);
+    EXPECT_EQ(memory.load8(0xCBCF9), 0x90);
+}
+
+//
+// das
+//
+TEST_F(MachineTest, das_batch9)
+{
+    // Initial CPU State
+    cpu.set_ax(0x7B4F);
+    cpu.set_bx(0xBE66);
+    cpu.set_cx(0xE41C);
+    cpu.set_dx(0x8119);
+    cpu.set_cs(0x95E3);
+    cpu.set_ss(0xCE10);
+    cpu.set_ds(0xF305);
+    cpu.set_es(0x5D7F);
+    cpu.set_sp(0x5576);
+    cpu.set_bp(0xC63C);
+    cpu.set_si(0x7822);
+    cpu.set_di(0xACB1);
+    cpu.set_ip(0xC671);
+    cpu.set_flags(0xFC03);
+    machine.trace_registers();
+
+    // Initial RAM entries
+    machine.mem_store_byte(0xA24A1, 0x2F);
+    machine.mem_store_byte(0xA24A2, 0x90);
+    machine.mem_store_byte(0xA24A3, 0x90);
+    machine.mem_store_byte(0xA24A4, 0x90);
+    machine.mem_store_byte(0xA24A5, 0x90);
+
+    // Single-step.
+    cpu.step();
+
+    // Final CPU State
+    EXPECT_EQ(cpu.get_ax(), 0x7BE9);
+    EXPECT_EQ(cpu.get_ip(), 0xC672);
+    EXPECT_FLAGS(0xF493);
+
+    // Final RAM entries
+    EXPECT_EQ(memory.load8(0xA24A1), 0x2F);
+    EXPECT_EQ(memory.load8(0xA24A2), 0x90);
+    EXPECT_EQ(memory.load8(0xA24A3), 0x90);
+    EXPECT_EQ(memory.load8(0xA24A4), 0x90);
+    EXPECT_EQ(memory.load8(0xA24A5), 0x90);
+}
