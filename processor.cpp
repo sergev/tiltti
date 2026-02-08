@@ -1903,92 +1903,44 @@ void Processor::exe_one()
         case 7: // IDIV (signed integer division)
             // According to the 8086 manual, the arithmetic flags are left
             // in an undefined state: CF, PF, AF, ZF, SF, OF.
-            // Though here we do our best to predict the flags.
-            unpredictable_flags = PF_MASK; // Parity is unpredictable
+            unpredictable_flags = CF_MASK | PF_MASK | AF_MASK | ZF_MASK | SF_MASK | OF_MASK;
+
             if (w == B) {
                 // Dividend is a signed 16-bit value in AX.
                 // Divisor is a signed 8-bit value (register or memory).
                 src = (int8_t)src;
                 if (src == 0) {
                     // Divide by zero
-                    core.flags.f.c = 0;
-                    core.flags.f.p = 1; // Unpredictable
-                    core.flags.f.a = 0;
-                    core.flags.f.z = 1;
-                    core.flags.f.s = 0;
-                    core.flags.f.o = 0;
                     callInt(0);
-                } else {
-                    dst = (int16_t)core.ax;
-                    res = dst / src;
-                    if (res > 0x7f || res < -0x80) {
-                        // Quotient overflow (byte).
-                        // OF=1 only when quotient negative.
-                        // PF from quotient if neg else AX high.
-                        core.flags.f.c = 0;
-                        core.flags.f.p = res < 0 ? PARITY[(Byte)res]
-                                                 : PARITY[(Byte)(core.ax >> 8)]; // Unpredictable
-                        core.flags.f.a = 1;
-                        core.flags.f.z = 0;
-                        core.flags.f.s = 0;
-                        core.flags.f.o = res < 0;
-                        callInt(0);
-                    } else {
-                        int rem = dst % src;
-                        set_al(res);
-                        set_ah(rem);
-
-                        // Successful byte IDIV.
-                        // SF from remainder.
-                        // PF from remainder.
-                        core.flags.f.c = 0;
-                        core.flags.f.o = 0;
-                        core.flags.f.z = 0;
-                        core.flags.f.s = (int8_t)rem < 0;
-                        core.flags.f.a = 0;
-                    }
+                    break;
                 }
+                dst = (int16_t)core.ax;
+                res = dst / src;
+                if (res > 0x7f || res < -0x80) {
+                    // Quotient overflow (byte).
+                    callInt(0);
+                    break;
+                }
+                set_al(res);
+                set_ah(dst % src);
             } else {
                 // Dividend is a signed 32-bit value in DX:AX.
                 // Divisor is a signed 16-bit value (register or memory).
                 src = (int16_t)src;
                 if (src == 0) {
                     // Divide by zero
-                    core.flags.f.c = 0;
-                    core.flags.f.p = 1; // Unpredictable
-                    core.flags.f.a = 0;
-                    core.flags.f.z = 1;
-                    core.flags.f.s = 0;
-                    core.flags.f.o = 0;
                     callInt(0);
-                } else {
-                    dst          = (int32_t)((core.dx << 16) | core.ax);
-                    int64_t lres = (int64_t)dst / src;
-
-                    if (lres > 0x7fff || lres < -0x8000) {
-                        // Quotient overflow (word).
-                        // PF from AX low byte.
-                        // AF inverted from initial.
-                        core.flags.f.c = 0;
-                        core.flags.f.p = PARITY[(Byte)core.ax]; // Unpredictable
-                        core.flags.f.a = !core.flags.f.a;
-                        core.flags.f.z = 0;
-                        core.flags.f.s = 0;
-                        core.flags.f.o = 0;
-                        callInt(0);
-                    } else {
-                        core.ax = lres;
-                        core.dx = dst % src;
-
-                        // Successful word IDIV.
-                        // SF from quotient.
-                        core.flags.f.c = 0;
-                        core.flags.f.o = 0;
-                        core.flags.f.z = 0;
-                        core.flags.f.s = (int16_t)core.ax < 0;
-                        core.flags.f.a = 1;
-                    }
+                    break;
                 }
+                dst          = (int32_t)((core.dx << 16) | core.ax);
+                int64_t lres = (int64_t)dst / src;
+                if (lres > 0x7fff || lres < -0x8000) {
+                    // Quotient overflow (word).
+                    callInt(0);
+                    break;
+                }
+                core.ax = lres;
+                core.dx = dst % src;
             }
             break;
         default:

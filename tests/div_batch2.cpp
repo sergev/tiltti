@@ -487,8 +487,8 @@ TEST_F(MachineTest, idiv_al)
     EXPECT_EQ(memory.load8(0x00001), 0x04);
     EXPECT_EQ(memory.load8(0x00002), 0x00);
     EXPECT_EQ(memory.load8(0x00003), 0x00);
-    EXPECT_EQ(memory.load8(0xB385E), 0x46);
-    EXPECT_EQ(memory.load8(0xB385F), 0xF0);
+    EXPECT_EQ(memory.load8(0xB385E), 0x46 & ~cpu.u_flags());
+    EXPECT_EQ(memory.load8(0xB385F), 0xF0 & ~(cpu.u_flags() >> 8));
     EXPECT_EQ(memory.load8(0xB385C), 0x11);
     EXPECT_EQ(memory.load8(0xB385D), 0xB8);
     EXPECT_EQ(memory.load8(0xB385A), 0x9C);
@@ -549,8 +549,8 @@ TEST_F(MachineTest, idiv_byte_ds_AD0Eh)
     EXPECT_EQ(memory.load8(0x00001), 0x04);
     EXPECT_EQ(memory.load8(0x00002), 0x00);
     EXPECT_EQ(memory.load8(0x00003), 0x00);
-    EXPECT_EQ(memory.load8(0xF9AA4), 0x12);
-    EXPECT_EQ(memory.load8(0xF9AA5), 0xF0);
+    EXPECT_EQ(memory.load8(0xF9AA4), 0x12 & ~cpu.u_flags());
+    EXPECT_EQ(memory.load8(0xF9AA5), 0xF0 & ~(cpu.u_flags() >> 8));
     EXPECT_EQ(memory.load8(0xF9AA2), 0xA2);
     EXPECT_EQ(memory.load8(0xF9AA3), 0xC5);
     EXPECT_EQ(memory.load8(0xF9AA0), 0x83);
@@ -613,8 +613,8 @@ TEST_F(MachineTest, idiv_byte_ss_bx_di_510Ah)
     EXPECT_EQ(memory.load8(0x00001), 0x04);
     EXPECT_EQ(memory.load8(0x00002), 0x00);
     EXPECT_EQ(memory.load8(0x00003), 0x00);
-    EXPECT_EQ(memory.load8(0x1A0A5), 0x12);
-    EXPECT_EQ(memory.load8(0x1A0A6), 0xFC);
+    EXPECT_EQ(memory.load8(0x1A0A5), 0x12 & ~cpu.u_flags());
+    EXPECT_EQ(memory.load8(0x1A0A6), 0xFC & ~(cpu.u_flags() >> 8));
     EXPECT_EQ(memory.load8(0x1A0A3), 0x20);
     EXPECT_EQ(memory.load8(0x1A0A4), 0xC5);
     EXPECT_EQ(memory.load8(0x1A0A1), 0xE3);
@@ -720,8 +720,8 @@ TEST_F(MachineTest, idiv_si)
     EXPECT_EQ(memory.load8(0x00001), 0x04);
     EXPECT_EQ(memory.load8(0x00002), 0x00);
     EXPECT_EQ(memory.load8(0x00003), 0x00);
-    EXPECT_EQ(memory.load8(0xE221B), 0x06);
-    EXPECT_EQ(memory.load8(0xE221C), 0xF4);
+    EXPECT_EQ(memory.load8(0xE221B), 0x06 & ~cpu.u_flags());
+    EXPECT_EQ(memory.load8(0xE221C), 0xF4 & ~(cpu.u_flags() >> 8));
     EXPECT_EQ(memory.load8(0xE2219), 0xA6);
     EXPECT_EQ(memory.load8(0xE221A), 0x3F);
     EXPECT_EQ(memory.load8(0xE2217), 0xC6);
@@ -888,8 +888,8 @@ TEST_F(MachineTest, idiv_word_es_si_5522h)
     EXPECT_EQ(memory.load8(0x00001), 0x04);
     EXPECT_EQ(memory.load8(0x00002), 0x00);
     EXPECT_EQ(memory.load8(0x00003), 0x00);
-    EXPECT_EQ(memory.load8(0xBF6AF), 0x12);
-    EXPECT_EQ(memory.load8(0xBF6B0), 0xF4);
+    EXPECT_EQ(memory.load8(0xBF6AF), 0x12 & ~cpu.u_flags());
+    EXPECT_EQ(memory.load8(0xBF6B0), 0xF4 & ~(cpu.u_flags() >> 8));
     EXPECT_EQ(memory.load8(0xBF6AD), 0xB1);
     EXPECT_EQ(memory.load8(0xBF6AE), 0x03);
     EXPECT_EQ(memory.load8(0xBF6AB), 0x2F);
