@@ -189,6 +189,36 @@ void Processor::setMem(int width, unsigned addr, int val)
 }
 
 //
+// Word access with 8086 segment offset wraparound (offset 0xFFFF -> second byte at seg:0).
+//
+int Processor::getMemAtSegOff(int width, Word seg, Word off)
+{
+    if (width == B) {
+        return machine.mem_load_byte(pc86_linear_addr(seg, off));
+    }
+    if (off == 0xffff) {
+        Byte lo = machine.mem_load_byte(pc86_linear_addr(seg, 0xffff));
+        Byte hi = machine.mem_load_byte(pc86_linear_addr(seg, 0));
+        return lo | (hi << 8);
+    }
+    return machine.mem_load_word(pc86_linear_addr(seg, off));
+}
+
+void Processor::setMemAtSegOff(int width, Word seg, Word off, int val)
+{
+    if (width == B) {
+        machine.mem_store_byte(pc86_linear_addr(seg, off), val);
+        return;
+    }
+    if (off == 0xffff) {
+        machine.mem_store_byte(pc86_linear_addr(seg, 0xffff), val);
+        machine.mem_store_byte(pc86_linear_addr(seg, 0), val >> 8);
+        return;
+    }
+    machine.mem_store_word(pc86_linear_addr(seg, off), val);
+}
+
+//
 // Get general or pointer register (reg encoding: 0=AX/AL, 1=CX/CL, ..., 4=SP, 5=BP, 6=SI, 7=DI).
 //
 int Processor::getReg(int width, unsigned r) const
@@ -393,8 +423,7 @@ void Processor::decode()
 //
 int Processor::pop()
 {
-    unsigned addr = pc86_linear_addr(core.ss, core.sp);
-    int val       = getMem(W, addr);
+    int val = getMemAtSegOff(W, core.ss, core.sp);
 
     core.sp += 2;
     return val;
@@ -406,7 +435,7 @@ int Processor::pop()
 void Processor::push(int val)
 {
     core.sp -= 2;
-    setMem(W, pc86_linear_addr(core.ss, core.sp), val);
+    setMemAtSegOff(W, core.ss, core.sp, val);
 }
 
 //
@@ -1253,35 +1282,35 @@ void Processor::exe_one()
     // String ops (one iteration each)
     case 0xa4: // MOVS
     case 0xa5:
-        src = getMem(w, pc86_linear_addr(os, core.si));
-        setMem(w, pc86_linear_addr(core.es, core.di), src);
+        src = getMemAtSegOff(w, os, core.si);
+        setMemAtSegOff(w, core.es, core.di, src);
         core.si = (core.si + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
     case 0xa6:
     case 0xa7:
-        dst = getMem(w, pc86_linear_addr(core.es, core.di));
-        src = getMem(w, pc86_linear_addr(os, core.si));
+        dst = getMemAtSegOff(w, core.es, core.di);
+        src = getMemAtSegOff(w, os, core.si);
         sub(w, src, dst);
         core.si = (core.si + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
     case 0xae:
     case 0xaf:
-        dst = getMem(w, pc86_linear_addr(core.es, core.di));
+        dst = getMemAtSegOff(w, core.es, core.di);
         src = getReg(w, AX);
         sub(w, src, dst);
         core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
     case 0xac:
     case 0xad:
-        src = getMem(w, pc86_linear_addr(os, core.si));
+        src = getMemAtSegOff(w, os, core.si);
         setReg(w, AX, src);
         core.si = (core.si + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
     case 0xaa:
     case 0xab:
-        setMem(w, pc86_linear_addr(core.es, core.di), getReg(w, AX));
+        setMemAtSegOff(w, core.es, core.di, getReg(w, AX));
         core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
         break;
 

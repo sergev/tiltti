@@ -117,6 +117,8 @@ private:
     int getRM(int width, unsigned mod_val, unsigned rm_val);
     Word getSegReg(unsigned r) const;
     void setMem(int width, unsigned addr, int val);
+    int getMemAtSegOff(int width, Word seg, Word off);
+    void setMemAtSegOff(int width, Word seg, Word off, int val);
     void setReg(int width, unsigned r, int val);
     void setRM(int width, unsigned mod_val, unsigned rm_val, int val);
     void setSegReg(unsigned r, Word val);
