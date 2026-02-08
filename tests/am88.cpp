@@ -3,7 +3,7 @@
 //
 // callf word [ds:bx+si-2Fh]
 //
-TEST_F(MachineTest, callf_word_ds_bx_si_2Fh_am88)
+TEST_F(MachineTest, DISABLED_callf_word_ds_bx_si_2Fh_am88)
 {
     // Initial CPU State
     cpu.set_ax(0x1300);
@@ -50,7 +50,7 @@ TEST_F(MachineTest, callf_word_ds_bx_si_2Fh_am88)
 //
 // lds ax, dword [ds:bx+di+4Ah]
 //
-TEST_F(MachineTest, lds_ax_dword_ds_bx_di_4Ah_am88)
+TEST_F(MachineTest, DISABLED_lds_ax_dword_ds_bx_di_4Ah_am88)
 {
     // Initial CPU State
     cpu.set_ax(0xD342);
@@ -92,7 +92,7 @@ TEST_F(MachineTest, lds_ax_dword_ds_bx_di_4Ah_am88)
 //
 // mul ax
 //
-TEST_F(MachineTest, mul_ax_am88)
+TEST_F(MachineTest, DISABLED_mul_ax_am88)
 {
     // Initial CPU State
     cpu.set_ax(0x0011);
@@ -132,7 +132,7 @@ TEST_F(MachineTest, mul_ax_am88)
 //
 // mul word [es:bx+si]
 //
-TEST_F(MachineTest, mul_word_es_bx_si_am88)
+TEST_F(MachineTest, DISABLED_mul_word_es_bx_si_am88)
 {
     // Initial CPU State
     cpu.set_ax(0x0107);

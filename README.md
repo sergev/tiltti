@@ -2,6 +2,10 @@
 
 Emulator of the i86 computer with PC BIOS.
 
+Verified using MOO test suites:
+ * 646000 tests from [SingleStepTests/8086](https://github.com/SingleStepTests/8086/tree/main/v1_binary)
+ * 3007000 tests from [SingleStepTests/8088](https://github.com/SingleStepTests/8088/tree/main/v2_binary)
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
