@@ -52,7 +52,7 @@ moo86:  all outdir
 MOO     ?= $(PWD)/../8086-tests/v1_binary
 run-moo86:
 	for moo in $(MOO)/*.gz; do \
-	    ../build/moo_booth/moo-booth -run -limit=100 $$moo; \
+	    ../build/moo_booth/moo-booth -run $$moo; \
         done
 
 outdir:
