@@ -1844,9 +1844,9 @@ void Processor::exe_one()
                 core.flags.f.s = (int16_t)core.dx < 0;
             }
             break;
-        case 5:                            // IMUL
-            // Parity is unpredictable
-            unpredictable_flags = PF_MASK;
+        case 5: // IMUL
+            // AF, SF, ZF, PF undefined per Intel; only CF and OF are defined.
+            unpredictable_flags = PF_MASK | AF_MASK | ZF_MASK | SF_MASK;
 
             if (w == B) {
                 int s          = signconv(B, src);
@@ -1857,8 +1857,9 @@ void Processor::exe_one()
                     res = (Word) -res;
                 }
                 core.ax        = res;
-                core.flags.f.c = (res != 0 && (res > 0x7f || res < -0x80));
-                core.flags.f.o = (res != 0 && (res > 0x7f || res < -0x80));
+                bool byte_overflow = ((int16_t)res != (int8_t)(res & 0xFF));
+                core.flags.f.c = byte_overflow;
+                core.flags.f.o = byte_overflow;
             } else {
                 uint32_t lres = (long)signconv(W, core.ax) * (long)signconv(W, src);
                 if (rep != 0) {
@@ -1866,15 +1867,9 @@ void Processor::exe_one()
                 }
                 core.ax        = lres;
                 core.dx        = lres >> 16;
-                core.flags.f.c = core.dx != 0 && core.dx != 0xffff;
-                core.flags.f.o = core.dx != 0 && core.dx != 0xffff;
-            }
-            core.flags.f.a = 0;
-            update_flags_zsp(w, core.ax);
-            if (w == B) {
-                core.flags.f.s = (int16_t)core.ax < 0;
-            } else if (w == W) {
-                core.flags.f.s = (int16_t)core.dx < 0;
+                bool word_overflow = ((int32_t)lres != (int16_t)core.ax);
+                core.flags.f.c = word_overflow;
+                core.flags.f.o = word_overflow;
             }
             break;
         case 6: // DIV (unsigned)
