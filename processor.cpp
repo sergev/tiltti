@@ -585,6 +585,7 @@ done_prefix:
     for (int i = 0; i < 6; ++i) {
         opcode.push_back(machine.mem_fetch_byte(pc86_linear_addr(core.cs, (core.ip + i) & 0xffff)));
     }
+    unpredictable_flags = 0;
 
     // Show instruction: address, opcode and mnemonics.
     machine.trace_instruction();
@@ -947,10 +948,15 @@ void Processor::exe_one()
             core.flags.f.c = 0;
             core.flags.f.a = 0;
         }
-        core.flags.f.z = al == 0;
-        core.flags.f.s = al <= 9;
-        core.flags.f.p = al > 9;
-        core.flags.f.o = al <= 9;
+        if (al == 0) {
+            update_flags_zsp(B, al);
+            core.flags.f.o = 0;
+        } else {
+            core.flags.f.z = 0;
+            core.flags.f.s = (al <= 9);
+            core.flags.f.p = (al > 9);
+            core.flags.f.o = (al <= 9);
+        }
         break;
     }
 
@@ -972,7 +978,7 @@ void Processor::exe_one()
             core.flags.f.c = 0;
         }
         update_flags_zsp(B, al);
-        core.flags.f.o = !core.flags.f.p; // Undefined: let's guess
+        core.flags.f.o = (al >= 0x80);
         break;
     }
 
@@ -1075,16 +1081,20 @@ void Processor::exe_one()
             core.flags.f.c = 0;
             core.flags.f.a = 0;
         }
-        core.flags.f.z = al == 0;
-        core.flags.f.s = (int8_t)al < 0;
-        core.flags.f.p = al < 1 | al > 9;
+        if (al == 0) {
+            update_flags_zsp(B, al);
+        } else {
+            core.flags.f.z = 0;
+            core.flags.f.s = (al <= 4);
+            core.flags.f.p = (al <= 4);
+        }
+        core.flags.f.o = 0;
         break;
     }
 
     // DAS: Decimal adjust for subtraction
     case 0x2f: {
         Byte al = get_al();
-        core.flags.f.o = !core.flags.f.c; // Undefined: let's guess
         if (core.flags.f.a || (al & 0xf) > 9) {
             al -= 6;
             set_al(al);
@@ -1100,6 +1110,7 @@ void Processor::exe_one()
             core.flags.f.c = 0;
         }
         update_flags_zsp(B, al);
+        core.flags.f.o = core.flags.f.c && (al >= 0x60);
         break;
     }
 
@@ -1636,7 +1647,7 @@ void Processor::exe_one()
             }
             if (src == 1)
                 core.flags.f.o = msb(w, dst) != core.flags.f.c;
-            else if (src > 1)
+            else if (src > 1 && src < (w == B ? 8 : 16))
                 core.flags.f.o = 0;
             break;
         case 3: // RCR
@@ -1771,6 +1782,7 @@ void Processor::exe_one()
             break;
         }
         case 4: // MUL
+            unpredictable_flags = PF_MASK; // Parity is unpredictable
             if (w == B) {
                 dst     = get_al();
                 res     = (Word)(dst * src);
@@ -1787,22 +1799,14 @@ void Processor::exe_one()
             core.flags.f.a = 0;
             if (w == B) {
                 core.flags.f.z = (core.ax == 0);
-                if ((res >> 8) != 0) {
-                    core.flags.f.s = 0;
-                    core.flags.f.p = PARITY[(Byte)(res >> 8)];
-                } else {
-                    core.flags.f.s = (int8_t)core.ax < 0;
-                    core.flags.f.p = PARITY[core.ax & 0xff];
-                }
+                core.flags.f.s = (int16_t)core.ax < 0;
             } else {
                 core.flags.f.z = (core.dx == 0 && core.ax == 0);
                 core.flags.f.s = (int16_t)core.dx < 0;
-                // 8086 word MUL: when DX even PF from parity of high byte; when DX odd PF from bit 0 of high byte
-                core.flags.f.p = (core.dx & 1) ? (core.dx >> 8) & 1
-                                               : PARITY[(Byte)(core.dx >> 8)];
             }
             break;
         case 5: // IMUL
+            unpredictable_flags = PF_MASK; // Parity is unpredictable
             if (w == B) {
                 int s    = signconv(B, src);
                 int dval = signconv(B, get_al());
@@ -1821,11 +1825,7 @@ void Processor::exe_one()
             update_flags_zsp(w, core.ax);
             if (w == B) {
                 core.flags.f.s = (int16_t)core.ax < 0;
-                // 8086 byte IMUL: PF=1 when result is zero or when AL has odd parity
-                core.flags.f.p = (core.ax == 0) || (PARITY[(Byte)core.ax] == 0);
             } else if (w == W) {
-                // 8086 word IMUL: PF from high byte of DX when DX is even (per hardware vectors)
-                core.flags.f.p = PARITY[(Byte)(core.dx >> 8)] && ((core.dx & 1) == 0);
                 core.flags.f.s = (int16_t)core.dx < 0;
             }
             break;
@@ -1833,11 +1833,12 @@ void Processor::exe_one()
             // In 8086 documentation, DIV leaves CF, OF, SF, ZF, PF, AF undefined.
             // We match test-vector behavior.
             // Flags DF/IF/TF stay unchanged.
+            unpredictable_flags = PF_MASK; // Parity is unpredictable
             if (w == B) {
                 unsigned divisor_b = (unsigned)(Byte)src;
                 if (divisor_b == 0) {
                     core.flags.f.c = 0;
-                    core.flags.f.p = 0;
+                    core.flags.f.p = 0; // Unpredictable
                     core.flags.f.a = 0;
                     core.flags.f.z = 1;
                     core.flags.f.s = 0;
@@ -1863,7 +1864,6 @@ void Processor::exe_one()
                     core.flags.f.o = 0;
                     update_flags_zsp(B, (int)quo);
                     if (quo >= 0xBE) {
-                        core.flags.f.p = 1;  // 0xF006
                         core.flags.f.a = 0;
                         core.flags.f.z = 0;
                         core.flags.f.s = 0;
@@ -1875,7 +1875,6 @@ void Processor::exe_one()
                     core.flags.f.s = 1;
                     core.flags.f.z = 0;
                     core.flags.f.a = 0;     // 0xF887 and 0xF487 both have AF=0
-                    core.flags.f.p = 1;
                     core.flags.f.c = 1;
                     if (quo > 0x2C)
                         core.flags.f.d = 0;
@@ -1886,7 +1885,7 @@ void Processor::exe_one()
                 unsigned divw = (Word)src;
                 if (divw == 0) {
                     core.flags.f.c = 0;
-                    core.flags.f.p = 0;
+                    core.flags.f.p = 0; // Unpredictable
                     core.flags.f.a = 0;
                     core.flags.f.z = 1;
                     core.flags.f.s = 0;
@@ -1903,7 +1902,7 @@ void Processor::exe_one()
                     core.flags.f.z = 0;
                     core.flags.f.o = 0;
                     core.flags.f.a = sf;
-                    core.flags.f.p = !sf;
+                    core.flags.f.p = !sf; // Unpredictable
                     core.flags.f.s = sf;
                     callInt(0);
                     break;
@@ -1916,7 +1915,6 @@ void Processor::exe_one()
                     core.flags.f.c = 0;
                     core.flags.f.o = 0;
                     core.flags.f.a = 0;
-                    core.flags.f.p = PARITY[(Byte)(quo >> 8)];
                     core.flags.f.z = quo == 0;
                     core.flags.f.s = 1;
                 } else {
@@ -1924,7 +1922,6 @@ void Processor::exe_one()
                     core.flags.f.o = 1;
                     core.flags.f.s = 1;
                     core.flags.f.z = 0;
-                    core.flags.f.p = quo < 0x0400;
                     core.flags.f.a = quo < 0x0400;
                 }
             }
@@ -1933,6 +1930,7 @@ void Processor::exe_one()
             // According to the 8086 manual, the arithmetic flags are left
             // in an undefined state: CF, PF, AF, ZF, SF, OF.
             // Though here we do our best to predict the flags.
+            unpredictable_flags = PF_MASK; // Parity is unpredictable
             if (w == B) {
                 // Dividend is a signed 16-bit value in AX.
                 // Divisor is a signed 8-bit value (register or memory).
@@ -1940,7 +1938,7 @@ void Processor::exe_one()
                 if (src == 0) {
                     // Divide by zero
                     core.flags.f.c = 0;
-                    core.flags.f.p = 1;
+                    core.flags.f.p = 1; // Unpredictable
                     core.flags.f.a = 0;
                     core.flags.f.z = 1;
                     core.flags.f.s = 0;
@@ -1954,7 +1952,7 @@ void Processor::exe_one()
                         // OF=1 only when quotient negative.
                         // PF from quotient if neg else AX high.
                         core.flags.f.c = 0;
-                        core.flags.f.p = res < 0 ? PARITY[(Byte)res] : PARITY[(Byte)(core.ax >> 8)];
+                        core.flags.f.p = res < 0 ? PARITY[(Byte)res] : PARITY[(Byte)(core.ax >> 8)]; // Unpredictable
                         core.flags.f.a = 1;
                         core.flags.f.z = 0;
                         core.flags.f.s = 0;
@@ -1971,7 +1969,6 @@ void Processor::exe_one()
                         core.flags.f.c = 0;
                         core.flags.f.o = 0;
                         core.flags.f.z = 0;
-                        core.flags.f.p = PARITY[(Byte)rem];
                         core.flags.f.s = (int8_t)rem < 0;
                         core.flags.f.a = 0;
                     }
@@ -1983,7 +1980,7 @@ void Processor::exe_one()
                 if (src == 0) {
                     // Divide by zero
                     core.flags.f.c = 0;
-                    core.flags.f.p = 1;
+                    core.flags.f.p = 1; // Unpredictable
                     core.flags.f.a = 0;
                     core.flags.f.z = 1;
                     core.flags.f.s = 0;
@@ -1998,7 +1995,7 @@ void Processor::exe_one()
                         // PF from AX low byte.
                         // AF inverted from initial.
                         core.flags.f.c = 0;
-                        core.flags.f.p = PARITY[(Byte)core.ax];
+                        core.flags.f.p = PARITY[(Byte)core.ax]; // Unpredictable
                         core.flags.f.a = !core.flags.f.a;
                         core.flags.f.z = 0;
                         core.flags.f.s = 0;
@@ -2013,7 +2010,6 @@ void Processor::exe_one()
                         core.flags.f.c = 0;
                         core.flags.f.o = 0;
                         core.flags.f.z = 0;
-                        core.flags.f.p = 1;
                         core.flags.f.s = (int16_t)core.ax < 0;
                         core.flags.f.a = 1;
                     }

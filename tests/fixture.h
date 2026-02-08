@@ -54,6 +54,11 @@ protected:
 };
 
 //
+// Compare flags, ignoring unpredictable bits.
+//
+#define EXPECT_FLAGS(val) EXPECT_EQ(cpu.get_flags() & ~cpu.u_flags(), val & ~cpu.u_flags()) << show_flags(val);
+
+//
 // Get current test name, as specified in TEST() macro.
 //
 std::string get_test_name();

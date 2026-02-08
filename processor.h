@@ -72,6 +72,19 @@ struct CoreState {
     } flags;
 };
 
+// Bitmasks for flags.
+enum {
+    CF_MASK = 1 << 0,  // Carry Flag
+    PF_MASK = 1 << 2,  // Parity Flag
+    AF_MASK = 1 << 4,  // Auxiliary Carry Flag
+    ZF_MASK = 1 << 6,  // Zero Flag
+    SF_MASK = 1 << 7,  // Sign Flag
+    TF_MASK = 1 << 8,  // Trap Flag
+    IF_MASK = 1 << 9,  // Interrupt Flag
+    DF_MASK = 1 << 10, // Direction Flag
+    OF_MASK = 1 << 11, // Overflow Flag
+};
+
 //
 // PC i86 processor.
 //
@@ -91,6 +104,9 @@ private:
     unsigned rep{}; // 0=none, 1=REP/REPE/REPZ, 2=REPNE/REPNZ
     bool segment_override{};
     Word os{}; // segment override (default DS)
+
+    // Bitmask of unpredictable flags for the last instruction.
+    Word unpredictable_flags;
 
     // Helpers: effective address, register/memory access, stack, ALU, flags.
     unsigned getAddr(Word seg, Word off) const;
@@ -200,6 +216,7 @@ public:
     Word get_flags() const { return core.flags.w; }
     void set_flags(Word val);
     void update_flags_zsp(int width, int res);
+    Word u_flags() { return unpredictable_flags; }
 
     void set_cf(bool bit) { core.flags.f.c = bit; } // CF, Carry Flag
     void set_pf(bool bit) { core.flags.f.p = bit; } // PF, Parity Flag
