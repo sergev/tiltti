@@ -443,6 +443,7 @@ void Processor::push(int val)
 //
 void Processor::callInt(int type)
 {
+    core.flags.w &= ~unpredictable_flags;
     if (machine.is_syscall(type)) {
         // Intercept syscalls.
         machine.process_syscall(type);
@@ -642,6 +643,7 @@ done_prefix:
     } else {
         exe_one();
     }
+    core.flags.w &= ~unpredictable_flags;
 
     // Show changed registers.
     machine.trace_registers();
@@ -964,6 +966,9 @@ void Processor::exe_one()
 
     // AAA: ASCII adjust for addition
     case 0x37: {
+        // Overflow, parity and sign are unpredictable
+        unpredictable_flags = OF_MASK | PF_MASK | SF_MASK;
+
         Byte al = get_al();
         if (core.flags.f.a || (al & 0xf) > 9) {
             al += 6;
@@ -977,12 +982,14 @@ void Processor::exe_one()
         al &= 0xf;
         set_al(al);
         core.flags.f.z = (al == 0);
-        unpredictable_flags = OF_MASK | PF_MASK | SF_MASK; // Overflow, parity and sign are unpredictable
         break;
     }
 
     // DAA: Decimal adjust for addition
     case 0x27: {
+        // Overflow is unpredictable
+        unpredictable_flags = OF_MASK;
+
         Byte al        = get_al();
         bool update_lo = core.flags.f.a || (al & 0xf) > 9;
         bool update_hi = core.flags.f.c || (al > 0x99);
@@ -1001,7 +1008,6 @@ void Processor::exe_one()
             core.flags.f.c = 0;
         }
         update_flags_zsp(B, al);
-        unpredictable_flags = OF_MASK; // Overflow is unpredictable
         break;
     }
 
@@ -1092,6 +1098,9 @@ void Processor::exe_one()
 
     // AAS: ASCII adjust for subtraction
     case 0x3f: {
+        // Overflow, parity and sign are unpredictable
+        unpredictable_flags = OF_MASK | PF_MASK | SF_MASK;
+
         Byte al = get_al();
         if (core.flags.f.a || (al & 0xf) > 9) {
             al -= 6;
@@ -1105,12 +1114,14 @@ void Processor::exe_one()
         al &= 0xf;
         set_al(al);
         core.flags.f.z = (al == 0);
-        unpredictable_flags = OF_MASK | PF_MASK | SF_MASK; // Overflow, parity and sign are unpredictable
         break;
     }
 
     // DAS: Decimal adjust for subtraction
     case 0x2f: {
+        // Overflow is unpredictable
+        unpredictable_flags = OF_MASK;
+
         Byte al        = get_al();
         bool update_lo = core.flags.f.a || (al & 0xf) > 9;
         bool update_hi = core.flags.f.c || (al > 0x99);
@@ -1129,12 +1140,14 @@ void Processor::exe_one()
             core.flags.f.c = 0;
         }
         update_flags_zsp(B, al);
-        unpredictable_flags = OF_MASK; // Overflow is unpredictable
         break;
     }
 
     // AAM: ASCII adjust for multiply
     case 0xd4:
+        // Overflow is unpredictable
+        unpredictable_flags = OF_MASK;
+
         src = getMem(B);
         if (src == 0) {
             callInt(0);
@@ -1145,11 +1158,13 @@ void Processor::exe_one()
             core.flags.f.c = 0;
             core.flags.f.a = 0;
         }
-        unpredictable_flags = OF_MASK; // Overflow is unpredictable
         break;
 
     // AAD: ASCII adjust for division
     case 0xd5: {
+        // Overflow is unpredictable
+        unpredictable_flags = OF_MASK;
+
         src          = getMem(B);
         int ah_orig  = get_ah();
         int al_orig  = get_al();
@@ -1161,7 +1176,6 @@ void Processor::exe_one()
         core.flags.f.c      = (sum >= 256);
         core.flags.f.a      = (half_sum > 15);
         core.flags.f.t      = 0;
-        unpredictable_flags = OF_MASK; // Overflow is unpredictable
         break;
     }
 
@@ -1798,8 +1812,10 @@ void Processor::exe_one()
             setRM(w, mod, rm, dst);
             break;
         }
-        case 4:                            // MUL
-            unpredictable_flags = PF_MASK; // Parity is unpredictable
+        case 4: // MUL
+            // Parity is unpredictable
+            unpredictable_flags = PF_MASK;
+
             if (w == B) {
                 dst            = get_al();
                 res            = (Word)(dst * src);
@@ -1823,7 +1839,9 @@ void Processor::exe_one()
             }
             break;
         case 5:                            // IMUL
-            unpredictable_flags = PF_MASK; // Parity is unpredictable
+            // Parity is unpredictable
+            unpredictable_flags = PF_MASK;
+
             if (w == B) {
                 int s          = signconv(B, src);
                 int dval       = signconv(B, get_al());
@@ -1848,66 +1866,26 @@ void Processor::exe_one()
             break;
         case 6: // DIV (unsigned)
             // In 8086 documentation, DIV leaves CF, OF, SF, ZF, PF, AF undefined.
-            // We match test-vector behavior.
             // Flags DF/IF/TF stay unchanged.
-            unpredictable_flags = PF_MASK; // Parity is unpredictable
+            unpredictable_flags = CF_MASK | OF_MASK | SF_MASK | ZF_MASK | PF_MASK | AF_MASK;
+
             if (w == B) {
                 unsigned divisor_b = (unsigned)(Byte)src;
                 if (divisor_b == 0) {
-                    core.flags.f.c = 0;
-                    core.flags.f.p = 0; // Unpredictable
-                    core.flags.f.a = 0;
-                    core.flags.f.z = 1;
-                    core.flags.f.s = 0;
-                    core.flags.f.o = 0;
                     callInt(0);
                     break;
                 }
-                uint32_t udst = (Word)core.ax;
-                uint32_t quo  = udst / divisor_b;
-                uint32_t rem  = udst % divisor_b;
+                Word quo = core.ax / divisor_b;
+                Word rem = core.ax % divisor_b;
                 if (quo > 0xFF) {
-                    core.flags.f.o = 1;
-                    core.flags.f.a = 0;
                     callInt(0);
                     break;
                 }
-                set_al((Byte)quo);
-                set_ah((Byte)rem);
-
-                // Success: set flags one by one.
-                if ((quo & 0x80) != 0) {
-                    core.flags.f.c = 0;
-                    core.flags.f.o = 0;
-                    update_flags_zsp(B, (int)quo);
-                    if (quo >= 0xBE) {
-                        core.flags.f.a = 0;
-                        core.flags.f.z = 0;
-                        core.flags.f.s = 0;
-                    } else {
-                        core.flags.f.a = 0;
-                    }
-                } else {
-                    core.flags.f.o = quo >= 44; // 0xF887 has OF=1, 0xF487 has OF=0
-                    core.flags.f.s = 1;
-                    core.flags.f.z = 0;
-                    core.flags.f.a = 0; // 0xF887 and 0xF487 both have AF=0
-                    core.flags.f.c = 1;
-                    if (quo > 0x2C)
-                        core.flags.f.d = 0;
-                    else
-                        core.flags.f.d =
-                            quo < 44; // quo=44 -> 0xF887 (DF=0), quo<44 -> 0xF487 (DF=1)
-                }
+                set_al(quo);
+                set_ah(rem);
             } else {
                 unsigned divw = (Word)src;
                 if (divw == 0) {
-                    core.flags.f.c = 0;
-                    core.flags.f.p = 0; // Unpredictable
-                    core.flags.f.a = 0;
-                    core.flags.f.z = 1;
-                    core.flags.f.s = 0;
-                    core.flags.f.o = 0;
                     callInt(0);
                     break;
                 }
@@ -1915,33 +1893,11 @@ void Processor::exe_one()
                 uint32_t quo  = ldst / divw;
                 uint32_t rem  = ldst % divw;
                 if (quo > 0xFFFF) {
-                    bool sf        = (quo >> 16) >= 16;
-                    core.flags.f.c = 0;
-                    core.flags.f.z = 0;
-                    core.flags.f.o = 0;
-                    core.flags.f.a = sf;
-                    core.flags.f.p = !sf; // Unpredictable
-                    core.flags.f.s = sf;
                     callInt(0);
                     break;
                 }
-                core.ax = (Word)quo;
-                core.dx = (Word)rem;
-
-                // Success: set flags one by one.
-                if ((quo & 0x8000) != 0) {
-                    core.flags.f.c = 0;
-                    core.flags.f.o = 0;
-                    core.flags.f.a = 0;
-                    core.flags.f.z = quo == 0;
-                    core.flags.f.s = 1;
-                } else {
-                    core.flags.f.c = 1;
-                    core.flags.f.o = 1;
-                    core.flags.f.s = 1;
-                    core.flags.f.z = 0;
-                    core.flags.f.a = quo < 0x0400;
-                }
+                core.ax = quo;
+                core.dx = rem;
             }
             break;
         case 7: // IDIV (signed integer division)
