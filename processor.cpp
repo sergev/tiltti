@@ -950,13 +950,12 @@ void Processor::exe_one()
         }
         if (al == 0) {
             update_flags_zsp(B, al);
-            core.flags.f.o = 0;
         } else {
             core.flags.f.z = 0;
             core.flags.f.s = (al <= 9);
             core.flags.f.p = (al > 9);
-            core.flags.f.o = (al <= 9);
         }
+        unpredictable_flags = OF_MASK; // Overflow is unpredictable
         break;
     }
 
@@ -1088,7 +1087,7 @@ void Processor::exe_one()
             core.flags.f.s = (al <= 4);
             core.flags.f.p = (al <= 4);
         }
-        core.flags.f.o = 0;
+        unpredictable_flags = OF_MASK; // Overflow is unpredictable
         break;
     }
 
@@ -1110,7 +1109,7 @@ void Processor::exe_one()
             core.flags.f.c = 0;
         }
         update_flags_zsp(B, al);
-        core.flags.f.o = core.flags.f.c && (al >= 0x60);
+        unpredictable_flags = OF_MASK; // Overflow is unpredictable
         break;
     }
 
@@ -1123,10 +1122,10 @@ void Processor::exe_one()
             set_ah(get_al() / src);
             set_al(get_al() % src);
             update_flags_zsp(B, get_al());
-            core.flags.f.o = 0;
             core.flags.f.c = 0;
             core.flags.f.a = 0;
         }
+        unpredictable_flags = OF_MASK; // Overflow is unpredictable
         break;
 
     // AAD: ASCII adjust for division
@@ -1141,8 +1140,8 @@ void Processor::exe_one()
         update_flags_zsp(B, get_al());
         core.flags.f.c = (sum >= 256);
         core.flags.f.a = (half_sum > 15);
-        core.flags.f.o = (get_al() >= 0xF0);
         core.flags.f.t = 0;
+        unpredictable_flags = OF_MASK; // Overflow is unpredictable
         break;
     }
 
