@@ -1005,15 +1005,23 @@ void Processor::exe_one()
         // Overflow is unpredictable
         unpredictable_flags = OF_MASK;
 
-        Byte al        = get_al();
-        bool update_lo = core.flags.f.a || (al & 0xf) > 9;
-        bool update_hi = core.flags.f.c || (al > 0x9F) || (al >= 0x9A && al < 0x9C);
+        Byte al       = get_al();
+        Byte al_orig  = al;
+        bool af_orig  = core.flags.f.a;
+        bool update_lo = af_orig || (al & 0xf) > 9;
         if (update_lo) {
             al += 6;
             core.flags.f.a = 1;
         } else {
             core.flags.f.a = 0;
         }
+        // When low adjustment overflows byte (e.g. 0xFA+6), set CF so high adjustment runs
+        if (update_lo && (al_orig + 6) > 0xFF)
+            core.flags.f.c = 1;
+        // High nibble: when AF=1 use old_AL vs 0x9F (8088 quirk); else use AL after low. Force high adjust for 0x9A only when AF=0.
+        bool update_hi = core.flags.f.c ||
+                         (af_orig ? (al_orig > 0x9F) : (al > 0x9F)) ||
+                         (al_orig == 0x9A && !af_orig);
         if (update_hi) {
             al += 0x60;
             core.flags.f.c = 1;
@@ -1138,7 +1146,10 @@ void Processor::exe_one()
 
         Byte al        = get_al();
         bool update_lo = core.flags.f.a || (al & 0xf) > 9;
-        bool update_hi = (al > 0x9F) || (core.flags.f.c && (al > 0x9F || al < 0x9A)) ||
+        // When AF=1, do not trigger high adjust from 0x9D-0x9F (8088 quirk, mirror of DAA).
+        bool update_hi = (al > 0x9F) || (core.flags.f.c && (al > 0x9F || al < 0x9A || al > 0x9C)) ||
+                         (core.flags.f.c && al >= 0x9A && al <= 0x9C) ||
+                         (al >= 0x9D && al <= 0x9F && !core.flags.f.a) ||
                          (al >= 0x9A && al <= 0x9C && !core.flags.f.c && !core.flags.f.a);
         if (update_lo) {
             al -= 6;
