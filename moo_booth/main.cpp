@@ -93,7 +93,7 @@ int main(int argc, char **argv)
             if (index >= 0 && count > index)
                 break;
         }
-        std::cerr << "Processed " << count << " tests from" << filename << "\n";
+        std::cerr << "Processed " << count << " tests from " << filename << "\n";
     } catch (const std::exception &e) {
         std::cerr << e.what() << "\n";
         return 1;
