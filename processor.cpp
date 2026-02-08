@@ -1698,9 +1698,17 @@ void Processor::exe_one()
             int orig_dst   = dst;
             int shl_thresh = (w == B) ? 8 : 16;
             if (src >= shl_thresh) {
-                core.flags.f.c = 0; // undefined when count >= operand bits; match test expectations
+                // CF = last bit shifted out; when src > thresh, last shift shifts 0 so CF=0
+                int last_bit = 0;
+                if (src == shl_thresh) {
+                    int eff_shift = shl_thresh - 1;
+                    last_bit =
+                        (static_cast<unsigned>(orig_dst) << eff_shift) & static_cast<unsigned>(MASK[w]) &
+                        static_cast<unsigned>(SIGN[w]);
+                }
+                core.flags.f.c = last_bit != 0;
+                core.flags.f.o = core.flags.f.c;
                 dst            = 0;
-                core.flags.f.o = 0;
                 core.flags.f.a = 0;
                 update_flags_zsp(w, dst);
             } else {
@@ -1710,10 +1718,8 @@ void Processor::exe_one()
                 }
                 core.flags.f.o = ((dst & static_cast<int>(SIGN[w])) != 0) != core.flags.f.c;
 
-                if (src >= 1 && src <= 2)
-                    core.flags.f.a = (orig_dst & 0x08) != 0;
-                else if (src > 0)
-                    core.flags.f.a = 0;
+                // AF undefined per Intel; batch5/batch6 expect different values - mark unpredictable
+                unpredictable_flags = AF_MASK;
 
                 if (src > 0)
                     update_flags_zsp(w, dst);
@@ -1732,8 +1738,10 @@ void Processor::exe_one()
         case 5: { // SHR
             int shr_thresh = (w == B) ? 8 : 16;
             if (src >= shr_thresh) {
-                core.flags.f.c = (static_cast<unsigned>(dst) >> (src - 1)) & 1;
-                dst            = 0;
+                // CF = last bit shifted out; when src > thresh all bits gone so 0
+                core.flags.f.c =
+                    (src == shr_thresh) ? ((static_cast<unsigned>(dst) >> (src - 1)) & 1) : 0;
+                dst = 0;
                 core.flags.f.o = 0;
                 core.flags.f.a = 0;
                 update_flags_zsp(w, dst);
