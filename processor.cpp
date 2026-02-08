@@ -1935,7 +1935,8 @@ void Processor::exe_one()
                 }
                 dst = (int16_t)core.ax;
                 res = dst / src;
-                if (res > 0x7f || res < -0x80) {
+                // 8086/8088: min negative quotient is -127, not -128 (Q68599); -128 triggers INT 0.
+                if (res > 0x7f || res < -0x7f) {
                     // Quotient overflow (byte).
                     callInt(0);
                     break;
@@ -1957,7 +1958,8 @@ void Processor::exe_one()
                 }
                 dst          = (int32_t)((core.dx << 16) | core.ax);
                 int64_t lres = (int64_t)dst / src;
-                if (lres > 0x7fff || lres < -0x8000) {
+                // 8086/8088: min negative quotient is -32767, not -32768 (Q68599); -32768 triggers INT 0.
+                if (lres > 0x7fff || lres < -0x7fff) {
                     // Quotient overflow (word).
                     callInt(0);
                     break;
