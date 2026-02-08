@@ -967,8 +967,6 @@ void Processor::exe_one()
         Byte al = get_al();
         if (core.flags.f.a || (al & 0xf) > 9) {
             al += 6;
-            al &= 0xf;
-            set_al(al);
             set_ah(get_ah() + 1);
             core.flags.f.c = 1;
             core.flags.f.a = 1;
@@ -976,28 +974,26 @@ void Processor::exe_one()
             core.flags.f.c = 0;
             core.flags.f.a = 0;
         }
-        if (al == 0) {
-            update_flags_zsp(B, al);
-        } else {
-            core.flags.f.z = 0;
-            core.flags.f.s = (al <= 9);
-            core.flags.f.p = (al > 9);
-        }
-        unpredictable_flags = OF_MASK; // Overflow is unpredictable
+        al &= 0xf;
+        set_al(al);
+        core.flags.f.z = (al == 0);
+        unpredictable_flags = OF_MASK | PF_MASK | SF_MASK; // Overflow, parity and sign are unpredictable
         break;
     }
 
     // DAA: Decimal adjust for addition
     case 0x27: {
-        Byte al = get_al();
-        if (core.flags.f.a || (al & 0xf) > 9) {
+        Byte al        = get_al();
+        bool update_lo = core.flags.f.a || (al & 0xf) > 9;
+        bool update_hi = core.flags.f.c || (al > 0x99);
+        if (update_lo) {
             al += 6;
             set_al(al);
             core.flags.f.a = 1;
         } else {
             core.flags.f.a = 0;
         }
-        if (core.flags.f.c || al > 0x99 || (al <= 0x9f && core.flags.f.a)) {
+        if (update_hi) {
             al += 0x60;
             set_al(al);
             core.flags.f.c = 1;
@@ -1005,7 +1001,7 @@ void Processor::exe_one()
             core.flags.f.c = 0;
         }
         update_flags_zsp(B, al);
-        core.flags.f.o = (al >= 0x80);
+        unpredictable_flags = OF_MASK; // Overflow is unpredictable
         break;
     }
 
@@ -1099,8 +1095,6 @@ void Processor::exe_one()
         Byte al = get_al();
         if (core.flags.f.a || (al & 0xf) > 9) {
             al -= 6;
-            al &= 0xf;
-            set_al(al);
             set_ah(get_ah() - 1);
             core.flags.f.c = 1;
             core.flags.f.a = 1;
@@ -1108,28 +1102,26 @@ void Processor::exe_one()
             core.flags.f.c = 0;
             core.flags.f.a = 0;
         }
-        if (al == 0) {
-            update_flags_zsp(B, al);
-        } else {
-            core.flags.f.z = 0;
-            core.flags.f.s = (al <= 4);
-            core.flags.f.p = (al <= 4);
-        }
-        unpredictable_flags = OF_MASK; // Overflow is unpredictable
+        al &= 0xf;
+        set_al(al);
+        core.flags.f.z = (al == 0);
+        unpredictable_flags = OF_MASK | PF_MASK | SF_MASK; // Overflow, parity and sign are unpredictable
         break;
     }
 
     // DAS: Decimal adjust for subtraction
     case 0x2f: {
-        Byte al = get_al();
-        if (core.flags.f.a || (al & 0xf) > 9) {
+        Byte al        = get_al();
+        bool update_lo = core.flags.f.a || (al & 0xf) > 9;
+        bool update_hi = core.flags.f.c || (al > 0x99);
+        if (update_lo) {
             al -= 6;
             set_al(al);
             core.flags.f.a = 1;
         } else {
             core.flags.f.a = 0;
         }
-        if (core.flags.f.c || al > 0x99 || (al <= 0x9f && core.flags.f.a)) {
+        if (update_hi) {
             al -= 0x60;
             set_al(al);
             core.flags.f.c = 1;
