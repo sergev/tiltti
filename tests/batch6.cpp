@@ -3,7 +3,7 @@
 //
 // mul byte [ds:bp-3Eh]
 //
-TEST_F(MachineTest, mul_byte_ds_bp_3Eh)
+TEST_F(MachineTest, mul_byte_ds_bp_3Eh_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0x48CE);
@@ -52,7 +52,7 @@ TEST_F(MachineTest, mul_byte_ds_bp_3Eh)
 //
 // mul byte [ds:bx+di]
 //
-TEST_F(MachineTest, mul_byte_ds_bx_di)
+TEST_F(MachineTest, mul_byte_ds_bx_di_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0x8902);
@@ -101,7 +101,7 @@ TEST_F(MachineTest, mul_byte_ds_bx_di)
 //
 // shl byte [ds:bp+si+69E0h], cl
 //
-TEST_F(MachineTest, shl_byte_ds_bp_si_69E0h_cl)
+TEST_F(MachineTest, shl_byte_ds_bp_si_69E0h_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0xD3DC);
@@ -147,7 +147,7 @@ TEST_F(MachineTest, shl_byte_ds_bp_si_69E0h_cl)
 //
 // shl byte [ds:bx+di+21A7h], cl
 //
-TEST_F(MachineTest, shl_byte_ds_bx_di_21A7h_cl)
+TEST_F(MachineTest, shl_byte_ds_bx_di_21A7h_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0x0000);
@@ -193,7 +193,7 @@ TEST_F(MachineTest, shl_byte_ds_bx_di_21A7h_cl)
 //
 // shl byte [es:bp+si+51h], cl
 //
-TEST_F(MachineTest, shl_byte_es_bp_si_51h_cl)
+TEST_F(MachineTest, shl_byte_es_bp_si_51h_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0xFEF7);
@@ -241,7 +241,7 @@ TEST_F(MachineTest, shl_byte_es_bp_si_51h_cl)
 //
 // shl byte [ss:bx+di-7AAFh], cl
 //
-TEST_F(MachineTest, shl_byte_ss_bx_di_7AAFh_cl)
+TEST_F(MachineTest, shl_byte_ss_bx_di_7AAFh_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0xCE41);
@@ -289,7 +289,7 @@ TEST_F(MachineTest, shl_byte_ss_bx_di_7AAFh_cl)
 //
 // shl byte [ss:di+20DAh], cl
 //
-TEST_F(MachineTest, shl_byte_ss_di_20DAh_cl)
+TEST_F(MachineTest, shl_byte_ss_di_20DAh_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0xB30B);
@@ -335,7 +335,7 @@ TEST_F(MachineTest, shl_byte_ss_di_20DAh_cl)
 //
 // shl sp, cl
 //
-TEST_F(MachineTest, shl_sp_cl)
+TEST_F(MachineTest, shl_sp_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0x1F4B);
@@ -380,7 +380,7 @@ TEST_F(MachineTest, shl_sp_cl)
 //
 // shl word [ds:bx-78h], cl
 //
-TEST_F(MachineTest, shl_word_ds_bx_78h_cl)
+TEST_F(MachineTest, shl_word_ds_bx_78h_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0x0000);
@@ -430,7 +430,7 @@ TEST_F(MachineTest, shl_word_ds_bx_78h_cl)
 //
 // shl word [ss:bx+di-6098h], cl
 //
-TEST_F(MachineTest, shl_word_ss_bx_di_6098h_cl)
+TEST_F(MachineTest, shl_word_ss_bx_di_6098h_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0xDFCB);
@@ -478,7 +478,7 @@ TEST_F(MachineTest, shl_word_ss_bx_di_6098h_cl)
 //
 // shr byte [cs:bp+di-5628h], cl
 //
-TEST_F(MachineTest, shr_byte_cs_bp_di_5628h_cl)
+TEST_F(MachineTest, shr_byte_cs_bp_di_5628h_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0x3DC5);
@@ -526,7 +526,7 @@ TEST_F(MachineTest, shr_byte_cs_bp_di_5628h_cl)
 //
 // shr byte [cs:si], cl
 //
-TEST_F(MachineTest, shr_byte_cs_si_cl)
+TEST_F(MachineTest, shr_byte_cs_si_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0x6CB0);
@@ -574,7 +574,7 @@ TEST_F(MachineTest, shr_byte_cs_si_cl)
 //
 // shr byte [ds:7EB4h], cl
 //
-TEST_F(MachineTest, shr_byte_ds_7EB4h_cl)
+TEST_F(MachineTest, shr_byte_ds_7EB4h_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0xB32C);
@@ -622,7 +622,7 @@ TEST_F(MachineTest, shr_byte_ds_7EB4h_cl)
 //
 // shr byte [ss:bx+si-2607h], cl
 //
-TEST_F(MachineTest, shr_byte_ss_bx_si_2607h_cl)
+TEST_F(MachineTest, shr_byte_ss_bx_si_2607h_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0x0000);
@@ -668,7 +668,7 @@ TEST_F(MachineTest, shr_byte_ss_bx_si_2607h_cl)
 //
 // shr dh, cl
 //
-TEST_F(MachineTest, shr_dh_cl)
+TEST_F(MachineTest, shr_dh_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0x96E4);
@@ -715,7 +715,7 @@ TEST_F(MachineTest, shr_dh_cl)
 //
 // shr word [cs:bx], cl
 //
-TEST_F(MachineTest, shr_word_cs_bx_cl)
+TEST_F(MachineTest, shr_word_cs_bx_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0x938D);
@@ -763,7 +763,7 @@ TEST_F(MachineTest, shr_word_cs_bx_cl)
 //
 // shr word [cs:di], cl
 //
-TEST_F(MachineTest, shr_word_cs_di_cl)
+TEST_F(MachineTest, shr_word_cs_di_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0x3694);
@@ -813,7 +813,7 @@ TEST_F(MachineTest, shr_word_cs_di_cl)
 //
 // shr word [ds:bp+2Ch], cl
 //
-TEST_F(MachineTest, shr_word_ds_bp_2Ch_cl)
+TEST_F(MachineTest, shr_word_ds_bp_2Ch_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0xF513);
@@ -863,7 +863,7 @@ TEST_F(MachineTest, shr_word_ds_bp_2Ch_cl)
 //
 // shr word [ds:bx+di+7Fh], cl
 //
-TEST_F(MachineTest, shr_word_ds_bx_di_7Fh_cl)
+TEST_F(MachineTest, shr_word_ds_bx_di_7Fh_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0xC470);
@@ -913,7 +913,7 @@ TEST_F(MachineTest, shr_word_ds_bx_di_7Fh_cl)
 //
 // shr word [ds:bx+si+43A9h], cl
 //
-TEST_F(MachineTest, shr_word_ds_bx_si_43A9h_cl)
+TEST_F(MachineTest, shr_word_ds_bx_si_43A9h_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0x0983);
@@ -963,7 +963,7 @@ TEST_F(MachineTest, shr_word_ds_bx_si_43A9h_cl)
 //
 // shr word [ss:bp+di], cl
 //
-TEST_F(MachineTest, shr_word_ss_bp_di_cl)
+TEST_F(MachineTest, shr_word_ss_bp_di_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0x1986);
@@ -1013,7 +1013,7 @@ TEST_F(MachineTest, shr_word_ss_bp_di_cl)
 //
 // shr word [ss:di], cl
 //
-TEST_F(MachineTest, shr_word_ss_di_cl)
+TEST_F(MachineTest, shr_word_ss_di_cl_batch6)
 {
     // Initial CPU State
     cpu.set_ax(0x0DAA);

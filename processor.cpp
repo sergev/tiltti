@@ -1817,9 +1817,6 @@ void Processor::exe_one()
             break;
         }
         case 4: // MUL
-            // Parity is unpredictable
-            unpredictable_flags = PF_MASK;
-
             if (w == B) {
                 res = (Word)(get_al() * src);
                 if (rep != 0) {
@@ -1829,6 +1826,9 @@ void Processor::exe_one()
                 core.ax        = res;
                 core.flags.f.c = (res >> 8) != 0;
                 core.flags.f.o = (res >> 8) != 0;
+                core.flags.f.z = ((res >> 8) == 0);
+                core.flags.f.p = PARITY[(Byte)(res >> 8)];
+                core.flags.f.s = (int16_t)core.ax < 0;
             } else {
                 uint32_t lres = (uint32_t)core.ax * (Word)src;
                 if (rep != 0) {
@@ -1838,15 +1838,13 @@ void Processor::exe_one()
                 core.dx        = lres >> 16;
                 core.flags.f.c = (lres >> 16) != 0;
                 core.flags.f.o = (lres >> 16) != 0;
-            }
-            core.flags.f.a = 0;
-            if (w == B) {
-                core.flags.f.z = (core.ax == 0);
-                core.flags.f.s = (int16_t)core.ax < 0;
-            } else {
                 core.flags.f.z = (core.dx == 0 && core.ax == 0);
                 core.flags.f.s = (int16_t)core.dx < 0;
+
+                // Word MUL: PF undefined per reference; mask so tests do not compare it.
+                unpredictable_flags = PF_MASK;
             }
+            core.flags.f.a = 0;
             break;
         case 5: // IMUL
             // AF, SF, ZF, PF undefined per Intel; only CF and OF are defined.
