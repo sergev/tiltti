@@ -1704,11 +1704,12 @@ void Processor::exe_one()
                 dst     = ((dst >> 1) | (core.flags.f.c ? static_cast<int>(SIGN[w]) : 0)) & MASK[w];
                 core.flags.f.c = temp_cf;
             }
-            if (src == 0)
-                core.flags.f.o = msb(w, dst) != core.flags.f.c;
-            else if (src > 1)
-                core.flags.f.o =
-                    msb(w, dst) != ((static_cast<unsigned>(dst) & (SIGN[w] >> 1)) != 0);
+            if (src != 1) {
+                // The overflow flag is defined only for the single-rotate forms
+                // of the instructions (second operand := 1).
+                // It is undefined in all other cases.
+                unpredictable_flags = OF_MASK;
+            }
             break;
         case 4: { // SAL/SHL
             int orig_dst   = dst;
