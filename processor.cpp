@@ -1005,22 +1005,25 @@ void Processor::exe_one()
         // Overflow is unpredictable
         unpredictable_flags = OF_MASK;
 
-        Byte al       = get_al();
-        Byte al_orig  = al;
-        bool af_orig  = core.flags.f.a;
+        Byte al        = get_al();
+        Byte al_orig   = al;
+        bool af_orig   = core.flags.f.a;
         bool update_lo = af_orig || (al & 0xf) > 9;
         if (update_lo) {
             al += 6;
             core.flags.f.a = 1;
+
+            // When low adjustment overflows byte (e.g. 0xFA+6), set CF so high adjustment runs
+            if (al_orig + 6 > 0xFF) {
+                core.flags.f.c = 1;
+            }
         } else {
             core.flags.f.a = 0;
         }
-        // When low adjustment overflows byte (e.g. 0xFA+6), set CF so high adjustment runs
-        if (update_lo && (al_orig + 6) > 0xFF)
-            core.flags.f.c = 1;
-        // High nibble: when AF=1 use old_AL vs 0x9F (8088 quirk); else use AL after low. Force high adjust for 0x9A only when AF=0.
-        bool update_hi = core.flags.f.c ||
-                         (af_orig ? (al_orig > 0x9F) : (al > 0x9F)) ||
+
+        // High nibble: when AF=1 use old_AL vs 0x9F (8088 quirk); else use AL after low. Force high
+        // adjust for 0x9A only when AF=0.
+        bool update_hi = core.flags.f.c || (af_orig ? (al_orig > 0x9F) : (al > 0x9F)) ||
                          (al_orig == 0x9A && !af_orig);
         if (update_hi) {
             al += 0x60;
@@ -1173,7 +1176,7 @@ void Processor::exe_one()
         // Overflow is unpredictable
         unpredictable_flags = OF_MASK;
 
-        src = getMem(B);
+        src            = getMem(B);
         core.flags.f.c = 0;
         core.flags.f.a = 0;
         if (src == 0) {
@@ -1729,9 +1732,8 @@ void Processor::exe_one()
                 int last_bit = 0;
                 if (src == shl_thresh) {
                     int eff_shift = shl_thresh - 1;
-                    last_bit =
-                        (static_cast<unsigned>(orig_dst) << eff_shift) & static_cast<unsigned>(MASK[w]) &
-                        static_cast<unsigned>(SIGN[w]);
+                    last_bit      = (static_cast<unsigned>(orig_dst) << eff_shift) &
+                               static_cast<unsigned>(MASK[w]) & static_cast<unsigned>(SIGN[w]);
                 }
                 core.flags.f.c = last_bit != 0;
                 core.flags.f.o = core.flags.f.c;
@@ -1745,7 +1747,8 @@ void Processor::exe_one()
                 }
                 core.flags.f.o = ((dst & static_cast<int>(SIGN[w])) != 0) != core.flags.f.c;
 
-                // AF undefined per Intel; batch5/batch6 expect different values - mark unpredictable
+                // AF undefined per Intel; batch5/batch6 expect different values - mark
+                // unpredictable
                 unpredictable_flags = AF_MASK;
 
                 if (src > 0)
@@ -1768,7 +1771,7 @@ void Processor::exe_one()
                 // CF = last bit shifted out; when src > thresh all bits gone so 0
                 core.flags.f.c =
                     (src == shr_thresh) ? ((static_cast<unsigned>(dst) >> (src - 1)) & 1) : 0;
-                dst = 0;
+                dst            = 0;
                 core.flags.f.o = 0;
                 core.flags.f.a = 0;
                 update_flags_zsp(w, dst);
@@ -1984,7 +1987,8 @@ void Processor::exe_one()
                 }
                 dst          = (int32_t)((core.dx << 16) | core.ax);
                 int64_t lres = (int64_t)dst / src;
-                // 8086/8088: min negative quotient is -32767, not -32768 (Q68599); -32768 triggers INT 0.
+                // 8086/8088: min negative quotient is -32767, not -32768 (Q68599); -32768 triggers
+                // INT 0.
                 if (lres > 0x7fff || lres < -0x7fff) {
                     // Quotient overflow (word).
                     callInt(0);
