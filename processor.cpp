@@ -1678,8 +1678,7 @@ void Processor::exe_one()
                 dst            = ((dst << 1) | core.flags.f.c) & MASK[w];
                 core.flags.f.c = temp_cf;
             }
-            if (src >= 1)
-                core.flags.f.o = msb(w, dst) != core.flags.f.c;
+            core.flags.f.o = msb(w, dst) != core.flags.f.c;
             break;
         case 3: // RCR
             if (src == 1)
@@ -1689,7 +1688,9 @@ void Processor::exe_one()
                 dst     = ((dst >> 1) | (core.flags.f.c ? static_cast<int>(SIGN[w]) : 0)) & MASK[w];
                 core.flags.f.c = temp_cf;
             }
-            if (src > 1)
+            if (src == 0)
+                core.flags.f.o = msb(w, dst) != core.flags.f.c;
+            else if (src > 1)
                 core.flags.f.o =
                     msb(w, dst) != ((static_cast<unsigned>(dst) & (SIGN[w] >> 1)) != 0);
             break;
@@ -1707,14 +1708,15 @@ void Processor::exe_one()
                     core.flags.f.c = (dst & static_cast<int>(SIGN[w])) != 0;
                     dst            = (dst << 1) & MASK[w];
                 }
-                if (src == 1)
-                    core.flags.f.o = ((dst & static_cast<int>(SIGN[w])) != 0) != core.flags.f.c;
-                else if (src > 0)
-                    core.flags.f.o = 0;
-                if (src > 0) {
+                core.flags.f.o = ((dst & static_cast<int>(SIGN[w])) != 0) != core.flags.f.c;
+
+                if (src >= 1 && src <= 2)
                     core.flags.f.a = (orig_dst & 0x08) != 0;
+                else if (src > 0)
+                    core.flags.f.a = 0;
+
+                if (src > 0)
                     update_flags_zsp(w, dst);
-                }
             }
             break;
         }
@@ -1730,7 +1732,7 @@ void Processor::exe_one()
         case 5: { // SHR
             int shr_thresh = (w == B) ? 8 : 16;
             if (src >= shr_thresh) {
-                core.flags.f.c = 0; // undefined when count >= operand bits; match test expectations
+                core.flags.f.c = (static_cast<unsigned>(dst) >> (src - 1)) & 1;
                 dst            = 0;
                 core.flags.f.o = 0;
                 core.flags.f.a = 0;
