@@ -992,7 +992,7 @@ void Processor::exe_one()
 
         Byte al        = get_al();
         bool update_lo = core.flags.f.a || (al & 0xf) > 9;
-        bool update_hi = core.flags.f.c || (al > 0x99);
+        bool update_hi = core.flags.f.c || (al > 0x9F);
         if (update_lo) {
             al += 6;
             set_al(al);
@@ -1124,7 +1124,7 @@ void Processor::exe_one()
 
         Byte al        = get_al();
         bool update_lo = core.flags.f.a || (al & 0xf) > 9;
-        bool update_hi = core.flags.f.c || (al > 0x99);
+        bool update_hi = core.flags.f.c || (al > 0x9F);
         if (update_lo) {
             al -= 6;
             set_al(al);
@@ -1149,14 +1149,15 @@ void Processor::exe_one()
         unpredictable_flags = OF_MASK;
 
         src = getMem(B);
+        core.flags.f.c = 0;
+        core.flags.f.a = 0;
         if (src == 0) {
+            update_flags_zsp(B, 0);
             callInt(0);
         } else {
             set_ah(get_al() / src);
             set_al(get_al() % src);
             update_flags_zsp(B, get_al());
-            core.flags.f.c = 0;
-            core.flags.f.a = 0;
         }
         break;
 
