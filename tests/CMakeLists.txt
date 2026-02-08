@@ -47,6 +47,7 @@ set(TEST_SOURCES
     batch3.cpp
     batch4.cpp
     ss_rep_movsw.cpp
+    batch5.cpp
 )
 
 #
