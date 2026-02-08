@@ -150,8 +150,8 @@ TEST_F(MachineTest, idiv_byte_ds_bx_si_5AD8h)
     EXPECT_EQ(memory.load8(0x00001), 0x04);
     EXPECT_EQ(memory.load8(0x00002), 0x00);
     EXPECT_EQ(memory.load8(0x00003), 0x00);
-    EXPECT_EQ(memory.load8(0xC9A13), 0x16 & ~cpu.u_flags());
-    EXPECT_EQ(memory.load8(0xC9A14), 0xF0 & ~(cpu.u_flags() >> 8));
+    EXPECT_FLAGS_LO(0xC9A13, 0x16);
+    EXPECT_FLAGS_HI(0xC9A14, 0xF0);
     EXPECT_EQ(memory.load8(0xC9A11), 0xB7);
     EXPECT_EQ(memory.load8(0xC9A12), 0x6C);
     EXPECT_EQ(memory.load8(0xC9A0F), 0x41);

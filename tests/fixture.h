@@ -56,7 +56,9 @@ protected:
 //
 // Compare flags, ignoring unpredictable bits.
 //
-#define EXPECT_FLAGS(val) EXPECT_EQ(cpu.get_flags() & ~cpu.u_flags(), val & ~cpu.u_flags()) << show_flags(val);
+#define EXPECT_FLAGS(val) EXPECT_EQ(cpu.get_flags() & ~cpu.u_flags(), val & ~cpu.u_flags()) << show_flags(val)
+#define EXPECT_FLAGS_LO(addr, val) EXPECT_EQ(memory.load8(addr), val & ~cpu.u_flags())
+#define EXPECT_FLAGS_HI(addr, val) EXPECT_EQ(memory.load8(addr), val & ~(cpu.u_flags() >> 8))
 
 //
 // Get current test name, as specified in TEST() macro.

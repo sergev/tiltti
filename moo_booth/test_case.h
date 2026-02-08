@@ -38,6 +38,8 @@ private:
     static void parse_cpu_state(const uint8_t *data, uint32_t len, OptReg *regs,
                                 std::vector<MemByte> &ram);
 
+    bool is_flags_in_mem(size_t index) const;
+
     uint32_t index_;
     uint32_t chunk_len_;
     std::string name_;

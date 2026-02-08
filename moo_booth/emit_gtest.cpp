@@ -93,12 +93,49 @@ void TestCase::emit_gtest() const
         }
     }
     ofs << "\n    // Final RAM entries\n";
-    for (const auto &mb : final_ram) {
-        ofs << "    EXPECT_EQ(memory.load8(0x";
-        fmt_hex5(ofs, mb.first);
-        ofs << "), 0x";
-        fmt_hex2(ofs, static_cast<unsigned>(mb.second));
-        ofs << ");\n";
+    for (size_t i = 0; i < final_ram.size(); i++) {
+        const auto &mb = final_ram[i];
+        if (is_flags_in_mem(i)) {
+            // Print two lines to check flags in memory.
+            const auto &mc = final_ram[i + 1];
+            i++;
+
+            ofs << "    EXPECT_FLAGS_LO(0x";
+            fmt_hex5(ofs, mb.first);
+            ofs << ", 0x";
+            fmt_hex2(ofs, mb.second);
+            ofs << ");\n";
+
+            ofs << "    EXPECT_FLAGS_HI(0x";
+            fmt_hex5(ofs, mc.first);
+            ofs << ", 0x";
+            fmt_hex2(ofs, mc.second);
+            ofs << ");\n";
+        } else {
+            ofs << "    EXPECT_EQ(memory.load8(0x";
+            fmt_hex5(ofs, mb.first);
+            ofs << "), 0x";
+            fmt_hex2(ofs, mb.second);
+            ofs << ");\n";
+        }
     }
     ofs << "}\n";
+}
+
+//
+// Is this index in final_ram correspond to FLAGS register, saved in memory?
+//
+bool TestCase::is_flags_in_mem(size_t index) const
+{
+    // Must be third word from the end
+    if (index + 6 != final_ram.size())
+        return false;
+
+    // Must be two consecutive addresses.
+    if (final_ram[index].first + 1 != final_ram[index + 1].first)
+        return false;
+
+    // Upper byte must have upper bits set.
+    const auto val = final_ram[index + 1].second;
+    return (val & 0xf0) == 0xf0;
 }

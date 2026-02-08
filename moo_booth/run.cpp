@@ -87,8 +87,20 @@ void TestCase::run() const
         auto expect = *final_flags & ~cpu.u_flags();
         failed |= flags != expect;
     }
-    for (const auto &mb : final_ram) {
-        failed |= memory.load8(mb.first) != mb.second;
+
+    for (size_t i = 0; i < final_ram.size(); i++) {
+        const auto &mb = final_ram[i];
+        if (is_flags_in_mem(i)) {
+            // Check two items as flags in memory.
+            const auto &mc    = final_ram[i + 1];
+            uint8_t expect_lo = mb.second & ~cpu.u_flags();
+            uint8_t expect_hi = mc.second & ~(cpu.u_flags() >> 8);
+            i++;
+            failed |= memory.load8(mb.first) != expect_lo;
+            failed |= memory.load8(mc.first) != expect_hi;
+        } else {
+            failed |= memory.load8(mb.first) != mb.second;
+        }
     }
 
     if (failed) {
