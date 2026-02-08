@@ -82,8 +82,11 @@ void TestCase::run() const
         failed |= cpu.get_di() != *final_di;
     if (final_ip.has_value())
         failed |= cpu.get_ip() != *final_ip;
-    if (final_flags.has_value())
-        failed |= cpu.get_flags() != *final_flags;
+    if (final_flags.has_value()) {
+        auto flags  = cpu.get_flags() & ~cpu.u_flags();
+        auto expect = *final_flags & ~cpu.u_flags();
+        failed |= flags != expect;
+    }
     for (const auto &mb : final_ram) {
         failed |= memory.load8(mb.first) != mb.second;
     }
