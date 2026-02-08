@@ -1173,9 +1173,9 @@ void Processor::exe_one()
         set_al(sum);
         set_ah(0);
         update_flags_zsp(B, get_al());
-        core.flags.f.c      = (sum >= 256);
-        core.flags.f.a      = (half_sum > 15);
-        core.flags.f.t      = 0;
+        core.flags.f.c = (sum >= 256);
+        core.flags.f.a = (half_sum > 15);
+        core.flags.f.t = 0;
         break;
     }
 
@@ -1718,12 +1718,14 @@ void Processor::exe_one()
             }
             break;
         }
-        case 6: // SETMO: real 8086 sets operand to all ones (0xFF/0xFFFF)
-            dst            = static_cast<int>(MASK[w]);
-            core.flags.f.c = 0;
-            core.flags.f.o = 0;
-            core.flags.f.a = 0;
-            update_flags_zsp(w, dst);
+        case 6: // SETMO/SETMOC: set to all ones; when count 0 (D2/D3), no op
+            if (op == 0xd0 || op == 0xd1 || src >= 1) {
+                dst            = static_cast<int>(MASK[w]);
+                core.flags.f.c = 0;
+                core.flags.f.o = 0;
+                core.flags.f.a = 0;
+                update_flags_zsp(w, dst);
+            }
             break;
         case 5: { // SHR
             int shr_thresh = (w == B) ? 8 : 16;
@@ -1820,13 +1822,13 @@ void Processor::exe_one()
                 res = (Word)(get_al() * src);
                 if (rep != 0) {
                     // 8086 REP/REPNE with MUL negates product
-                    res = (Word) -res;
+                    res = (Word)-res;
                 }
                 core.ax        = res;
                 core.flags.f.c = (res >> 8) != 0;
                 core.flags.f.o = (res >> 8) != 0;
             } else {
-                uint32_t lres  = (uint32_t)core.ax * (Word)src;
+                uint32_t lres = (uint32_t)core.ax * (Word)src;
                 if (rep != 0) {
                     lres = -lres;
                 }
@@ -1849,27 +1851,27 @@ void Processor::exe_one()
             unpredictable_flags = PF_MASK | AF_MASK | ZF_MASK | SF_MASK;
 
             if (w == B) {
-                int s          = signconv(B, src);
-                int dval       = signconv(B, get_al());
-                res            = (Word)(dval * s);
+                int s    = signconv(B, src);
+                int dval = signconv(B, get_al());
+                res      = (Word)(dval * s);
                 if (rep != 0) {
                     // 8086 REP/REPNE with IMUL negates product
-                    res = (Word) -res;
+                    res = (Word)-res;
                 }
-                core.ax        = res;
+                core.ax            = res;
                 bool byte_overflow = ((int16_t)res != (int8_t)(res & 0xFF));
-                core.flags.f.c = byte_overflow;
-                core.flags.f.o = byte_overflow;
+                core.flags.f.c     = byte_overflow;
+                core.flags.f.o     = byte_overflow;
             } else {
                 uint32_t lres = (long)signconv(W, core.ax) * (long)signconv(W, src);
                 if (rep != 0) {
                     lres = -lres;
                 }
-                core.ax        = lres;
-                core.dx        = lres >> 16;
+                core.ax            = lres;
+                core.dx            = lres >> 16;
                 bool word_overflow = ((int32_t)lres != (int16_t)core.ax);
-                core.flags.f.c = word_overflow;
-                core.flags.f.o = word_overflow;
+                core.flags.f.c     = word_overflow;
+                core.flags.f.o     = word_overflow;
             }
             break;
         case 6: // DIV (unsigned)
