@@ -127,9 +127,13 @@ void TestCase::emit_gtest() const
 //
 bool TestCase::is_flags_in_mem(size_t index) const
 {
-    // Must be out of initial memory check.
-    if (index < initial_ram.size())
-        return false;
+    if (index == 0 && final_ram.size() == 6) {
+        // Good (am88).
+    } else {
+        // Must be out of initial memory check.
+        if (index < initial_ram.size())
+            return false;
+    }
 
     // Must be third word from the end
     if (index + 6 != final_ram.size())

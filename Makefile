@@ -49,11 +49,23 @@ debug:
 moo86:  all outdir
 	$(MAKE) -Coutdir -f ../Makefile run-moo86
 
-MOO     ?= $(PWD)/../8086-tests/v1_binary
+MOO86   ?= $(PWD)/../8086-tests/v1_binary
 run-moo86:
-	for moo in $(MOO)/*.gz; do \
+	for moo in $(MOO86)/*.gz; do \
 	    ../build/moo_booth/moo-booth -run $$moo; \
         done
 
 outdir:
 	mkdir $@
+
+#
+# Run 8088 test suite.
+#
+moo88:  all outdir
+	$(MAKE) -Coutdir -f ../Makefile run-moo88
+
+MOO88   ?= $(PWD)/../8088-tests/v2_binary
+run-moo88:
+	for moo in $(MOO88)/*.gz; do \
+	    ../build/moo_booth/moo-booth -run -limit=10 $$moo; \
+        done
