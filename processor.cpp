@@ -1007,7 +1007,7 @@ void Processor::exe_one()
 
         Byte al        = get_al();
         bool update_lo = core.flags.f.a || (al & 0xf) > 9;
-        bool update_hi = core.flags.f.c || (al > 0x9F) || (al >= 0x9A && al < 0x9F);
+        bool update_hi = core.flags.f.c || (al > 0x9F) || (al >= 0x9A && al < 0x9C);
         if (update_lo) {
             al += 6;
             core.flags.f.a = 1;
@@ -1138,7 +1138,8 @@ void Processor::exe_one()
 
         Byte al        = get_al();
         bool update_lo = core.flags.f.a || (al & 0xf) > 9;
-        bool update_hi = core.flags.f.c || (al > 0x9F) || (al >= 0x9A && al <= 0x9C);
+        bool update_hi = (al > 0x9F) || (core.flags.f.c && (al > 0x9F || al < 0x9A)) ||
+                         (al >= 0x9A && al <= 0x9C && !core.flags.f.c && !core.flags.f.a);
         if (update_lo) {
             al -= 6;
             core.flags.f.a = 1;
