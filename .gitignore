@@ -16,3 +16,4 @@ outdir/
 *.patched
 *.img
 *.bin
+*.log

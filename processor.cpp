@@ -1817,13 +1817,19 @@ void Processor::exe_one()
             unpredictable_flags = PF_MASK;
 
             if (w == B) {
-                dst            = get_al();
-                res            = (Word)(dst * src);
+                res = (Word)(get_al() * src);
+                if (rep != 0) {
+                    // 8086 REP/REPNE with MUL negates product
+                    res = (Word) -res;
+                }
                 core.ax        = res;
                 core.flags.f.c = (res >> 8) != 0;
                 core.flags.f.o = (res >> 8) != 0;
             } else {
                 uint32_t lres  = (uint32_t)core.ax * (Word)src;
+                if (rep != 0) {
+                    lres = -lres;
+                }
                 core.ax        = lres;
                 core.dx        = lres >> 16;
                 core.flags.f.c = (lres >> 16) != 0;
@@ -1846,15 +1852,22 @@ void Processor::exe_one()
                 int s          = signconv(B, src);
                 int dval       = signconv(B, get_al());
                 res            = (Word)(dval * s);
+                if (rep != 0) {
+                    // 8086 REP/REPNE with IMUL negates product
+                    res = (Word) -res;
+                }
                 core.ax        = res;
                 core.flags.f.c = (res != 0 && (res > 0x7f || res < -0x80));
                 core.flags.f.o = (res != 0 && (res > 0x7f || res < -0x80));
             } else {
-                long ld        = (long)signconv(W, core.ax) * (long)signconv(W, src);
-                core.ax        = ld;
-                core.dx        = ld >> 16;
-                core.flags.f.c = (ld >> 16) != 0 && (ld >> 16) != 0xffff;
-                core.flags.f.o = (ld >> 16) != 0 && (ld >> 16) != 0xffff;
+                uint32_t lres = (long)signconv(W, core.ax) * (long)signconv(W, src);
+                if (rep != 0) {
+                    lres = -lres;
+                }
+                core.ax        = lres;
+                core.dx        = lres >> 16;
+                core.flags.f.c = core.dx != 0 && core.dx != 0xffff;
+                core.flags.f.o = core.dx != 0 && core.dx != 0xffff;
             }
             core.flags.f.a = 0;
             update_flags_zsp(w, core.ax);
@@ -1921,6 +1934,10 @@ void Processor::exe_one()
                     callInt(0);
                     break;
                 }
+                if (rep != 0) {
+                    // 8086 REP/REPNE with IDIV negates quotient
+                    res = -res;
+                }
                 set_al(res);
                 set_ah(dst % src);
             } else {
@@ -1938,6 +1955,10 @@ void Processor::exe_one()
                     // Quotient overflow (word).
                     callInt(0);
                     break;
+                }
+                if (rep != 0) {
+                    // 8086 REP/REPNE with IDIV negates quotient
+                    lres = -lres;
                 }
                 core.ax = lres;
                 core.dx = dst % src;
