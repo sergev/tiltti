@@ -1005,24 +1005,25 @@ void Processor::exe_one()
         // Overflow is unpredictable
         unpredictable_flags = OF_MASK;
 
-        Byte al        = get_al();
-        bool update_lo = core.flags.f.a || (al & 0xf) > 9;
-        bool update_hi = core.flags.f.c || (al > 0x9F);
+        bool update_lo = core.flags.f.a || (get_al() & 0xf) > 9;
+        bool update_hi = core.flags.f.c || (get_al() > 0x99);
         if (update_lo) {
-            al += 6;
-            set_al(al);
+            if ((get_al() & 0xF) == 0xF) {
+                update_hi = false;
+            }
+            set_al(get_al() + 6);
             core.flags.f.a = 1;
         } else {
             core.flags.f.a = 0;
         }
+        // High nibble: (AL > 0x99) || CF, but skip when low nibble was 0xF (batch7 reference)
         if (update_hi) {
-            al += 0x60;
-            set_al(al);
+            set_al(get_al() + 0x60);
             core.flags.f.c = 1;
-        } else {
+        } else if (!update_lo) {
             core.flags.f.c = 0;
         }
-        update_flags_zsp(B, al);
+        update_flags_zsp(B, get_al());
         break;
     }
 
@@ -1137,24 +1138,25 @@ void Processor::exe_one()
         // Overflow is unpredictable
         unpredictable_flags = OF_MASK;
 
-        Byte al        = get_al();
-        bool update_lo = core.flags.f.a || (al & 0xf) > 9;
-        bool update_hi = core.flags.f.c || (al > 0x9F);
+        bool update_lo = core.flags.f.a || (get_al() & 0xf) > 9;
+        bool update_hi = core.flags.f.c || (get_al() > 0x99);
         if (update_lo) {
-            al -= 6;
-            set_al(al);
+            if ((get_al() & 0xF) >= 0xD) {
+                update_hi = false;
+            }
+            set_al(get_al() - 6);
             core.flags.f.a = 1;
         } else {
             core.flags.f.a = 0;
         }
+        // High nibble: (AL > 0x99) || CF, but skip when low nibble was 0xD..0xF (batch7 reference)
         if (update_hi) {
-            al -= 0x60;
-            set_al(al);
+            set_al(get_al() - 0x60);
             core.flags.f.c = 1;
-        } else {
+        } else if (!update_lo) {
             core.flags.f.c = 0;
         }
-        update_flags_zsp(B, al);
+        update_flags_zsp(B, get_al());
         break;
     }
 

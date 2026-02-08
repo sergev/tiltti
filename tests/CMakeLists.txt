@@ -50,6 +50,7 @@ set(TEST_SOURCES
     batch5.cpp
     batch6.cpp
     batch7.cpp
+    batch8.cpp
 )
 
 #
