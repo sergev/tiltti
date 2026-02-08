@@ -334,23 +334,40 @@ void Processor::setReg(int width, unsigned r, int val)
 
 //
 // Get R/M operand (register or memory from mod/rm). Effective address from ModR/M and displacement.
+// 8086 segment wraparound: word at offset 0xFFFF has high byte at offset 0 in same segment.
 //
 int Processor::getRM(int width, unsigned mod_val, unsigned rm_val)
 {
     if (mod_val == 0b11)
         return getReg(width, rm_val);
-    return getMem(width, getEA(mod_val, rm_val));
+    unsigned addr = getEA(mod_val, rm_val);
+    if (width == W) {
+        Word off = addr - (os << 4);
+        if (off == 0xffff)
+            return getMemAtSegOff(W, os, 0xffff);
+    }
+    return getMem(width, addr);
 }
 
 //
 // Set R/M operand.
+// 8086 segment wraparound: word at offset 0xFFFF has high byte at offset 0 in same segment.
 //
 void Processor::setRM(int width, unsigned mod_val, unsigned rm_val, int val)
 {
     if (mod_val == 0b11)
         setReg(width, rm_val, val);
-    else
-        setMem(width, getEA(mod_val, rm_val), val);
+    else {
+        unsigned addr = getEA(mod_val, rm_val);
+        if (width == W) {
+            Word off = addr - (os << 4);
+            if (off == 0xffff) {
+                setMemAtSegOff(W, os, 0xffff, val);
+                return;
+            }
+        }
+        setMem(width, addr, val);
+    }
 }
 
 //
