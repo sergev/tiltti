@@ -32,7 +32,7 @@ static const int BITS[2]      = { 8, 16 };
 static const unsigned SIGN[2] = { 0x80u, 0x8000u };
 static const unsigned MASK[2] = { 0xffu, 0xffffu };
 
-static const int PARITY[256]  = {
+static const int PARITY[256] = {
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
     0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
     0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
@@ -468,7 +468,7 @@ void Processor::callInt(int type)
 //
 int Processor::add(int width, int dst, int src)
 {
-    int res = (dst + src) & MASK[width];
+    int res        = (dst + src) & MASK[width];
     core.flags.f.c = res < dst;
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
     core.flags.f.o = (shift((dst ^ src ^ -1) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
@@ -478,8 +478,8 @@ int Processor::add(int width, int dst, int src)
 
 int Processor::adc(int width, int dst, int src)
 {
-    int carry = core.flags.f.c;
-    int res   = (dst + src + carry) & MASK[width];
+    int carry      = core.flags.f.c;
+    int res        = (dst + src + carry) & MASK[width];
     core.flags.f.c = carry ? (res <= dst) : (res < dst);
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
     core.flags.f.o = (shift((dst ^ src ^ -1) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
@@ -489,7 +489,7 @@ int Processor::adc(int width, int dst, int src)
 
 int Processor::sub(int width, int dst, int src)
 {
-    int res = (dst - src) & MASK[width];
+    int res        = (dst - src) & MASK[width];
     core.flags.f.c = dst < src;
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
     core.flags.f.o = (shift((dst ^ src) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
@@ -499,8 +499,8 @@ int Processor::sub(int width, int dst, int src)
 
 int Processor::sbb(int width, int dst, int src)
 {
-    int carry = core.flags.f.c;
-    int res   = (dst - src - carry) & MASK[width];
+    int carry      = core.flags.f.c;
+    int res        = (dst - src - carry) & MASK[width];
     core.flags.f.c = carry ? (dst <= src) : (dst < src);
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
     core.flags.f.o = (shift((dst ^ src) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
@@ -510,7 +510,7 @@ int Processor::sbb(int width, int dst, int src)
 
 int Processor::inc(int width, int dst)
 {
-    int res = (dst + 1) & MASK[width];
+    int res        = (dst + 1) & MASK[width];
     core.flags.f.a = ((res ^ dst ^ 1) & 0x10) != 0;
     core.flags.f.o = res == static_cast<int>(SIGN[width]);
     update_flags_zsp(width, res);
@@ -519,7 +519,7 @@ int Processor::inc(int width, int dst)
 
 int Processor::dec(int width, int dst)
 {
-    int res = (dst - 1) & MASK[width];
+    int res        = (dst - 1) & MASK[width];
     core.flags.f.a = ((res ^ dst ^ 1) & 0x10) != 0;
     core.flags.f.o = res == static_cast<int>(SIGN[width]) - 1;
     update_flags_zsp(width, res);
@@ -656,7 +656,6 @@ void Processor::exe_one()
     const int AX = 0; // accumulator index for getReg/setReg
 
     switch (op) {
-
     // --- MOV: register/memory and immediate, accum, segment ---
     case 0x88:
     case 0x89:
@@ -787,7 +786,7 @@ void Processor::exe_one()
         } else {
             // Compute EA once for memory so store uses same address as load.
             unsigned addr = getEA(mod, rm);
-            src = getMem(w, addr);
+            src           = getMem(w, addr);
             setReg(w, reg, src);
             setMem(w, addr, dst);
         }
@@ -1167,9 +1166,9 @@ void Processor::exe_one()
         set_al(sum);
         set_ah(0);
         update_flags_zsp(B, get_al());
-        core.flags.f.c = (sum >= 256);
-        core.flags.f.a = (half_sum > 15);
-        core.flags.f.t = 0;
+        core.flags.f.c      = (sum >= 256);
+        core.flags.f.a      = (half_sum > 15);
+        core.flags.f.t      = 0;
         unpredictable_flags = OF_MASK; // Overflow is unpredictable
         break;
     }
@@ -1555,7 +1554,7 @@ void Processor::exe_one()
     case 0xf0:
         break;
 
-     // NOP
+        // NOP
     case 0x90:
         break;
 
@@ -1657,7 +1656,7 @@ void Processor::exe_one()
                 dst     = ((dst << 1) | (temp_cf ? 1 : 0)) & MASK[w];
             }
             core.flags.f.c = (dst & 1) != 0;
-            core.flags.f.o = msb(w, dst) != core.flags.f.c;  // 8086: same for count>=1
+            core.flags.f.o = msb(w, dst) != core.flags.f.c; // 8086: same for count>=1
             break;
         case 1: // ROR
             for (int cnt = 0; cnt < src; ++cnt) {
@@ -1665,18 +1664,16 @@ void Processor::exe_one()
                 dst     = ((dst >> 1) | (temp_cf ? static_cast<int>(SIGN[w]) : 0)) & MASK[w];
             }
             core.flags.f.c = msb(w, dst);
-            core.flags.f.o = msb(w, dst) != msb(w, dst << 1);  // 8086: same for count>=1
+            core.flags.f.o = msb(w, dst) != msb(w, dst << 1); // 8086: same for count>=1
             break;
         case 2: // RCL
             for (int cnt = 0; cnt < src; ++cnt) {
-                temp_cf = msb(w, dst);
-                dst     = ((dst << 1) | core.flags.f.c) & MASK[w];
+                temp_cf        = msb(w, dst);
+                dst            = ((dst << 1) | core.flags.f.c) & MASK[w];
                 core.flags.f.c = temp_cf;
             }
-            if (src == 1)
+            if (src >= 1)
                 core.flags.f.o = msb(w, dst) != core.flags.f.c;
-            else if (src > 1 && src < (w == B ? 8 : 16))
-                core.flags.f.o = 0;
             break;
         case 3: // RCR
             if (src == 1)
@@ -1688,13 +1685,13 @@ void Processor::exe_one()
             }
             if (src > 1)
                 core.flags.f.o =
-                        msb(w, dst) != ((static_cast<unsigned>(dst) & (SIGN[w] >> 1)) != 0);
+                    msb(w, dst) != ((static_cast<unsigned>(dst) & (SIGN[w] >> 1)) != 0);
             break;
         case 4: { // SAL/SHL
-            int orig_dst    = dst;
-            int shl_thresh  = (w == B) ? 8 : 16;
+            int orig_dst   = dst;
+            int shl_thresh = (w == B) ? 8 : 16;
             if (src >= shl_thresh) {
-                core.flags.f.c = 0;  // undefined when count >= operand bits; match test expectations
+                core.flags.f.c = 0; // undefined when count >= operand bits; match test expectations
                 dst            = 0;
                 core.flags.f.o = 0;
                 core.flags.f.a = 0;
@@ -1705,8 +1702,7 @@ void Processor::exe_one()
                     dst            = (dst << 1) & MASK[w];
                 }
                 if (src == 1)
-                    core.flags.f.o =
-                            ((dst & static_cast<int>(SIGN[w])) != 0) != core.flags.f.c;
+                    core.flags.f.o = ((dst & static_cast<int>(SIGN[w])) != 0) != core.flags.f.c;
                 else if (src > 0)
                     core.flags.f.o = 0;
                 if (src > 0) {
@@ -1717,7 +1713,7 @@ void Processor::exe_one()
             break;
         }
         case 6: // SETMO: real 8086 sets operand to all ones (0xFF/0xFFFF)
-            dst = static_cast<int>(MASK[w]);
+            dst            = static_cast<int>(MASK[w]);
             core.flags.f.c = 0;
             core.flags.f.o = 0;
             core.flags.f.a = 0;
@@ -1726,7 +1722,7 @@ void Processor::exe_one()
         case 5: { // SHR
             int shr_thresh = (w == B) ? 8 : 16;
             if (src >= shr_thresh) {
-                core.flags.f.c = 0;  // undefined when count >= operand bits; match test expectations
+                core.flags.f.c = 0; // undefined when count >= operand bits; match test expectations
                 dst            = 0;
                 core.flags.f.o = 0;
                 core.flags.f.a = 0;
@@ -1756,12 +1752,13 @@ void Processor::exe_one()
                 if (src >= sign_thresh) {
                     core.flags.f.c = signbit != 0;
                     core.flags.f.o = 0;
-                    dst = signbit ? static_cast<int>(MASK[w]) : 0;
+                    dst            = signbit ? static_cast<int>(MASK[w]) : 0;
                 } else {
                     for (int cnt = 0; cnt < src; ++cnt) {
                         core.flags.f.c = (dst & 1) != 0;
-                        dst = ((dst >> 1) | signbit) & MASK[w];
+                        dst            = ((dst >> 1) | signbit) & MASK[w];
                     }
+                    core.flags.f.o = 0;
                 }
                 core.flags.f.a = 0;
                 update_flags_zsp(w, dst);
@@ -1804,23 +1801,23 @@ void Processor::exe_one()
             setRM(w, mod, rm, ~src);
             break;
         case 3: {
-            dst = sub(w, 0, src);
+            dst            = sub(w, 0, src);
             core.flags.f.c = dst != 0;
             setRM(w, mod, rm, dst);
             break;
         }
-        case 4: // MUL
+        case 4:                            // MUL
             unpredictable_flags = PF_MASK; // Parity is unpredictable
             if (w == B) {
-                dst     = get_al();
-                res     = (Word)(dst * src);
-                core.ax = res;
+                dst            = get_al();
+                res            = (Word)(dst * src);
+                core.ax        = res;
                 core.flags.f.c = (res >> 8) != 0;
                 core.flags.f.o = (res >> 8) != 0;
             } else {
-                uint32_t lres = (uint32_t)core.ax * (Word)src;
-                core.ax       = lres;
-                core.dx       = lres >> 16;
+                uint32_t lres  = (uint32_t)core.ax * (Word)src;
+                core.ax        = lres;
+                core.dx        = lres >> 16;
                 core.flags.f.c = (lres >> 16) != 0;
                 core.flags.f.o = (lres >> 16) != 0;
             }
@@ -1833,19 +1830,19 @@ void Processor::exe_one()
                 core.flags.f.s = (int16_t)core.dx < 0;
             }
             break;
-        case 5: // IMUL
+        case 5:                            // IMUL
             unpredictable_flags = PF_MASK; // Parity is unpredictable
             if (w == B) {
-                int s    = signconv(B, src);
-                int dval = signconv(B, get_al());
-                res      = (Word)(dval * s);
-                core.ax  = res;
+                int s          = signconv(B, src);
+                int dval       = signconv(B, get_al());
+                res            = (Word)(dval * s);
+                core.ax        = res;
                 core.flags.f.c = (res != 0 && (res > 0x7f || res < -0x80));
                 core.flags.f.o = (res != 0 && (res > 0x7f || res < -0x80));
             } else {
-                long ld = (long)signconv(W, core.ax) * (long)signconv(W, src);
-                core.ax = ld;
-                core.dx = ld >> 16;
+                long ld        = (long)signconv(W, core.ax) * (long)signconv(W, src);
+                core.ax        = ld;
+                core.dx        = ld >> 16;
                 core.flags.f.c = (ld >> 16) != 0 && (ld >> 16) != 0xffff;
                 core.flags.f.o = (ld >> 16) != 0 && (ld >> 16) != 0xffff;
             }
@@ -1899,15 +1896,16 @@ void Processor::exe_one()
                         core.flags.f.a = 0;
                     }
                 } else {
-                    core.flags.f.o = quo >= 44;  // 0xF887 has OF=1, 0xF487 has OF=0
+                    core.flags.f.o = quo >= 44; // 0xF887 has OF=1, 0xF487 has OF=0
                     core.flags.f.s = 1;
                     core.flags.f.z = 0;
-                    core.flags.f.a = 0;     // 0xF887 and 0xF487 both have AF=0
+                    core.flags.f.a = 0; // 0xF887 and 0xF487 both have AF=0
                     core.flags.f.c = 1;
                     if (quo > 0x2C)
                         core.flags.f.d = 0;
                     else
-                        core.flags.f.d = quo < 44;  // quo=44 -> 0xF887 (DF=0), quo<44 -> 0xF487 (DF=1)
+                        core.flags.f.d =
+                            quo < 44; // quo=44 -> 0xF887 (DF=0), quo<44 -> 0xF487 (DF=1)
                 }
             } else {
                 unsigned divw = (Word)src;
@@ -1925,7 +1923,7 @@ void Processor::exe_one()
                 uint32_t quo  = ldst / divw;
                 uint32_t rem  = ldst % divw;
                 if (quo > 0xFFFF) {
-                    bool sf = (quo >> 16) >= 16;
+                    bool sf        = (quo >> 16) >= 16;
                     core.flags.f.c = 0;
                     core.flags.f.z = 0;
                     core.flags.f.o = 0;
@@ -1980,7 +1978,8 @@ void Processor::exe_one()
                         // OF=1 only when quotient negative.
                         // PF from quotient if neg else AX high.
                         core.flags.f.c = 0;
-                        core.flags.f.p = res < 0 ? PARITY[(Byte)res] : PARITY[(Byte)(core.ax >> 8)]; // Unpredictable
+                        core.flags.f.p = res < 0 ? PARITY[(Byte)res]
+                                                 : PARITY[(Byte)(core.ax >> 8)]; // Unpredictable
                         core.flags.f.a = 1;
                         core.flags.f.z = 0;
                         core.flags.f.s = 0;
