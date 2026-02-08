@@ -51,6 +51,7 @@ set(TEST_SOURCES
     batch6.cpp
     batch7.cpp
     daa_das.cpp
+    am88.cpp
 )
 
 #

@@ -67,5 +67,5 @@ moo88:  all outdir
 MOO88   ?= $(PWD)/../8088-tests/v2_binary
 run-moo88:
 	for moo in $(MOO88)/*.gz; do \
-	    ../build/moo_booth/moo-booth -run -limit=10 $$moo; \
+	    ../build/moo_booth/moo-booth -run $$moo; \
         done
