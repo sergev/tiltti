@@ -966,8 +966,8 @@ void Processor::exe_one()
 
     // AAA: ASCII adjust for addition
     case 0x37: {
-        // Overflow, parity and sign are unpredictable
-        unpredictable_flags = OF_MASK | PF_MASK | SF_MASK;
+        // Overflow, parity, sign and zero are unpredictable
+        unpredictable_flags = OF_MASK | PF_MASK | SF_MASK | ZF_MASK;
 
         Byte al = get_al();
         if (core.flags.f.a || (al & 0xf) > 9) {
@@ -1098,8 +1098,8 @@ void Processor::exe_one()
 
     // AAS: ASCII adjust for subtraction
     case 0x3f: {
-        // Overflow, parity and sign are unpredictable
-        unpredictable_flags = OF_MASK | PF_MASK | SF_MASK;
+        // Overflow, parity, sign and zero are unpredictable
+        unpredictable_flags = OF_MASK | PF_MASK | SF_MASK | ZF_MASK;
 
         Byte al = get_al();
         if (core.flags.f.a || (al & 0xf) > 9) {
