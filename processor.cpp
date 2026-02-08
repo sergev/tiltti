@@ -157,12 +157,10 @@ unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
 //
 int Processor::getMem(int width)
 {
-    unsigned addr = pc86_linear_addr(core.cs, core.ip);
-    Word val      = machine.mem_fetch_byte(addr);
-
-    if (width == W)
-        val |= machine.mem_fetch_byte(addr + 1) << 8;
-
+    Word val = machine.mem_fetch_byte(pc86_linear_addr(core.cs, core.ip));
+    if (width == W) {
+        val |= machine.mem_fetch_byte(pc86_linear_addr(core.cs, core.ip + 1)) << 8;
+    }
     core.ip += 1 + width;
     return val;
 }
@@ -711,11 +709,11 @@ void Processor::exe_one()
     case 0xa3:
         dst = getMem(W);
         if (d == 0) {
-            src = getMem(w, pc86_linear_addr(os, static_cast<Word>(dst)));
+            src = getMemAtSegOff(w, os, dst);
             setReg(w, AX, src);
         } else {
             src = getReg(w, AX);
-            setMem(w, pc86_linear_addr(os, static_cast<Word>(dst)), src);
+            setMemAtSegOff(w, os, dst, src);
         }
         break;
 
