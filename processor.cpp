@@ -1870,13 +1870,13 @@ void Processor::exe_one()
             unpredictable_flags = CF_MASK | OF_MASK | SF_MASK | ZF_MASK | PF_MASK | AF_MASK;
 
             if (w == B) {
-                unsigned divisor_b = (unsigned)(Byte)src;
-                if (divisor_b == 0) {
+                Byte divb = src;
+                if (divb == 0) {
                     callInt(0);
                     break;
                 }
-                Word quo = core.ax / divisor_b;
-                Word rem = core.ax % divisor_b;
+                Word quo = core.ax / divb;
+                Byte rem = core.ax % divb;
                 if (quo > 0xFF) {
                     callInt(0);
                     break;
@@ -1884,14 +1884,14 @@ void Processor::exe_one()
                 set_al(quo);
                 set_ah(rem);
             } else {
-                unsigned divw = (Word)src;
+                Word divw = src;
                 if (divw == 0) {
                     callInt(0);
                     break;
                 }
-                uint32_t ldst = (uint32_t)(core.dx << 16) | (Word)core.ax;
-                uint32_t quo  = ldst / divw;
-                uint32_t rem  = ldst % divw;
+                unsigned ldst = (core.dx << 16) | core.ax;
+                unsigned quo  = ldst / divw;
+                unsigned rem  = ldst % divw;
                 if (quo > 0xFFFF) {
                     callInt(0);
                     break;
