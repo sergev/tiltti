@@ -96,8 +96,8 @@ void TestCase::run() const
             uint8_t expect_lo = mb.second & ~cpu.u_flags();
             uint8_t expect_hi = mc.second & ~(cpu.u_flags() >> 8);
             i++;
-            failed |= memory.load8(mb.first) != expect_lo;
-            failed |= memory.load8(mc.first) != expect_hi;
+            failed |= (memory.load8(mb.first) & ~cpu.u_flags()) != expect_lo;
+            failed |= (memory.load8(mc.first) & ~(cpu.u_flags() >> 8)) != expect_hi;
         } else {
             failed |= memory.load8(mb.first) != mb.second;
         }
