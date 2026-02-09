@@ -880,21 +880,25 @@ void Processor::exe_one()
         setReg(w, reg, (getEA(mod, rm) - (static_cast<unsigned>(os) << 4)) & 0xffff);
         break;
 
-    // LDS (always loads 16-bit offset into reg)
-    case 0xc5:
+    // LDS (always loads 16-bit offset into reg). 8086: EA+2 wraps at 64K.
+    case 0xc5: {
         decode();
-        src = getEA(mod, rm);
-        setReg(W, reg, getMem(W, src));
-        core.ds = getMem(W, src + 2);
+        unsigned addr = getEA(mod, rm);
+        unsigned off  = addr - (os << 4);
+        setReg(W, reg, getMemAtSegOff(W, os, off));
+        core.ds = getMemAtSegOff(W, os, off + 2);
         break;
+    }
 
-    // LES (always loads 16-bit offset into reg)
-    case 0xc4:
+    // LES (always loads 16-bit offset into reg). 8086: EA+2 wraps at 64K.
+    case 0xc4: {
         decode();
-        src = getEA(mod, rm);
-        setReg(W, reg, getMem(W, src));
-        core.es = getMem(W, src + 2);
+        unsigned addr = getEA(mod, rm);
+        unsigned off  = addr - (os << 4);
+        setReg(W, reg, getMemAtSegOff(W, os, off));
+        core.es = getMemAtSegOff(W, os, off + 2);
         break;
+    }
 
     // LAHF
     case 0x9f:
@@ -1876,11 +1880,10 @@ void Processor::exe_one()
                 core.dx        = lres >> 16;
                 core.flags.f.c = (lres >> 16) != 0;
                 core.flags.f.o = (lres >> 16) != 0;
-                core.flags.f.z = (core.dx == 0 && core.ax == 0);
                 core.flags.f.s = (int16_t)core.dx < 0;
 
-                // Word MUL: PF undefined per reference; mask so tests do not compare it.
-                unpredictable_flags = PF_MASK;
+                // Word MUL: PF and ZF undefined per reference; mask so tests do not compare it.
+                unpredictable_flags = PF_MASK | ZF_MASK;
             }
             core.flags.f.a = 0;
             break;
@@ -2041,10 +2044,11 @@ void Processor::exe_one()
             break;
         case 3: {
             unsigned addr = getEA(mod, rm);
+            unsigned off  = addr - (os << 4);
             push(core.cs);
             push(core.ip);
-            core.ip = getMem(W, addr);
-            core.cs = getMem(W, addr + 2);
+            core.ip = getMemAtSegOff(W, os, off);
+            core.cs = getMemAtSegOff(W, os, off + 2);
             break;
         }
         case 4:
@@ -2052,8 +2056,9 @@ void Processor::exe_one()
             break;
         case 5: {
             unsigned addr = getEA(mod, rm);
-            core.ip       = getMem(W, addr);
-            core.cs       = getMem(W, addr + 2);
+            unsigned off  = addr - (os << 4);
+            core.ip = getMemAtSegOff(W, os, off);
+            core.cs = getMemAtSegOff(W, os, off + 2);
             break;
         }
         case 6:
