@@ -1009,31 +1009,20 @@ void Processor::exe_one()
         // Overflow is unpredictable
         unpredictable_flags = OF_MASK;
 
-        Byte al        = get_al();
-        Byte al_orig   = al;
-        bool af_orig   = core.flags.f.a;
-        bool update_lo = af_orig || (al & 0xf) > 9;
-        if (update_lo) {
+        // First adjustment (low nibble).
+        Byte al = get_al();
+        if (core.flags.f.a || (al & 0x0f) > 9) {
             al += 6;
-            core.flags.f.a = 1;
-
-            // When low adjustment overflows byte (e.g. 0xFA+6), set CF so high adjustment runs
-            if (al_orig + 6 > 0xFF) {
+            if (!core.flags.f.a && (al >> 4) > 9) {
                 core.flags.f.c = 1;
             }
-        } else {
-            core.flags.f.a = 0;
+            core.flags.f.a = 1;
         }
-
-        // High nibble: when AF=1 use old_AL vs 0x9F (8088 quirk); else use AL after low. Force high
-        // adjust for 0x9A only when AF=0.
-        bool update_hi = core.flags.f.c || (af_orig ? (al_orig > 0x9F) : (al > 0x9F)) ||
-                         (al_orig == 0x9A && !af_orig);
-        if (update_hi) {
+        // Second adjustment (high nibble).
+        // Note: decision uses original AL but new CF.
+        if (core.flags.f.c || (get_al() >> 4) > 9) {
             al += 0x60;
             core.flags.f.c = 1;
-        } else if (!update_lo) {
-            core.flags.f.c = 0;
         }
         set_al(al);
         update_flags_zsp(B, get_al());
@@ -2057,8 +2046,8 @@ void Processor::exe_one()
         case 5: {
             unsigned addr = getEA(mod, rm);
             unsigned off  = addr - (os << 4);
-            core.ip = getMemAtSegOff(W, os, off);
-            core.cs = getMemAtSegOff(W, os, off + 2);
+            core.ip       = getMemAtSegOff(W, os, off);
+            core.cs       = getMemAtSegOff(W, os, off + 2);
             break;
         }
         case 6:
