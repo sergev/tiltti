@@ -1140,27 +1140,23 @@ void Processor::exe_one()
         // Overflow is unpredictable
         unpredictable_flags = OF_MASK;
 
-        Byte al        = get_al();
-        bool update_lo = core.flags.f.a || (al & 0xf) > 9;
-        // When AF=1, do not trigger high adjust from 0x9D-0x9F (8088 quirk, mirror of DAA).
-        bool update_hi = (al > 0x9F) || (core.flags.f.c && (al > 0x9F || al < 0x9A || al > 0x9C)) ||
-                         (core.flags.f.c && al >= 0x9A && al <= 0x9C) ||
-                         (al >= 0x9D && al <= 0x9F && !core.flags.f.a) ||
-                         (al >= 0x9A && al <= 0x9C && !core.flags.f.c && !core.flags.f.a);
-        if (update_lo) {
+        // First adjustment (low nibble).
+        Byte al = get_al();
+        if (core.flags.f.a || (al & 0x0f) > 9) {
             al -= 6;
+            if (!core.flags.f.a && (al >> 4) >= 9) {
+                core.flags.f.c = 1;
+            }
             core.flags.f.a = 1;
-        } else {
-            core.flags.f.a = 0;
         }
-        if (update_hi) {
+        // Second adjustment (high nibble).
+        // Note: decision uses original AL but new CF.
+        if (core.flags.f.c || (get_al() >> 4) > 9) {
             al -= 0x60;
             core.flags.f.c = 1;
-        } else if (!update_lo) {
-            core.flags.f.c = 0;
         }
         set_al(al);
-        update_flags_zsp(B, al);
+        update_flags_zsp(B, get_al());
         break;
     }
 
