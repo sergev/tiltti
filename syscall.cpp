@@ -174,8 +174,9 @@ void Machine::process_syscall(int type)
         // TODO: Print Screen
         throw std::runtime_error("Unimplemented Print Screen Request");
     case 0x10:
-        // TODO: Video
-        throw std::runtime_error("Unimplemented Video Request");
+        // Video
+        handle_int10_video();
+        return;
     case 0x11:
         // TODO: Equipment List
         throw std::runtime_error("Unimplemented Equipment List Request");

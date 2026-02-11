@@ -127,6 +127,7 @@ public:
     // Syscalls.
     bool is_syscall(int type);
     void process_syscall(int type);
+    void handle_int10_video();
     void handle_int13_disk();
 
     //
@@ -159,6 +160,32 @@ private:
     void read_dap(unsigned addr, unsigned &count, Word &buf_seg, Word &buf_off,
                   uint64_t &lba) const;
     void disk_ret(unsigned drive, unsigned code);
+
+    // Int 10: video
+    void int10_set_video_mode();
+    void int10_set_cursor_shape();
+    void int10_set_cursor_position();
+    void int10_get_cursor_position();
+    void int10_read_light_pen_position();
+    void int10_select_display_page();
+    void int10_scroll_window_up();
+    void int10_scroll_window_down();
+    void int10_read_char();
+    void int10_write_char();
+    void int10_write_char_only();
+    void int10_set_cga_palette();
+    void int10_write_pixel();
+    void int10_read_pixel();
+    void int10_teletype_output();
+    void int10_get_current_video_mode();
+    void int10_palette_control();
+    void int10_char_generator();
+    void int10_alternate_select();
+    void int10_write_string();
+    void int10_display_combination_code();
+    void int10_video_bios_functionality();
+    void int10_save_rrestore_video_state();
+    void int10_vbe();
 
     // Int 13: disk
     void int13_reset_disk_system();

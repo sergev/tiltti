@@ -41,6 +41,9 @@ add_library(simulator STATIC
     trace.cpp
     processor.cpp
     syscall.cpp
+    encoding.cpp
+    cp437.cpp
+    int10_video.cpp
     int13_disk.cpp
 )
 

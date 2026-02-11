@@ -146,12 +146,12 @@ void Machine::handle_int13_disk()
 
             out << "----- AH=" << std::hex << std::setfill('0') << std::setw(2)
                 << (unsigned)cpu.get_ah() << "h Unknown request" << std::endl;
-            out << "      AH=0x" << std::setw(2) << (unsigned)cpu.get_ah() << " DL=0x"
-                << std::setw(2) << (unsigned)cpu.get_dl() << " CX=0x" << std::setw(4)
-                << cpu.get_cx() << " DX=0x" << std::setw(4) << cpu.get_dx() << " DS:SI=0x"
-                << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si()
-                << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4)
-                << cpu.get_bx() << std::endl;
+            out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl()
+                << " CX=0x" << std::setw(4) << cpu.get_cx()
+                << " DX=0x" << std::setw(4) << cpu.get_dx()
+                << " DS:SI=0x" << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si()
+                << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx()
+                << std::endl;
             out.flags(save);
         }
         disk_ret(cpu.get_dl(), DISK_RET_EPARAM);
