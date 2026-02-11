@@ -45,6 +45,7 @@ add_library(simulator STATIC
     cp437.cpp
     int10_video.cpp
     int13_disk.cpp
+    int15_system.cpp
 )
 
 # Build executable file

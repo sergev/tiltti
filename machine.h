@@ -129,6 +129,7 @@ public:
     void process_syscall(int type);
     void handle_int10_video();
     void handle_int13_disk();
+    void handle_int15_system_services();
 
     //
     // Trace methods.
@@ -156,7 +157,8 @@ public:
     static void print_word_access(unsigned addr, Word val, const char *opname);
 
 private:
-    void floppy_setup();
+    void setup_bios_config_table();
+    void setup_floppy();
     void read_dap(unsigned addr, unsigned &count, Word &buf_seg, Word &buf_off,
                   uint64_t &lba) const;
     void disk_ret(unsigned drive, unsigned code);
@@ -214,6 +216,25 @@ private:
     void int13_extended_media_change();
     void int13_el_torito_cd_emulation();
     void int13_set_hardware_configuration();
+
+    // Int 15: system services
+    void int15_a20_gate_control();
+    void int15_keyboard_intercept();
+    void int15_removable_media_eject();
+    void int15_apm_bios();
+    void int15_vga_option_rom_intel();
+    void int15_vga_option_rom_smi();
+    void int15_user_wait_interval();
+    void int15_wait_for_time();
+    void int15_copy_memory_block();
+    void int15_get_extended_memory_size();
+    void int15_switch_to_protected_mode();
+    void int15_device_busy();
+    void int15_interrupt_complete();
+    void int15_get_system_configuration();
+    void int15_get_ebda_segment();
+    void int15_mouse_interface();
+    void int15_extended_memory();
 };
 
 #endif // TILTTI_MACHINE_H

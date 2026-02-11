@@ -53,11 +53,13 @@ Machine::Machine(Memory &m)
     bda.ebda_seg = 0x9fc00 >> 4;
     ebda.size    = (sizeof(ebda) + 1023) / 1024; // round up
 
-    // Floppy disk installed.
+    setup_bios_config_table();
+
     // Video mode 80×25 color.
     bda.equipment_list_flags = 0x0021;
 
-    floppy_setup();
+    // Floppy disk installed.
+    setup_floppy();
 }
 
 //
@@ -312,7 +314,7 @@ void Machine::boot_disk(const std::string &filename)
 //
 // Initialize floppy BIOS.
 //
-void Machine::floppy_setup()
+void Machine::setup_floppy()
 {
     // Parameters for 1.44M floppy type.
     static const Floppy_Extended_Disk_Base_Table diskette_params = {
@@ -340,4 +342,41 @@ void Machine::floppy_setup()
 
     // Vector 0x1E points to the floppy param table.
     ivt.ivec[0x1e] = { .offset = BIOS_DISKETTE_PARAM_TABLE, .seg = 0xf000 };
+}
+
+//
+// Initialize BIOS Config Table.
+//
+void Machine::setup_bios_config_table()
+{
+    enum {
+        F1_DMA3USED = 1<<7,  // DMA channel 3 used by hard disk BIOS
+        F1_2NDPIC   = 1<<6,  // 2nd interrupt controller (8259) installed
+        F1_RTC      = 1<<5,  // Real-Time Clock installed
+        F1_INT154F  = 1<<4,  // INT 15/AH=4Fh called upon INT 09h
+        F1_WAITEXT  = 1<<3,  // wait for external event (INT 15/AH=41h) supported
+        F1_EBDA     = 1<<2,  // extended BIOS area allocated (usually at top of RAM)
+        F1_MCA      = 1<<1,  // bus is Micro Channel instead of ISA
+        F1_MCAISA   = 1<<0,  // system has dual bus (Micro Channel + ISA)
+
+        F2_INT1609  = 1<<6,  // INT 16/AH=09h (keyboard functionality) supported
+    };
+
+    static const Bios_Config_Table config_table = {
+        .size     = sizeof(Bios_Config_Table) - 2,
+        .model    = 0xFC,
+        .submodel = 0x00,
+        .biosrev  = 0x01,
+        .feature1 = // F1_2NDPIC |
+                    // F1_RTC |
+                    // F1_EBDA |
+                    // F1_INT154F |
+                    0,
+        .feature2 = // F2_INT1609 // INT 16/AH=09h (keyboard functionality) supported
+                    0,
+        .feature3 = 0,
+        .feature4 = 0,
+        .feature5 = 0,
+    };
+    memcpy(&bios[BIOS_CONFIG_TABLE], &config_table, sizeof(config_table));
 }

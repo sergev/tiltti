@@ -192,8 +192,9 @@ void Machine::process_syscall(int type)
         // TODO: Serial
         throw std::runtime_error("Unimplemented Serial Request");
     case 0x15:
-        // TODO: System Services
-        throw std::runtime_error("Unimplemented System Services Request");
+        // System Services
+        handle_int15_system_services();
+        return;
     case 0x16:
         // TODO: Keyboard
         throw std::runtime_error("Unimplemented Keyboard Request");

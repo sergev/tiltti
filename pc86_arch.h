@@ -230,6 +230,17 @@ enum {
 };
 
 //
+// Bios Config Table.
+//
+struct Bios_Config_Table {
+    uint16_t size;
+    uint8_t model;
+    uint8_t submodel;
+    uint8_t biosrev;
+    uint8_t feature1, feature2, feature3, feature4, feature5;
+} __attribute__((packed));
+
+//
 // Fixed Disk Parameter Table.
 //
 struct Fixed_Disk_Param_Table {

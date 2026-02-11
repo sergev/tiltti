@@ -1,5 +1,5 @@
 //
-// Int 13h: BIOS video services.
+// Int 10h: BIOS video services.
 //
 // Copyright (c) 2026 Serge Vakulenko
 //
@@ -138,67 +138,67 @@ void Machine::int10_set_video_mode()
 
 void Machine::int10_set_cursor_shape()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Set cursor shape");
 }
 
 void Machine::int10_set_cursor_position()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Set cursor position");
 }
 
 void Machine::int10_get_cursor_position()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Get cursor position");
 }
 
 void Machine::int10_read_light_pen_position()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Read light pen");
 }
 
 void Machine::int10_select_display_page()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Select display page");
 }
 
 void Machine::int10_scroll_window_up()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Scroll window up");
 }
 
 void Machine::int10_scroll_window_down()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Scroll window down");
 }
 
 void Machine::int10_read_char()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Read character and attribute");
 }
 
 void Machine::int10_write_char()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Write character and attribute");
 }
 
 void Machine::int10_write_char_only()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Write character only");
 }
 
 void Machine::int10_set_cga_palette()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Set color palette");
 }
 
 void Machine::int10_write_pixel()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Write pixel");
 }
 
 void Machine::int10_read_pixel()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Read pixel");
 }
 
 //
@@ -218,46 +218,47 @@ void Machine::int10_teletype_output()
     unsigned ch = cpu.get_al();
 
     utf8_putc(cp437_to_unicode_table[ch]);
+    std::cout << std::flush;
 }
 
 void Machine::int10_get_current_video_mode()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Get video mode");
 }
 
 void Machine::int10_palette_control()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Palette and DAC functions");
 }
 
 void Machine::int10_char_generator()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Character generator");
 }
 
 void Machine::int10_alternate_select()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Alternate select");
 }
 
 void Machine::int10_write_string()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Write string");
 }
 
 void Machine::int10_display_combination_code()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Display combination code");
 }
 
 void Machine::int10_video_bios_functionality()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Video BIOS functionality");
 }
 
 void Machine::int10_save_rrestore_video_state()
 {
-    throw std::runtime_error("Unimplemented: ");
+    throw std::runtime_error("Unimplemented: Save/restore video state");
 }
 
 void Machine::int10_vbe()
