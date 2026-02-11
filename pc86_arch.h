@@ -295,4 +295,30 @@ struct Extended_Bios_Data_Area {
     // 0x121 - Begin custom storage.
 } __attribute__((packed));
 
+//
+// Error codes for int13 calls.
+//
+#define DISK_RET_SUCCESS       0x00
+#define DISK_RET_EPARAM        0x01
+#define DISK_RET_EADDRNOTFOUND 0x02
+#define DISK_RET_EWRITEPROTECT 0x03
+#define DISK_RET_ECHANGED      0x06
+#define DISK_RET_EBOUNDARY     0x09
+#define DISK_RET_EBADTRACK     0x0c
+#define DISK_RET_ECONTROLLER   0x20
+#define DISK_RET_ETIMEOUT      0x80
+#define DISK_RET_ENOTLOCKED    0xb0
+#define DISK_RET_ELOCKED       0xb1
+#define DISK_RET_ENOTREMOVABLE 0xb2
+#define DISK_RET_ETOOMANYLOCKS 0xb4
+#define DISK_RET_EMEDIA        0xC0
+#define DISK_RET_ENOTREADY     0xAA
+
+//
+// Drive selection by DL.
+//
+#define EXTSTART_FD 0x00 // Floppy
+#define EXTSTART_HD 0x80 // Hard disk
+#define EXTSTART_CD 0xE0 // CD-ROM
+
 #endif // TILTTI_I86_ARCH_H

@@ -42,6 +42,20 @@ void Machine::read_dap(unsigned addr, unsigned &count, Word &buf_seg, Word &buf_
 }
 
 //
+// Return from Int 13h request.
+//
+void Machine::disk_ret(unsigned drive, unsigned code)
+{
+    if (drive < EXTSTART_HD) {
+        bda.floppy_last_status = code;
+    } else {
+        bda.disk_last_status = code;
+    }
+    cpu.set_ah(code);
+    cpu.set_cf(code != DISK_RET_SUCCESS);
+}
+
+//
 // Process Int 13h request: Disk I/O.
 //
 void Machine::handle_int13_disk()
@@ -140,7 +154,7 @@ void Machine::handle_int13_disk()
                 << cpu.get_bx() << std::endl;
             out.flags(save);
         }
-        throw std::runtime_error("Unimplemented disk request");
+        disk_ret(cpu.get_dl(), DISK_RET_EPARAM);
     }
 }
 
@@ -174,17 +188,35 @@ void Machine::int13_reset_disk_system()
     cpu.set_ah(0);
 }
 
+//
+// Read disk status
+//
+// Return the status of the last disk operation for the given drive.
+// No BDA update.
+// Inputs:
+//      DL = drive number
+// Outputs:
+//      AH = last status (from BDA `floppy_last_status` or `disk_last_status`)
+//      CF is set if AH ≠ 0.
+// All other INT 13h functions set the BDA last-status and AH/CF.
+// This request simply reports that value.
+//
 void Machine::int13_read_disk_status()
 {
+    unsigned drive = cpu.get_dl();
+
     if (Machine::trace_enabled()) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
         out << "----- AH=01h Read disk status" << std::endl;
-        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out << "      drive=0x" << std::setw(2) << drive << std::endl;
         out.flags(save);
     }
-    throw std::runtime_error("Unimplemented: Read disk status");
+
+    unsigned last_status = drive < EXTSTART_HD ? bda.floppy_last_status
+                                               : bda.disk_last_status;
+    disk_ret(drive, last_status);
 }
 
 //
@@ -214,30 +246,28 @@ void Machine::int13_read_sectors()
     unsigned cylinder = cpu.get_ch() | ((cpu.get_cl() & 0xC0) << 2); // 10 bits, 0-based
     unsigned sector   = cpu.get_cl() & 0x3f;                         // 6 bits, 1-based
     unsigned head     = cpu.get_dh();                                // 8 bits, 0-based
+    unsigned nsectors = cpu.get_al();
+    unsigned drive    = cpu.get_dl();
+    unsigned addr     = pc86_linear_addr(cpu.get_es(), cpu.get_bx());
 
     if (Machine::trace_enabled()) {
         auto &out = Machine::get_trace_stream();
-        auto save = out.flags();
 
         out << "----- AH=02h Read sectors (CHS)" << std::endl;
-        out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
-            << (unsigned)cpu.get_al() << " (count) CHS=" << cylinder << "/" << head << "/" << sector
-            << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx()
-            << std::endl;
-        out.flags(save);
+        out << "      drive=0x" << std::hex << std::setw(2) << drive
+            << " nsectors=" << std::dec << std::setw(2) << nsectors
+            << " CHS=" << cylinder << "/" << head << "/" << sector
+            << " addr=0x" << std::hex << std::setw(5) << addr
+            << std::dec << std::endl;
     }
 
-#if 0
-    unsigned drive    = cpu.get_dl();
-    unsigned nsectors = cpu.get_al();
-    unsigned addr     = pc86_linear_addr(cpu.get_es(), cpu.get_bx());
-
-    //TODO
-    if (count > 128 || count == 0 || sector == 0) {
-        disk_ret(regs, DISK_RET_EPARAM);
+    if (nsectors > 128 || nsectors == 0 || sector == 0) {
+        disk_ret(drive, DISK_RET_EPARAM);
         return;
     }
-    dop.count = count;
+#if 0
+    //TODO
+    dop.count = nsectors;
 
     struct chs_s chs = getLCHS(drive_fl);
     u16 nlc=chs.cylinder, nlh=chs.head, nls=chs.sector;
@@ -258,6 +288,7 @@ void Machine::int13_read_sectors()
     int status = send_disk_op(&dop);
 
     regs->al = dop.count;
+    disk_ret(drive, DISK_RET_SUCCESS);
 #endif
     throw std::runtime_error("Unimplemented: Read sectors (CHS)");
 }

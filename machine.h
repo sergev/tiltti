@@ -158,6 +158,7 @@ private:
     void floppy_setup();
     void read_dap(unsigned addr, unsigned &count, Word &buf_seg, Word &buf_off,
                   uint64_t &lba) const;
+    void disk_ret(unsigned drive, unsigned code);
 
     // Int 13: disk
     void int13_reset_disk_system();
