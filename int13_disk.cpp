@@ -262,35 +262,27 @@ void Machine::int13_read_sectors()
     }
 
     if (nsectors > 128 || nsectors == 0 || sector == 0) {
+        // Bad length or wrong sector.
         disk_ret(drive, DISK_RET_EPARAM);
         return;
     }
 #if 0
     //TODO
-    dop.count = nsectors;
-
     struct chs_s chs = getLCHS(drive_fl);
     u16 nlc=chs.cylinder, nlh=chs.head, nls=chs.sector;
 
-    // sanity check on cyl heads, sec
     if (cylinder >= nlc || head >= nlh || sector > nls) {
-        warn_invalid(regs);
+        // Too large cylinder or head or sector.
         disk_ret(regs, DISK_RET_EPARAM);
         return;
     }
 
     // translate lchs to lba
-    dop.lba = (((((u32)cylinder * (u32)nlh) + (u32)head) * (u32)nls)
-               + (u32)sector - 1);
-
-    dop.buf_fl = MAKE_FLATPTR(regs->es, regs->bx);
-
-    int status = send_disk_op(&dop);
-
-    regs->al = dop.count;
-    disk_ret(drive, DISK_RET_SUCCESS);
+    dop.lba = (((cylinder * nlh) + head) * nls) + sector - 1;
 #endif
-    throw std::runtime_error("Unimplemented: Read sectors (CHS)");
+    //TODO: disk_io('r', drive, lba, addr, nsectors * SECTOR_NBYTES);
+    cpu.set_al(nsectors);
+    disk_ret(drive, DISK_RET_SUCCESS);
 }
 
 void Machine::int13_write_sectors()

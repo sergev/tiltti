@@ -26,13 +26,14 @@
 //
 // 8086 size codes (B=byte, W=word).
 //
-static const int B            = 0;
-static const int W            = 1;
-static const int BITS[2]      = { 8, 16 };
+enum {
+    B = 0,
+    W = 1,
+};
 static const unsigned SIGN[2] = { 0x80u, 0x8000u };
 static const unsigned MASK[2] = { 0xffu, 0xffffu };
 
-static const int PARITY[256] = {
+static const uint8_t PARITY[256] = {
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
     0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
     0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
@@ -42,11 +43,6 @@ static const int PARITY[256] = {
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
     0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1
 };
-
-static int shift(int x, int n)
-{
-    return n >= 0 ? x << n : x >> -n;
-}
 
 //
 // Initialize the processor.
@@ -487,7 +483,7 @@ int Processor::add(int width, int dst, int src)
     int res        = (dst + src) & MASK[width];
     core.flags.f.c = res < dst;
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
-    core.flags.f.o = (shift((dst ^ src ^ -1) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
+    core.flags.f.o = ((dst ^ ~src) & (dst ^ res) & SIGN[width]) != 0;
     update_flags_zsp(width, res);
     return res;
 }
@@ -498,7 +494,7 @@ int Processor::adc(int width, int dst, int src)
     int res        = (dst + src + carry) & MASK[width];
     core.flags.f.c = carry ? (res <= dst) : (res < dst);
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
-    core.flags.f.o = (shift((dst ^ src ^ -1) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
+    core.flags.f.o = ((dst ^ ~src) & (dst ^ res) & SIGN[width]) != 0;
     update_flags_zsp(width, res);
     return res;
 }
@@ -508,7 +504,7 @@ int Processor::sub(int width, int dst, int src)
     int res        = (dst - src) & MASK[width];
     core.flags.f.c = dst < src;
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
-    core.flags.f.o = (shift((dst ^ src) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
+    core.flags.f.o = ((dst ^ src) & (dst ^ res) & SIGN[width]) != 0;
     update_flags_zsp(width, res);
     return res;
 }
@@ -519,7 +515,7 @@ int Processor::sbb(int width, int dst, int src)
     int res        = (dst - src - carry) & MASK[width];
     core.flags.f.c = carry ? (dst <= src) : (dst < src);
     core.flags.f.a = ((res ^ dst ^ src) & 0x10) != 0;
-    core.flags.f.o = (shift((dst ^ src) & (dst ^ res), 12 - BITS[width]) & 0x800) != 0;
+    core.flags.f.o = ((dst ^ src) & (dst ^ res) & SIGN[width]) != 0;
     update_flags_zsp(width, res);
     return res;
 }
@@ -595,26 +591,26 @@ void Processor::step()
         unsigned addr = pc86_linear_addr(core.cs, core.ip);
         Byte prefix   = machine.mem_fetch_byte(addr);
         switch (prefix) {
-        case 0x26:
+        case 0x26: // ES:
             segment_override = true;
             os               = core.es;
             break;
-        case 0x2e:
+        case 0x2e: // CS:
             segment_override = true;
             os               = core.cs;
             break;
-        case 0x36:
+        case 0x36: // SS:
             segment_override = true;
             os               = core.ss;
             break;
-        case 0x3e:
+        case 0x3e: // DS:
             segment_override = true;
             os               = core.ds;
             break;
-        case 0xf2:
+        case 0xf2: // REPNE, REPNZ
             rep = 2;
             break;
-        case 0xf3:
+        case 0xf3: // REP, REPE, REPZ
             rep = 1;
             break;
         default:
