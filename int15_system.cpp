@@ -91,7 +91,7 @@ void Machine::handle_int15_system_services()
             auto &out = Machine::get_trace_stream();
             auto save = out.flags();
 
-            out << "      AH=" << std::hex << std::setfill('0') << std::setw(2)
+            out << "\tAH=" << std::hex << std::setfill('0') << std::setw(2)
                 << (unsigned)cpu.get_ah() << "h Unknown request" << std::endl;
             out.flags(save);
         }
