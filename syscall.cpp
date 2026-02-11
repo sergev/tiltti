@@ -178,8 +178,9 @@ void Machine::process_syscall(int type)
         handle_int10_video();
         return;
     case 0x11:
-        // TODO: Equipment List
-        throw std::runtime_error("Unimplemented Equipment List Request");
+        // Equipment List
+        cpu.set_ax(bda.equipment_list_flags);
+        return;
     case 0x12:
         // TODO: Memory Size
         throw std::runtime_error("Unimplemented Memory Size Request");

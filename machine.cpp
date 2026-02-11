@@ -53,6 +53,10 @@ Machine::Machine(Memory &m)
     bda.ebda_seg = 0x9fc00 >> 4;
     ebda.size    = (sizeof(ebda) + 1023) / 1024; // round up
 
+    // Floppy disk installed.
+    // Video mode 80×25 color.
+    bda.equipment_list_flags = 0x0021;
+
     floppy_setup();
 }
 

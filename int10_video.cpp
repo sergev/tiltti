@@ -112,7 +112,7 @@ void Machine::handle_int10_video()
             auto &out = Machine::get_trace_stream();
             auto save = out.flags();
 
-            out << "----- AH=" << std::hex << std::setfill('0') << std::setw(2)
+            out << "      AH=" << std::hex << std::setfill('0') << std::setw(2)
                 << (unsigned)cpu.get_ah() << "h Unknown request" << std::endl;
             out.flags(save);
         }

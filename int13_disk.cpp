@@ -144,7 +144,7 @@ void Machine::handle_int13_disk()
             auto &out = Machine::get_trace_stream();
             auto save = out.flags();
 
-            out << "----- AH=" << std::hex << std::setfill('0') << std::setw(2)
+            out << "      AH=" << std::hex << std::setfill('0') << std::setw(2)
                 << (unsigned)cpu.get_ah() << "h Unknown request" << std::endl;
             out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl()
                 << " CX=0x" << std::setw(4) << cpu.get_cx()
@@ -176,7 +176,7 @@ void Machine::int13_reset_disk_system()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=00h Reset disk system" << std::endl;
+        out << "      AH=00h Reset disk system" << std::endl;
         out << "      DL=0x" << std::hex << std::setfill('0') << std::setw(2)
             << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
         out.flags(save);
@@ -209,7 +209,7 @@ void Machine::int13_read_disk_status()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=01h Read disk status" << std::endl;
+        out << "      AH=01h Read disk status" << std::endl;
         out << "      drive=0x" << std::setw(2) << drive << std::endl;
         out.flags(save);
     }
@@ -253,7 +253,7 @@ void Machine::int13_read_sectors()
     if (Machine::trace_enabled()) {
         auto &out = Machine::get_trace_stream();
 
-        out << "----- AH=02h Read sectors (CHS)" << std::endl;
+        out << "      AH=02h Read sectors (CHS)" << std::endl;
         out << "      drive=0x" << std::hex << std::setw(2) << drive
             << " nsectors=" << std::dec << std::setw(2) << nsectors
             << " CHS=" << cylinder << "/" << head << "/" << sector
@@ -286,7 +286,7 @@ void Machine::int13_write_sectors()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=03h Write sectors (CHS)" << std::endl;
+        out << "      AH=03h Write sectors (CHS)" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
             << (unsigned)cpu.get_al() << " (count) CHS=" << cylinder << "/" << head << "/" << sector
             << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx()
@@ -306,7 +306,7 @@ void Machine::int13_verify_sectors()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=04h Verify sectors (CHS)" << std::endl;
+        out << "      AH=04h Verify sectors (CHS)" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
             << (unsigned)cpu.get_al() << " CHS=" << cylinder << "/" << head << "/" << sector
             << std::endl;
@@ -321,7 +321,7 @@ void Machine::int13_format_track()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=05h Format track" << std::endl;
+        out << "      AH=05h Format track" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
             << (unsigned)cpu.get_al() << " (sectors/track) CH=0x" << std::setw(2)
             << (unsigned)cpu.get_ch() << " DH=0x" << std::setw(2) << (unsigned)cpu.get_dh()
@@ -338,7 +338,7 @@ void Machine::int13_get_drive_parameters()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=08h Get drive parameters" << std::endl;
+        out << "      AH=08h Get drive parameters" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
         out.flags(save);
     }
@@ -351,7 +351,7 @@ void Machine::int13_initialize_drive_parameters()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=09h Initialize drive parameters" << std::endl;
+        out << "      AH=09h Initialize drive parameters" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
         out.flags(save);
     }
@@ -366,7 +366,7 @@ void Machine::int13_seek_to_cylinder()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=0Ch Seek to cylinder" << std::endl;
+        out << "      AH=0Ch Seek to cylinder" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " cylinder=" << cylinder
             << std::endl;
         out.flags(save);
@@ -380,7 +380,7 @@ void Machine::int13_alternate_disk_reset()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=0Dh Alternate disk reset" << std::endl;
+        out << "      AH=0Dh Alternate disk reset" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
         out.flags(save);
     }
@@ -393,7 +393,7 @@ void Machine::int13_check_drive_ready()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=10h Check drive ready" << std::endl;
+        out << "      AH=10h Check drive ready" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
         out.flags(save);
     }
@@ -406,7 +406,7 @@ void Machine::int13_recalibrate_drive()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=11h Recalibrate drive" << std::endl;
+        out << "      AH=11h Recalibrate drive" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
         out.flags(save);
     }
@@ -419,7 +419,7 @@ void Machine::int13_controller_diagnostic()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=14h Controller diagnostic" << std::endl;
+        out << "      AH=14h Controller diagnostic" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
         out.flags(save);
     }
@@ -432,7 +432,7 @@ void Machine::int13_read_disk_drive_size()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=15h Read disk drive size" << std::endl;
+        out << "      AH=15h Read disk drive size" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
         out.flags(save);
     }
@@ -445,7 +445,7 @@ void Machine::int13_detect_disk_change()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=16h Detect disk change" << std::endl;
+        out << "      AH=16h Detect disk change" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
         out.flags(save);
     }
@@ -458,7 +458,7 @@ void Machine::int13_edd_installation_check()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=41h EDD installation check" << std::endl;
+        out << "      AH=41h EDD installation check" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
         out.flags(save);
     }
@@ -476,7 +476,7 @@ void Machine::int13_extended_read()
         uint64_t lba;
 
         read_dap(addr, count, buf_seg, buf_off, lba);
-        out << "----- AH=42h Extended read (LBA)" << std::endl;
+        out << "      AH=42h Extended read (LBA)" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x"
             << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si()
             << " count=" << count << " buffer=0x" << std::setw(4) << buf_seg << ":0x"
@@ -497,7 +497,7 @@ void Machine::int13_extended_write()
         uint64_t lba;
 
         read_dap(addr, count, buf_seg, buf_off, lba);
-        out << "----- AH=43h Extended write (LBA)" << std::endl;
+        out << "      AH=43h Extended write (LBA)" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x"
             << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si()
             << " count=" << count << " buffer=0x" << std::setw(4) << buf_seg << ":0x"
@@ -518,7 +518,7 @@ void Machine::int13_extended_verify()
         uint64_t lba;
 
         read_dap(addr, count, buf_seg, buf_off, lba);
-        out << "----- AH=44h Extended verify (LBA)" << std::endl;
+        out << "      AH=44h Extended verify (LBA)" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x"
             << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si()
             << " count=" << count << " LBA=0x" << std::setw(16) << lba << std::endl;
@@ -533,7 +533,7 @@ void Machine::int13_lock_unlock_drive()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=45h Lock/unlock drive" << std::endl;
+        out << "      AH=45h Lock/unlock drive" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
             << (unsigned)cpu.get_al() << " (subfunction)" << std::endl;
         out.flags(save);
@@ -547,7 +547,7 @@ void Machine::int13_eject_media()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=46h Eject media" << std::endl;
+        out << "      AH=46h Eject media" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
         out.flags(save);
     }
@@ -565,7 +565,7 @@ void Machine::int13_extended_seek()
         uint64_t lba;
 
         read_dap(addr, count, buf_seg, buf_off, lba);
-        out << "----- AH=47h Extended seek (LBA)" << std::endl;
+        out << "      AH=47h Extended seek (LBA)" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x"
             << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si() << " LBA=0x"
             << std::setw(16) << lba << std::endl;
@@ -580,7 +580,7 @@ void Machine::int13_get_edd_parameters()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=48h Get drive parameters (EDD)" << std::endl;
+        out << "      AH=48h Get drive parameters (EDD)" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x"
             << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si() << " (buffer)"
             << std::endl;
@@ -595,7 +595,7 @@ void Machine::int13_extended_media_change()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=49h Extended media change" << std::endl;
+        out << "      AH=49h Extended media change" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
         out.flags(save);
     }
@@ -608,7 +608,7 @@ void Machine::int13_el_torito_cd_emulation()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=4Bh El Torito CD emulation" << std::endl;
+        out << "      AH=4Bh El Torito CD emulation" << std::endl;
         out << "      AL=0x" << std::setw(2) << (unsigned)cpu.get_al() << " DS:SI=0x"
             << std::setw(4) << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si() << " (packet)"
             << std::endl;
@@ -623,7 +623,7 @@ void Machine::int13_set_hardware_configuration()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
-        out << "----- AH=4Eh Set hardware configuration" << std::endl;
+        out << "      AH=4Eh Set hardware configuration" << std::endl;
         out << "      DL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
             << (unsigned)cpu.get_al() << " (subfunction)" << std::endl;
         out.flags(save);
