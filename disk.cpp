@@ -47,13 +47,13 @@ Disk::Disk(const std::string &p, Memory &m, bool wp, unsigned offset)
     // Get file size.
     struct stat stat;
     fstat(file_descriptor, &stat);
-    num_sectors = stat.st_size / SECTOR_NBYTES;
+    size_sectors = stat.st_size / SECTOR_NBYTES;
 }
 
 //
 // Open embedded image as disk.
 //
-Disk::Disk(const unsigned char data[], Memory &m, unsigned ns) : memory(m), num_sectors(ns)
+Disk::Disk(const unsigned char data[], Memory &m, unsigned ns) : memory(m), size_sectors(ns)
 {
     embedded_data = data;
 }
@@ -69,36 +69,36 @@ Disk::~Disk()
 //
 // Disk read: transfer data to memory.
 //
-void Disk::disk_to_memory(unsigned sector, unsigned addr, unsigned nbytes)
+void Disk::disk_to_memory(unsigned lba, unsigned addr, unsigned nbytes)
 {
     if (embedded_data) {
-        embedded_to_memory(sector, addr, nbytes);
+        embedded_to_memory(lba, addr, nbytes);
     } else {
-        file_to_memory(sector, addr, nbytes);
+        file_to_memory(lba, addr, nbytes);
     }
 }
 
 //
 // Disk write: transfer data from memory.
 //
-void Disk::memory_to_disk(unsigned sector, unsigned addr, unsigned nbytes)
+void Disk::memory_to_disk(unsigned lba, unsigned addr, unsigned nbytes)
 {
     if (embedded_data) {
         throw std::runtime_error("Cannot write embedded image");
     } else {
-        memory_to_file(sector, addr, nbytes);
+        memory_to_file(lba, addr, nbytes);
     }
 }
 
 //
 // Read binary file: transfer data to memory.
 //
-void Disk::file_to_memory(unsigned sector, unsigned addr, unsigned nbytes)
+void Disk::file_to_memory(unsigned lba, unsigned addr, unsigned nbytes)
 {
-    if (sector >= num_sectors)
+    if (lba >= size_sectors)
         throw std::runtime_error("Sector number exceeds file size");
 
-    unsigned offset_bytes = sector * SECTOR_NBYTES + file_offset;
+    unsigned offset_bytes = lba * SECTOR_NBYTES + file_offset;
     if (lseek(file_descriptor, offset_bytes, SEEK_SET) < 0)
         throw std::runtime_error("File seek error");
 
@@ -112,15 +112,15 @@ void Disk::file_to_memory(unsigned sector, unsigned addr, unsigned nbytes)
 //
 // Write binary file: transfer data from memory.
 //
-void Disk::memory_to_file(unsigned sector, unsigned addr, unsigned nbytes)
+void Disk::memory_to_file(unsigned lba, unsigned addr, unsigned nbytes)
 {
     if (!write_permit)
         throw std::runtime_error("Cannot write to read-only file");
 
-    if (sector >= num_sectors)
+    if (lba >= size_sectors)
         throw std::runtime_error("Sector number exceeds file size");
 
-    unsigned offset_bytes = sector * SECTOR_NBYTES + file_offset;
+    unsigned offset_bytes = lba * SECTOR_NBYTES + file_offset;
     if (lseek(file_descriptor, offset_bytes, SEEK_SET) < 0)
         throw std::runtime_error("File seek error");
 
@@ -134,12 +134,12 @@ void Disk::memory_to_file(unsigned sector, unsigned addr, unsigned nbytes)
 //
 // Read embedded data: transfer data to memory.
 //
-void Disk::embedded_to_memory(unsigned sector, unsigned addr, unsigned nbytes)
+void Disk::embedded_to_memory(unsigned lba, unsigned addr, unsigned nbytes)
 {
-    if (sector >= num_sectors)
+    if (lba >= size_sectors)
         throw std::runtime_error("Sector number exceeds embedded data size");
 
-    unsigned offset_bytes = sector * SECTOR_NBYTES;
+    unsigned offset_bytes = lba * SECTOR_NBYTES;
     const uint8_t *ptr    = &embedded_data[offset_bytes];
     Byte *destination     = memory.get_ptr(addr);
 

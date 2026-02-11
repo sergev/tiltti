@@ -266,23 +266,14 @@ void Machine::int13_read_sectors()
         disk_ret(drive, DISK_RET_EPARAM);
         return;
     }
-#if 0
-    //TODO
-    struct chs_s chs = getLCHS(drive_fl);
-    u16 nlc=chs.cylinder, nlh=chs.head, nls=chs.sector;
 
-    if (cylinder >= nlc || head >= nlh || sector > nls) {
-        // Too large cylinder or head or sector.
-        disk_ret(regs, DISK_RET_EPARAM);
-        return;
+    auto status = disk_io_chs('r', drive, cylinder, head, sector, addr, nsectors * SECTOR_NBYTES);
+    if (status == DISK_RET_SUCCESS) {
+        cpu.set_al(nsectors);
+    } else {
+        cpu.set_al(0);
     }
-
-    // translate lchs to lba
-    dop.lba = (((cylinder * nlh) + head) * nls) + sector - 1;
-#endif
-    //TODO: disk_io('r', drive, lba, addr, nsectors * SECTOR_NBYTES);
-    cpu.set_al(nsectors);
-    disk_ret(drive, DISK_RET_SUCCESS);
+    disk_ret(drive, status);
 }
 
 void Machine::int13_write_sectors()

@@ -118,7 +118,7 @@ public:
     void port_out_word(unsigned port, Word val);
 
     // Disk i/o.
-    void disk_io(char op, unsigned disk_unit, unsigned sector, unsigned addr, unsigned nbytes);
+    unsigned disk_io_chs(char op, unsigned disk_unit, unsigned cylinder, unsigned head, unsigned sector, unsigned addr, unsigned nbytes);
     void disk_mount(unsigned disk_unit, const std::string &path, bool write_permit);
 
     // Boot from disk or floppy image.

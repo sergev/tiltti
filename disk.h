@@ -36,7 +36,7 @@ private:
     bool write_permit{};
     bool remove_on_close{};
     int file_descriptor{};
-    unsigned num_sectors;
+    unsigned size_sectors;
 
     // Skip so many bytes at the beginning of the file.
     unsigned file_offset{};
@@ -45,9 +45,14 @@ private:
     const unsigned char *embedded_data{};
 
 public:
+    // Disk geometry.
+    unsigned num_cylinders;
+    unsigned num_heads;
+    unsigned num_sectors;
+
     // Constructor throws exception if the file cannot be opened.
     Disk(const std::string &path, Memory &memory, bool write_permit, unsigned offset = 0);
-    Disk(const unsigned char data[], Memory &memory, unsigned num_sectors);
+    Disk(const unsigned char data[], Memory &memory, unsigned size_sectors);
 
     // Clone the disk.
     Disk(const Disk &other);

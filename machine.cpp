@@ -215,30 +215,39 @@ Word Machine::port_in_word(unsigned port)
 
 //
 // Disk read/write.
+// Return disk status.
 //
-void Machine::disk_io(char op, unsigned disk_unit, unsigned sector, unsigned addr, unsigned nbytes)
+unsigned Machine::disk_io_chs(char op, unsigned disk_unit, unsigned cylinder, unsigned head, unsigned sector, unsigned addr, unsigned nbytes)
 {
-    Disk *disk;
-
-    if (disk_unit >= NDISKS) {
-        throw std::runtime_error("Invalid disk unit " + std::to_string(disk_unit));
+    if (disk_unit >= NDISKS || sector < 1) {
+        // Invalid disk unit
+        return DISK_RET_EPARAM;
     }
     if (!disks[disk_unit]) {
         // Disk must be previously configured using disk_mount().
-        throw std::runtime_error("Disk unit " + std::to_string(disk_unit) + " is not mounted");
+        return DISK_RET_EPARAM;
     }
-    disk = disks[disk_unit].get();
+    auto &disk = *disks[disk_unit].get();
+
+    if (cylinder >= disk.num_cylinders || head >= disk.num_heads || sector > disk.num_sectors) {
+        // Too large cylinder or head or sector.
+        return DISK_RET_EPARAM;
+    }
+
+    // Translate CHS to logical block address.
+    unsigned lba = (((cylinder * disk.num_heads) + head) * disk.num_sectors) + sector - 1;
 
     if (op == 'r') {
-        disk->disk_to_memory(sector, addr, nbytes);
+        disk.disk_to_memory(lba, addr, nbytes);
 
         // Debug: dump the data.
         if (dump_io_flag) {
-            memory.dump(++dump_serial_num, disk_unit, sector, addr, nbytes);
+            memory.dump(++dump_serial_num, disk_unit, lba, addr, nbytes);
         }
     } else {
-        disk->memory_to_disk(sector, addr, nbytes);
+        disk.memory_to_disk(lba, addr, nbytes);
     }
+    return DISK_RET_SUCCESS;
 }
 
 //
@@ -257,8 +266,18 @@ void Machine::disk_mount(unsigned disk_unit, const std::string &path, bool write
     // Open binary image as disk.
     disks[disk_unit] = std::make_unique<Disk>(path, memory, write_permit);
 
+    // Set geometry. TODO
+    auto &disk = *disks[disk_unit].get();
+    disk.num_cylinders = 80;
+    disk.num_heads = 2;
+    disk.num_sectors = 9; // floppy 720k
+
     if (trace_enabled()) {
-        std::cout << "Mount image '" << path << "' as disk " << disk_unit << std::endl;
+        std::cout << "Mount image '" << path << "' as disk " << disk_unit
+                  << ", CHS = " << disk.num_cylinders
+                  << "/" << disk.num_heads
+                  << "/" << disk.num_sectors
+                  << std::endl;
     }
 }
 
@@ -281,7 +300,9 @@ void Machine::boot_disk(const std::string &filename)
     cpu.set_ip(0);
 
     // Load boot sector from disk.
-    disk_io('r', FLOPPY_A, 0, addr, SECTOR_NBYTES);
+    if (disk_io_chs('r', FLOPPY_A, 0, 0, 1, addr, SECTOR_NBYTES) != DISK_RET_SUCCESS) {
+        throw std::runtime_error("Cannot read boot sector");
+    }
 }
 
 //
