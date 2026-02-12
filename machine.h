@@ -259,6 +259,8 @@ private:
     void int16_get_extended_keyboard_status();
     void int16_keyboard_capability_check();
     void int16_keyboard_capability_dos_keyb();
+    void setup_keyboard();
+    void close_keyboard();
 
     // Int 17: printer
     void int17_write_char();

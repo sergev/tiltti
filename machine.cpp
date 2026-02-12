@@ -63,6 +63,7 @@ Machine::Machine(Memory &m)
 
     // Floppy disk installed.
     setup_floppy();
+    setup_keyboard();
 }
 
 //
@@ -72,6 +73,7 @@ Machine::~Machine()
 {
     redirect_trace(nullptr, "");
     enable_trace("");
+    close_keyboard();
 }
 
 //

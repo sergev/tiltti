@@ -24,10 +24,43 @@
 #include <cstdint>
 #include <iomanip>
 #include <sstream>
+#include <termios.h>
+#include <unistd.h>
+#include <sys/select.h>
 
 #include "encoding.h"
 #include "machine.h"
 #include "pc86_arch.h"
+
+static struct termios tios_org;
+
+void Machine::setup_keyboard()
+{
+    struct termios tios;
+
+    if (tcgetattr(1, &tios) < 0) {
+        throw std::runtime_error("Cannot get stdout mode");
+    }
+    tios_org = tios;
+    tios.c_iflag &= ~(ISTRIP | INLCR | ICRNL | IXON | IXOFF);
+    tios.c_oflag &= ~OPOST;
+    tios.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN);
+    tios.c_cc[VMIN] = 1;
+    tios.c_cc[VTIME] = 0;
+    if (tcsetattr(0, TCSANOW, &tios) < 0) {
+        throw std::runtime_error("Cannot set stdout mode");
+    }
+
+    //init = 1;
+    //atexit((void (*)(void))conio_close);
+}
+
+void Machine::close_keyboard()
+{
+    if (tcsetattr(0, TCSANOW, &tios_org) < 0) {
+        std::cerr << "Error: Cannot restore stdout mode\n";
+    }
+}
 
 //
 // Process Int 16h request: Keyboard.
@@ -80,9 +113,37 @@ void Machine::handle_int16_keyboard()
     }
 }
 
+//
+// AH=00h — Read keyboard input.
+//
+// Wait until a key is available in the keyboard buffer,
+// then return its keycode in AX and remove it from the buffer.
+// Outputs:
+//      AX = keycode (AL = ASCII, AH = scancode).
+// For extended keys, the BIOS may translate (e.g. extended Enter → 0x1c0d, extended '/' → 0x352f).
+// If the low byte was 0xe0 and high byte non-zero, AH is left as the scancode and AL cleared.
+// If 0xf0 in low byte with high byte set, only the high byte is returned.
+// Other registers and flags (except as modified by entry/exit) are preserved.
+//
 void Machine::int16_read_keyboard_input()
 {
-    throw std::runtime_error("Unimplemented: Read keyboard input");
+    char c;
+
+    for (;;) {
+        switch (read(0, &c, 1)) {
+        case 0:
+            // No input - wait.
+            continue;
+        case 1:
+            // Valid input.
+            cpu.set_al(c);
+            cpu.set_ah(c); // TODO: scancode
+            return;
+        default:
+            // EOF
+            exit(-1);
+        }
+    }
 }
 
 //
@@ -100,9 +161,17 @@ void Machine::int16_read_keyboard_input()
 //
 void Machine::int16_check_keyboard_status()
 {
-    // Imitate empty buffer for now.
-    //TODO
-    cpu.set_zf(1);
+    fd_set rfds;
+    struct timeval tout{};
+
+    // Check input on stdin.
+    FD_ZERO(&rfds);
+    FD_SET(0, &rfds);
+    if (select(1, &rfds, NULL, NULL, &tout) == 1) {
+        cpu.set_zf(0);
+    } else {
+        cpu.set_zf(1);
+    }
 }
 
 void Machine::int16_get_shift_flag_status()
