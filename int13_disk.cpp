@@ -332,17 +332,42 @@ void Machine::int13_format_track()
     throw std::runtime_error("Unimplemented: Format track");
 }
 
+//
+// AH=08h — Get drive parameters.
+//
+// Return logical CHS geometry and number of drives of this type.
+// Inputs:
+//      DL = drive number
+// Outputs, on success:
+//      CF = 0
+//      AH = 0
+//      AL = 0
+//      CH = max cylinder (low 8 bits)
+//      CL = (max cylinder >> 2) in bits 6–7,
+//           sectors per track in bits 0–5
+//      DH = max head
+//      DL = count of drives (floppy or HD)
+// For floppy:
+//      ES:DI = diskette parameter table (segment 0xF000, `diskette_param_table2`);
+//      BX = floppy type.
+// For HD: last logical cylinder is reduced by one (reserved).
+// On CD: returns EPARAM (not supported).
+//
 void Machine::int13_get_drive_parameters()
 {
+    unsigned drive = cpu.get_dl();
+
     if (Machine::trace_enabled()) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
         out << "\tAH=08h Get drive parameters" << std::endl;
-        out << "\tDL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out << "\tdrive=0x" << std::setw(2) << drive << std::endl;
         out.flags(save);
     }
-    throw std::runtime_error("Unimplemented: Get drive parameters");
+
+    // No hard disk for now.
+    disk_ret(drive, DISK_RET_EPARAM);
 }
 
 void Machine::int13_initialize_drive_parameters()
@@ -426,15 +451,42 @@ void Machine::int13_controller_diagnostic()
     throw std::runtime_error("Unimplemented: Controller diagnostic");
 }
 
+//
+// AH=15h — Read disk drive size.
+//
+// Return drive type and (for hard disks) total sector count in INT 13h geometry.
+// Inputs:
+//      DL = drive number
+// Outputs:
+//      CF = 0
+//      For floppy or CD:
+//          AH on return = 1 (drive present, type 1)
+//      For hard disk:
+//          AH = 3 (drive present, type 3)
+//          CX:DX = 32-bit sector count (CX = high word, DX = low word)
+//                  for the logical CHS space (max cylinder minus one for HD,
+//                  then cylinders ×heads ×sectors).
+//  BDA last-status set to success.
+//  For HD computes sectors as `(nlc-1)*nlh*nls`.
+//  For floppy/CD returns AH=1 only.
+//
 void Machine::int13_read_disk_drive_size()
 {
+    unsigned drive = cpu.get_dl();
+
     if (Machine::trace_enabled()) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
         out << "\tAH=15h Read disk drive size" << std::endl;
-        out << "\tDL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out << "\tdrive=0x" << std::setw(2) << drive << std::endl;
         out.flags(save);
+    }
+    if (drive < EXTSTART_HD) {
+        // Floppy.
+        cpu.set_ah(1);
+        disk_ret(drive, DISK_RET_SUCCESS);
+        return;
     }
     throw std::runtime_error("Unimplemented: Read disk drive size");
 }
