@@ -165,9 +165,11 @@ int main(int argc, char *argv[])
     } catch (const std::exception &ex) {
         // Print exception message.
         std::cerr << "Error: " << ex.what() << std::endl;
+        Machine::close_keyboard();
         exit(EXIT_FAILURE);
     } catch (...) {
         // Assuming the exception message already printed.
+        Machine::close_keyboard();
         exit(EXIT_FAILURE);
     }
 }

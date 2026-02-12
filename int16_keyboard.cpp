@@ -43,7 +43,7 @@ void Machine::setup_keyboard()
     }
     tios_org = tios;
     tios.c_iflag &= ~(ISTRIP | INLCR | ICRNL | IXON | IXOFF);
-    tios.c_oflag &= ~OPOST;
+    //tios.c_oflag &= ~OPOST;
     tios.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN);
     tios.c_cc[VMIN] = 1;
     tios.c_cc[VTIME] = 0;

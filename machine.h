@@ -161,6 +161,9 @@ public:
     static void print_byte_access(unsigned addr, Byte val, const char *opname);
     static void print_word_access(unsigned addr, Word val, const char *opname);
 
+    static void setup_keyboard();
+    static void close_keyboard();
+
 private:
     void setup_bios_config_table();
     void setup_floppy();
@@ -259,8 +262,6 @@ private:
     void int16_get_extended_keyboard_status();
     void int16_keyboard_capability_check();
     void int16_keyboard_capability_dos_keyb();
-    void setup_keyboard();
-    void close_keyboard();
 
     // Int 17: printer
     void int17_write_char();
