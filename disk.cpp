@@ -48,6 +48,56 @@ Disk::Disk(const std::string &p, Memory &m, bool wp, unsigned offset)
     struct stat stat;
     fstat(file_descriptor, &stat);
     size_sectors = stat.st_size / SECTOR_NBYTES;
+
+    // Set geometry.
+    if (size_sectors > 800) {
+        num_cylinders = 80;
+    } else {
+        num_cylinders = 40;
+    }
+    if (size_sectors > 400) {
+        num_heads = 2;
+    } else {
+        num_heads = 1;
+    }
+    switch (size_sectors) {
+    case 80 * 2 * 18: // 1.44M
+        num_sectors = 18;
+        break;
+    case 80 * 2 * 20: // 1.6M
+        num_sectors = 20;
+        break;
+    case 80 * 2 * 9:  // 720K
+        num_sectors = 9;
+        break;
+    case 80 * 2 * 10: // 800K
+        num_sectors = 10;
+        break;
+    case 80 * 2 * 36: // 2.88M
+        num_sectors = 36;
+        break;
+    case 80 * 2 * 39: // 3.12M
+        num_sectors = 39;
+        break;
+    case 80 * 2 * 15: // 1.2M
+        num_sectors = 15;
+        break;
+    case 40 * 2 * 9: // 360K
+        num_sectors = 9;
+        break;
+    case 40 * 2 * 8: // 320K
+        num_sectors = 8;
+        break;
+    case 40 * 1 * 8: // 160K single side
+        num_sectors = 8;
+        break;
+    case 40 * 1 * 9: // 180K single side
+        num_sectors = 9;
+        break;
+    default:
+        throw std::runtime_error("Unrecognized size of floppy image: " +
+                                 std::to_string(size_sectors / 2) + " kbytes");
+    }
 }
 
 //

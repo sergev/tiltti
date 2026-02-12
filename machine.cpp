@@ -277,13 +277,8 @@ void Machine::disk_mount(unsigned disk_unit, const std::string &path, bool write
     // Open binary image as disk.
     disks[disk_unit] = std::make_unique<Disk>(path, memory, write_permit);
 
-    // Set geometry. TODO
-    auto &disk = *disks[disk_unit].get();
-    disk.num_cylinders = 80;
-    disk.num_heads = 2;
-    disk.num_sectors = 9; // floppy 720k
-
     if (trace_enabled()) {
+        auto &disk = *disks[disk_unit].get();
         std::cout << "Mount image '" << path << "' as disk " << disk_unit
                   << ", CHS = " << disk.num_cylinders
                   << "/" << disk.num_heads
