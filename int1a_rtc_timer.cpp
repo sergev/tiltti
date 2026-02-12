@@ -98,12 +98,13 @@ void Machine::int1a_read_system_clock_count()
     struct timeval tv;
     gettimeofday(&tv, 0);
 
-    // Get microseconds since midnight.
-    const uint64_t sec_since_midnight  = tv.tv_sec % 86400;
-    const uint64_t usec_since_midnight = (sec_since_midnight * 1000000) + tv.tv_usec;
+    time_t now = tv.tv_sec;
+    struct tm *info = localtime(&now);
 
-    const uint64_t TICKS_PER_DAY = 1573040;
-    uint32_t ticks = usec_since_midnight * TICKS_PER_DAY / 86400 / 1000000;
+    // Get milliseconds since midnight.
+    unsigned sec   = (((info->tm_hour * 60) + info->tm_min) * 60) + info->tm_sec;
+    unsigned msec  = (sec * 1000) + (tv.tv_usec / 1000);
+    unsigned ticks = msec / 55;
 
     cpu.set_cx(ticks >> 16);
     cpu.set_dx(ticks);
