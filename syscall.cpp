@@ -198,8 +198,9 @@ void Machine::process_syscall(int type)
         handle_int15_system_services();
         return;
     case 0x16:
-        // TODO: Keyboard
-        throw std::runtime_error("Unimplemented Keyboard Request");
+        // Keyboard Request
+        handle_int16_keyboard();
+        return;
     case 0x17:
         // Printer
         handle_int17_printer();

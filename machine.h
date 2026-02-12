@@ -131,6 +131,7 @@ public:
     void handle_int13_disk();
     void handle_int14_serial();
     void handle_int15_system_services();
+    void handle_int16_keyboard();
     void handle_int17_printer();
     void handle_int1a_rtc_timer();
 
@@ -244,6 +245,19 @@ private:
     void int15_get_ebda_segment();
     void int15_mouse_interface();
     void int15_extended_memory();
+
+    // Int 16: keyboard
+    void int16_read_keyboard_input();
+    void int16_check_keyboard_status();
+    void int16_get_shift_flag_status();
+    void int16_store_kkeystroke_in_buffer();
+    void int16_get_kkeyboard_functionality();
+    void int16_get_keyboard_id();
+    void int16_read_mf2_keyboard_input();
+    void int16_check_mf2_keyboard_status();
+    void int16_get_extended_keyboard_status();
+    void int16_keyboard_capability_check();
+    void int16_keyboard_capability_dos_keyb();
 
     // Int 17: printer
     void int17_write_char();

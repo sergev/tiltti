@@ -371,7 +371,7 @@ void Machine::setup_bios_config_table()
         .submodel = 0x00,
         .biosrev  = 0x01,
         .feature1 = // F1_2NDPIC |
-                    // F1_RTC |
+                    F1_RTC |
                     // F1_EBDA |
                     // F1_INT154F |
                     0,
