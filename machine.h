@@ -132,6 +132,7 @@ public:
     void handle_int14_serial();
     void handle_int15_system_services();
     void handle_int17_printer();
+    void handle_int1a_rtc_timer();
 
     //
     // Trace methods.
@@ -248,6 +249,16 @@ private:
     void int17_write_char();
     void int17_initialize_port();
     void int17_get_status();
+
+    // Int 1a: RTC and timer
+    void int1a_read_system_clock_count();
+    void int1a_set_system_clock_count();
+    void int1a_read_cmos_time();
+    void int1a_set_cmos_time();
+    void int1a_read_cmos_date();
+    void int1a_set_cmos_date();
+    void int1a_set_alarm_time();
+    void int1a_turn_off_alarm();
 };
 
 #endif // TILTTI_MACHINE_H

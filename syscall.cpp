@@ -182,8 +182,9 @@ void Machine::process_syscall(int type)
         cpu.set_ax(bda.equipment_list_flags);
         return;
     case 0x12:
-        // TODO: Memory Size
-        throw std::runtime_error("Unimplemented Memory Size Request");
+        // Memory Size
+        cpu.set_ax(bda.mem_size_kb);
+        return;
     case 0x13:
         // Disk
         handle_int13_disk();
@@ -208,8 +209,9 @@ void Machine::process_syscall(int type)
     case 0x19:
         throw std::runtime_error("Boot Request");
     case 0x1A:
-        // TODO: RTC Timer
-        throw std::runtime_error("Unimplemented RTC Timer Request");
+        // RTC and Timer
+        handle_int1a_rtc_timer();
+        return;
     default:
         throw std::runtime_error("Unknown syscall 0x" + to_hex(type));
     }

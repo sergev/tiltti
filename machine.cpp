@@ -55,6 +55,9 @@ Machine::Machine(Memory &m)
 
     setup_bios_config_table();
 
+    // Memory size in kilobytes.
+    bda.mem_size_kb = 640;
+
     // Video mode 80×25 color.
     bda.equipment_list_flags = 0x0021;
 

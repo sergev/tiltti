@@ -48,6 +48,7 @@ add_library(simulator STATIC
     int14_serial.cpp
     int15_system.cpp
     int17_printer.cpp
+    int1a_rtc_timer.cpp
 )
 
 # Build executable file
