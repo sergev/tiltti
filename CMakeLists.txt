@@ -47,6 +47,7 @@ add_library(simulator STATIC
     int13_disk.cpp
     int14_serial.cpp
     int15_system.cpp
+    int17_printer.cpp
 )
 
 # Build executable file

@@ -200,8 +200,9 @@ void Machine::process_syscall(int type)
         // TODO: Keyboard
         throw std::runtime_error("Unimplemented Keyboard Request");
     case 0x17:
-        // TODO: Printer
-        throw std::runtime_error("Unimplemented Printer Request");
+        // Printer
+        handle_int17_printer();
+        return;
     case 0x18:
         throw std::runtime_error("ROM BASIC Request");
     case 0x19:

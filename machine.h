@@ -131,6 +131,7 @@ public:
     void handle_int13_disk();
     void handle_int14_serial();
     void handle_int15_system_services();
+    void handle_int17_printer();
 
     //
     // Trace methods.
@@ -242,6 +243,11 @@ private:
     void int15_get_ebda_segment();
     void int15_mouse_interface();
     void int15_extended_memory();
+
+    // Int 17: printer
+    void int17_write_char();
+    void int17_initialize_port();
+    void int17_get_status();
 };
 
 #endif // TILTTI_MACHINE_H
