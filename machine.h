@@ -129,6 +129,7 @@ public:
     void process_syscall(int type);
     void handle_int10_video();
     void handle_int13_disk();
+    void handle_int14_serial();
     void handle_int15_system_services();
 
     //
@@ -216,6 +217,12 @@ private:
     void int13_extended_media_change();
     void int13_el_torito_cd_emulation();
     void int13_set_hardware_configuration();
+
+    // Int 14: serial
+    void int14_initialize_serial_port();
+    void int14_write_char();
+    void int14_read_char();
+    void int14_get_port_status();
 
     // Int 15: system services
     void int15_a20_gate_control();

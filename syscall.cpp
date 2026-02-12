@@ -189,8 +189,9 @@ void Machine::process_syscall(int type)
         handle_int13_disk();
         return;
     case 0x14:
-        // TODO: Serial
-        throw std::runtime_error("Unimplemented Serial Request");
+        // Serial
+        handle_int14_serial();
+        return;
     case 0x15:
         // System Services
         handle_int15_system_services();
