@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <iomanip>
 #include <sstream>
+#include <unistd.h>
 
 #include "encoding.h"
 #include "machine.h"
@@ -37,6 +38,10 @@ void Machine::handle_int15_system_services()
     switch (cpu.get_ah()) {
     case 0x24:
         int15_a20_gate_control();
+        break;
+    case 0x41:
+        // Wait on External Event.
+        usleep(20000);
         break;
     case 0x4F:
         int15_keyboard_intercept();

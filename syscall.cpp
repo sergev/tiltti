@@ -112,7 +112,7 @@ void Processor::print_syscall(int type)
         machine.print_exception("Int 5h Print Screen Request");
         return;
     case 0x10:
-        machine.print_exception("Int 10h Video Request");
+        machine.print_exception_ah("Int 10h Video Request");
         return;
     case 0x11:
         machine.print_exception("Int 11h Equipment List Request");
@@ -121,19 +121,19 @@ void Processor::print_syscall(int type)
         machine.print_exception("Int 12h Memory Size Request");
         return;
     case 0x13:
-        machine.print_exception("Int 13h Disk Request");
+        machine.print_exception_ah("Int 13h Disk Request");
         return;
     case 0x14:
-        machine.print_exception("Int 14h Serial Request");
+        machine.print_exception_ah("Int 14h Serial Request");
         return;
     case 0x15:
-        machine.print_exception("Int 15h System Services Request");
+        machine.print_exception_ah("Int 15h System Services Request");
         return;
     case 0x16:
-        machine.print_exception("Int 16h Keyboard Request");
+        machine.print_exception_ah("Int 16h Keyboard Request");
         return;
     case 0x17:
-        machine.print_exception("Int 17h Printer Request");
+        machine.print_exception_ah("Int 17h Printer Request");
         return;
     case 0x18:
         machine.print_exception("Int 18h ROM BASIC Request");
@@ -142,7 +142,7 @@ void Processor::print_syscall(int type)
         machine.print_exception("Int 19h Boot Request");
         return;
     case 0x1A:
-        machine.print_exception("Int 1Ah RTC Timer Request");
+        machine.print_exception_ah("Int 1Ah RTC Timer Request");
         return;
     default:
         break;

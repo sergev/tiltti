@@ -372,7 +372,7 @@ void Machine::setup_bios_config_table()
         .biosrev  = 0x01,
         .feature1 = // F1_2NDPIC |
                     F1_RTC |
-                    // F1_EBDA |
+                    F1_EBDA |
                     // F1_INT154F |
                     0,
         .feature2 = // F2_INT1609 // INT 16/AH=09h (keyboard functionality) supported

@@ -148,6 +148,13 @@ void Machine::print_exception(const char *message)
     out << "------- " << message << std::endl;
 }
 
+void Machine::print_exception_ah(const char *message)
+{
+    auto &out = Machine::get_trace_stream();
+    out << "------- " << message << ", AH=" << std::hex << std::setfill('0')
+        << std::setw(2) << (unsigned)cpu.get_ah() << std::dec << "h\n";
+}
+
 //
 // Print memory or port read/write.
 //

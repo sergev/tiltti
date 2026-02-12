@@ -156,6 +156,7 @@ public:
             cpu.print_registers();
     }
 
+    void print_exception_ah(const char *message);
     static void print_exception(const char *message);
     static void print_byte_access(unsigned addr, Byte val, const char *opname);
     static void print_word_access(unsigned addr, Word val, const char *opname);

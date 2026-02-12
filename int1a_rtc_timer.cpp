@@ -72,6 +72,16 @@ void Machine::handle_int1a_rtc_timer()
     }
 }
 
+//static unsigned bcd2bin(unsigned val)
+//{
+//    return (val & 0xf) + ((val >> 4) * 10);
+//}
+
+static unsigned bin2bcd(unsigned val)
+{
+    return (val % 10) | ((val / 10) << 4);
+}
+
 //
 // AH=00h — Read system clock count.
 //
@@ -111,10 +121,11 @@ void Machine::int1a_set_system_clock_count()
 //
 // Read the current time from the RTC in BCD format.
 // Outputs:
-//      CH = hours
-//      CL = minutes
+//      CH = hours (BCD)
+//      CL = minutes (BCD)
 //      DH = seconds (BCD)
 //      DL bit 0 = daylight saving enable (DSE) from Status B
+//      AH = 0
 //      AL = CH (hours)
 //      CF = 0
 // If the RTC update-in-progress (UIP) bit is set, the handler returns with CF=1 (invalid).
@@ -127,11 +138,12 @@ void Machine::int1a_read_cmos_time()
     time_t now = tv.tv_sec;
     struct tm *info = localtime(&now);
 
-    cpu.set_ch(info->tm_hour);
-    cpu.set_cl(info->tm_min);
-    cpu.set_dh(info->tm_sec);
+    cpu.set_ch(bin2bcd(info->tm_hour));
+    cpu.set_cl(bin2bcd(info->tm_min));
+    cpu.set_dh(bin2bcd(info->tm_sec));
     cpu.set_dl(info->tm_isdst);
-    cpu.set_al(info->tm_hour);
+    cpu.set_ah(0);
+    cpu.set_al(cpu.get_ch());
     cpu.set_cf(0);
 }
 
@@ -160,13 +172,14 @@ void Machine::int1a_read_cmos_date()
 
     time_t now = tv.tv_sec;
     struct tm *info = localtime(&now);
-    int century = 20;
+    int century = 0x20;
 
     cpu.set_ch(century);
-    cpu.set_cl(info->tm_year);
-    cpu.set_dh(info->tm_mon);
-    cpu.set_dl((info->tm_mday % 10) + (info->tm_mday / 10) * 16);
-    cpu.set_al(century);
+    cpu.set_cl(bin2bcd(info->tm_year % 100));
+    cpu.set_dh(bin2bcd(info->tm_mon + 1));
+    cpu.set_dl(bin2bcd(info->tm_mday));
+    cpu.set_ah(0);
+    cpu.set_al(cpu.get_ch());
     cpu.set_cf(0);
 }
 
