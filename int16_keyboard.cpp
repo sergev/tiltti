@@ -78,10 +78,10 @@ void Machine::handle_int16_keyboard()
         int16_get_shift_flag_status();
         break;
     case 0x05:
-        int16_store_kkeystroke_in_buffer();
+        int16_store_keystroke_in_buffer();
         break;
     case 0x09:
-        int16_get_kkeyboard_functionality();
+        int16_get_keyboard_functionality();
         break;
     case 0x0a:
         int16_get_keyboard_id();
@@ -174,17 +174,30 @@ void Machine::int16_check_keyboard_status()
     }
 }
 
+//
+// AH=02h — Get shift flag status.
+//
+// Return the current keyboard shift/modifier and lock state (low byte of kbd_flag0).
+// Outputs:
+//      AL = value of BDA `kbd_flag0` (low byte).
+//           Bit definitions in `src/std/bda.h`:
+//           KF0_RSHIFT, KF0_LSHIFT, KF0_CTRLACTIVE, KF0_ALTACTIVE,
+//           KF0_SCROLLACTIVE, KF0_NUMACTIVE, KF0_CAPSACTIVE.
+// See also AH=12h: it returns the full extended status
+// (kbd_flag0 with kbd_flag1 RALT/RCTRL merged into the high byte).
+//
 void Machine::int16_get_shift_flag_status()
 {
-    throw std::runtime_error("Unimplemented: Get shift flag status");
+    // No flags for now.
+    cpu.set_ah(0);
 }
 
-void Machine::int16_store_kkeystroke_in_buffer()
+void Machine::int16_store_keystroke_in_buffer()
 {
     throw std::runtime_error("Unimplemented: Store keystroke in buffer");
 }
 
-void Machine::int16_get_kkeyboard_functionality()
+void Machine::int16_get_keyboard_functionality()
 {
     throw std::runtime_error("Unimplemented: Get keyboard functionality");
 }
@@ -214,7 +227,14 @@ void Machine::int16_keyboard_capability_check()
     throw std::runtime_error("Unimplemented: Keyboard capability check");
 }
 
+//
+// AH=92h — Keyboard capability (DOS keyb).
+//
+// Called by DOS 5.0+ KEYB to detect whether INT 16h AH=10h–12h (enhanced keyboard) is supported.
+// Outputs:
+//      AH = 0x80 (enhanced keyboard functions supported)
+//
 void Machine::int16_keyboard_capability_dos_keyb()
 {
-    throw std::runtime_error("Unimplemented: Keyboard capability (DOS keyb)");
+    cpu.set_ah(0x80);
 }

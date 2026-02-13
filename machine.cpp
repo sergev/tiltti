@@ -58,6 +58,9 @@ Machine::Machine(Memory &m)
     // Memory size in kilobytes.
     bda.mem_size_kb = 640;
 
+    // Set display combination code: VGA analog color.
+    bda.dcc_index = 0x08;
+
     // Video mode 80×25 color.
     bda.equipment_list_flags = 0x0021;
 

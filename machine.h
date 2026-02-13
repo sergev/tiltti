@@ -254,8 +254,8 @@ private:
     void int16_read_keyboard_input();
     void int16_check_keyboard_status();
     void int16_get_shift_flag_status();
-    void int16_store_kkeystroke_in_buffer();
-    void int16_get_kkeyboard_functionality();
+    void int16_store_keystroke_in_buffer();
+    void int16_get_keyboard_functionality();
     void int16_get_keyboard_id();
     void int16_read_mf2_keyboard_input();
     void int16_check_mf2_keyboard_status();

@@ -246,11 +246,55 @@ void Machine::int10_write_string()
     throw std::runtime_error("Unimplemented: Write string");
 }
 
+//
+// AH=1Ah - Display combination code.
+//
+// When AL=00h - Get display combination code.
+// Outputs:
+//      BX = DCC index
+//      AL = 0x1A
+//
+// When AL=01h - Set display combination code.
+// Inputs:
+//      BL = DCC index
+// Outputs:
+//      AL = 0x1A
+//
 void Machine::int10_display_combination_code()
 {
-    throw std::runtime_error("Unimplemented: Display combination code");
+    switch (cpu.get_al()) {
+    case 0:
+        // Get display combination code.
+        cpu.set_bx(bda.dcc_index);
+        cpu.set_al(0x1a);
+        break;
+    case 1:
+        // Set display combination code.
+        bda.dcc_index = cpu.get_bl();
+        cpu.set_al(0x1a);
+        break;
+    default:
+        break;
+    }
 }
 
+//
+// AH=1Bh - Video BIOS functionality
+//
+// Return a table describing video BIOS capabilities and current state.
+// Inputs:
+//      ES:DI = pointer to `struct video_func_info`
+// Outputs:
+//      Buffer filled with:
+//          pointer to static functionality table
+//          copy of BDA 0x49–0x66 and 0x84–0x86
+//          DCC index
+//          colors (16)
+//          pages (8)
+//          scan lines (2)
+//          video memory (3)
+//      AL = 0x1B
+//
 void Machine::int10_video_bios_functionality()
 {
     throw std::runtime_error("Unimplemented: Video BIOS functionality");

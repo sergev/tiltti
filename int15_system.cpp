@@ -148,9 +148,19 @@ void Machine::int15_copy_memory_block()
     throw std::runtime_error("Unimplemented: Copy memory block");
 }
 
+//
+// AH=88h — Get extended memory size.
+//
+// Return the size of extended memory (above 1 MB) in kilobytes.
+// Outputs:
+//      CF = 0
+//      AX = (LegacyRamSize - 1 MB) / 1024, capped at 63 MB (63*1024 = 64512)
+//
 void Machine::int15_get_extended_memory_size()
 {
-    throw std::runtime_error("Unimplemented: Get extended memory size");
+    // No extended memory.
+    cpu.set_cf(0);
+    cpu.set_ax(0);
 }
 
 void Machine::int15_switch_to_protected_mode()
