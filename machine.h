@@ -26,6 +26,7 @@
 
 #include <array>
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <queue>
 #include <set>
@@ -35,7 +36,15 @@
 #include "disk.h"
 #include "processor.h"
 
-class Video_Adapter;
+//
+// Parameters for refreshing the display (used by main() with Video_Adapter).
+//
+struct VideoRefreshParams {
+    const uint8_t *text_buf;
+    unsigned cursor_col;
+    unsigned cursor_row;
+    uint16_t cursor_type;
+};
 
 class Machine {
 private:
@@ -59,10 +68,9 @@ private:
     bool after_call{};          // right after JVM instruction
     bool after_return{};        // right after UJ(13) instruction
 
-    // SDL display and keyboard.
-    bool sdl_quit_requested_{};
-    std::unique_ptr<Video_Adapter> video_adapter_;
+    // Keyboard queue (fed by main() from SDL).
     std::queue<uint16_t> keyboard_queue_;
+    std::function<bool()> pump_callback_;
 
     // Static stuff.
     static bool verbose;                    // Verbose flag for tracing
@@ -86,22 +94,23 @@ public:
     // Destructor.
     ~Machine();
 
-    // Run simulation.
-    void run();
+    // Run a batch of CPU steps (main() owns the loop and calls this).
+    void run_batch(unsigned n);
+
+    // Parameters for main() to refresh the display from memory at 0xb8000 and BDA.
+    VideoRefreshParams get_video_refresh_params() const;
+
+    // Called when blocking (e.g. INT 16h wait). Returns false to request quit.
+    void set_pump_callback(std::function<bool()> cb) { pump_callback_ = std::move(cb); }
+
+    // Update BDA kbd_flag0 from host modifier state (called by main() from SDL).
+    void set_kbd_modifiers(uint16_t flags);
 
     // Keyboard queue. AX = (scancode << 8) | ASCII.
     void push_keystroke(uint16_t ax);
     bool has_keystroke() const;
     uint16_t peek_keystroke() const;
     uint16_t pop_keystroke();
-
-    // Refresh SDL window from memory at 0xb8000 and BDA.
-    void refresh_video();
-
-    // Pump SDL events (keyboard -> queue, modifiers -> BDA, QUIT flag). Return false if QUIT.
-    bool pump_sdl_events();
-
-    bool sdl_quit_requested() const { return sdl_quit_requested_; }
 
     // Get instruction count.
     static uint64_t get_instr_count() { return simulated_instructions; }
@@ -184,6 +193,11 @@ public:
     static void print_word_access(unsigned addr, Word val, const char *opname);
 
 private:
+    // Invoke pump callback (used by INT 16h when blocking). Returns false if quit requested.
+    bool pump_events();
+    // Throw if pump callback not set (used when blocking for keyboard input).
+    void require_pump_callback() const;
+
     void setup_bios_config_table();
     void setup_floppy();
     void read_dap(unsigned addr, unsigned &count, Word &buf_seg, Word &buf_off,

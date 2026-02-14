@@ -20,11 +20,16 @@
 // SOFTWARE.
 //
 #include <getopt.h>
+#include <SDL.h>
 
 #include <cstring>
 #include <iostream>
+#include <stdexcept>
 
 #include "machine.h"
+#include "pc86_arch.h"
+#include "sdl_scancode_map.h"
+#include "video_adapter.h"
 
 //
 // CLI options.
@@ -61,6 +66,69 @@ static void print_usage(std::ostream &out, const char *prog_name)
     out << "    -s, --syscalls          Trace INT software interrupts" << std::endl;
     out << "    -p, --ports             Trace IN and OUT port access" << std::endl;
     out << "    -o, --output=FILE       Redirect trace to the file" << std::endl;
+}
+
+//
+// Pump SDL events: keyboard -> machine queue, modifiers -> BDA, set quit on SDL_QUIT.
+//
+static void pump_sdl_events(Machine &machine, bool &quit)
+{
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            quit = true;
+            return;
+        }
+        if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
+            uint32_t sdl_sc = event.key.keysym.scancode;
+            bool down       = (event.type == SDL_KEYDOWN);
+
+            uint16_t mod = SDL_GetModState();
+            uint16_t f0  = 0;
+            if (mod & KMOD_RSHIFT)
+                f0 |= KF0_RSHIFT;
+            if (mod & KMOD_LSHIFT)
+                f0 |= KF0_LSHIFT;
+            if (mod & KMOD_CTRL)
+                f0 |= KF0_CTRL;
+            if (mod & KMOD_ALT)
+                f0 |= KF0_ALT;
+            const Uint8 *state = SDL_GetKeyboardState(nullptr);
+            if (state[SDL_SCANCODE_SCROLLLOCK])
+                f0 |= KF0_SCROLL;
+            if (state[SDL_SCANCODE_NUMLOCKCLEAR])
+                f0 |= KF0_NUMLOCK;
+            if (state[SDL_SCANCODE_CAPSLOCK])
+                f0 |= KF0_CAPSLOCK;
+            machine.set_kbd_modifiers(f0);
+
+            if (down) {
+                uint8_t bios_sc  = sdl_to_bios_scancode(sdl_sc);
+                uint8_t bios_ext = sdl_to_bios_scancode_extended(sdl_sc);
+                uint8_t ascii    = 0;
+                if (mod & KMOD_SHIFT)
+                    ascii = sdl_scancode_to_ascii_shifted(sdl_sc);
+                if (ascii == 0)
+                    ascii = sdl_scancode_to_ascii_unshifted(sdl_sc);
+                if (bios_ext) {
+                    machine.push_keystroke((static_cast<uint16_t>(bios_ext) << 8) | 0x00);
+                } else if (bios_sc) {
+                    machine.push_keystroke((static_cast<uint16_t>(bios_sc) << 8) | ascii);
+                }
+            }
+        }
+    }
+}
+
+//
+// Refresh SDL window from machine memory and BDA.
+//
+static void refresh_video(Machine &machine, Video_Adapter &video_adapter)
+{
+    if (!video_adapter.has_window())
+        return;
+    VideoRefreshParams p = machine.get_video_refresh_params();
+    video_adapter.refresh_from_memory(p.text_buf, p.cursor_col, p.cursor_row, p.cursor_type);
 }
 
 //
@@ -160,8 +228,28 @@ int main(int argc, char *argv[])
             machine.boot_disk(disk_file);
         }
 
-        // Run simulation.
-        machine.run();
+        Video_Adapter video_adapter(true, memory.get_ptr(0xb8000));
+        if (!video_adapter.has_window()) {
+            throw std::runtime_error("SDL: cannot create display window");
+        }
+
+        bool quit = false;
+        machine.set_pump_callback([&machine, &quit]() {
+            pump_sdl_events(machine, quit);
+            return !quit;
+        });
+
+        constexpr unsigned steps_per_frame = 5000;
+        constexpr unsigned frame_ms        = 16;
+
+        while (!quit) {
+            pump_sdl_events(machine, quit);
+            machine.run_batch(steps_per_frame);
+            refresh_video(machine, video_adapter);
+            if (quit)
+                break;
+            SDL_Delay(frame_ms);
+        }
 
         // Finish the trace output.
         Machine::close_trace();

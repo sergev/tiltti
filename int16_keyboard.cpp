@@ -26,8 +26,6 @@
 #include <iomanip>
 #include <sstream>
 
-#include <SDL.h>
-
 #include "encoding.h"
 #include "machine.h"
 #include "pc86_arch.h"
@@ -98,10 +96,9 @@ void Machine::handle_int16_keyboard()
 void Machine::int16_read_keyboard_input()
 {
     while (!has_keystroke()) {
-        pump_sdl_events();
-        if (sdl_quit_requested())
+        require_pump_callback();
+        if (!pump_events())
             std::exit(0);
-        SDL_Delay(5);
     }
     uint16_t ax = pop_keystroke();
     cpu.set_ax(ax);
@@ -122,7 +119,7 @@ void Machine::int16_read_keyboard_input()
 //
 void Machine::int16_check_keyboard_status()
 {
-    pump_sdl_events();
+    pump_events();
     if (has_keystroke()) {
         cpu.set_zf(0);
         cpu.set_ax(peek_keystroke());
