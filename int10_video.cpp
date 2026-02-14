@@ -221,9 +221,20 @@ void Machine::int10_teletype_output()
     std::cout << std::flush;
 }
 
+//
+// AH=0Fh — Get current video mode.
+//
+// Return current mode, number of columns, and active page.
+// Outputs:
+//      AL = current video mode (or 0xFF for VBE mode)
+//      AH = number of columns
+//      BH = active display page.
+//
 void Machine::int10_get_current_video_mode()
 {
-    throw std::runtime_error("Unimplemented: Get video mode");
+    cpu.set_bh(bda.video_page);
+    cpu.set_al(bda.video_mode | (bda.video_ctl & 0x80));
+    cpu.set_ah(bda.video_cols);
 }
 
 void Machine::int10_palette_control()

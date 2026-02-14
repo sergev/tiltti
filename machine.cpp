@@ -67,6 +67,12 @@ Machine::Machine(Memory &m)
     // Floppy disk installed.
     setup_floppy();
     setup_keyboard();
+
+    // Setup video.
+    bda.video_mode = 3; // Text mode: 80 columns, 25 rows, 16 colors
+    bda.video_rows = 25;
+    bda.video_cols = 80;
+    bda.video_ctl  = 0x60;
 }
 
 //
