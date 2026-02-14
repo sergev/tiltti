@@ -197,6 +197,7 @@ private:
     void int10_video_bios_functionality();
     void int10_save_rrestore_video_state();
     void int10_vbe();
+    void scroll_window(int dir);
 
     // Int 13: disk
     void int13_reset_disk_system();

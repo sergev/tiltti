@@ -32,32 +32,28 @@
 #include "machine.h"
 #include "pc86_arch.h"
 
-static struct termios tios_org;
+static struct termios tios_orig;
 
 void Machine::setup_keyboard()
 {
     struct termios tios;
 
-    if (tcgetattr(1, &tios) < 0) {
-        throw std::runtime_error("Cannot get stdout mode");
+    if (tcgetattr(1, &tios) >= 0) {
+        tios_orig = tios;
+        tios.c_iflag &= ~(ISTRIP | INLCR | ICRNL | IXON | IXOFF);
+        //tios.c_oflag &= ~OPOST;
+        tios.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN);
+        tios.c_cc[VMIN] = 1;
+        tios.c_cc[VTIME] = 0;
+        if (tcsetattr(0, TCSANOW, &tios) < 0) {
+            throw std::runtime_error("Cannot set stdout mode");
+        }
     }
-    tios_org = tios;
-    tios.c_iflag &= ~(ISTRIP | INLCR | ICRNL | IXON | IXOFF);
-    //tios.c_oflag &= ~OPOST;
-    tios.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN);
-    tios.c_cc[VMIN] = 1;
-    tios.c_cc[VTIME] = 0;
-    if (tcsetattr(0, TCSANOW, &tios) < 0) {
-        throw std::runtime_error("Cannot set stdout mode");
-    }
-
-    //init = 1;
-    //atexit((void (*)(void))conio_close);
 }
 
 void Machine::close_keyboard()
 {
-    if (tcsetattr(0, TCSANOW, &tios_org) < 0) {
+    if (tios_orig.c_cc[VMIN] == 1 && tcsetattr(0, TCSANOW, &tios_orig) < 0) {
         std::cerr << "Error: Cannot restore stdout mode\n";
     }
 }

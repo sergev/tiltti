@@ -22,6 +22,7 @@
 // SOFTWARE.
 //
 #include <cstdint>
+#include <cstring>
 #include <iomanip>
 #include <sstream>
 
@@ -161,14 +162,118 @@ void Machine::int10_select_display_page()
     throw std::runtime_error("Unimplemented: Select display page");
 }
 
+//
+// AH=06h - Scroll window up
+// AH=07h - Scroll window down
+//
+// Scroll a rectangle up or down by a number of lines, or clear it (AL=0).
+// Inputs:
+//      AL = number of lines to scroll (0 = clear entire rectangle)
+//      BH = attribute for new lines
+//      CH, CL = upper-left row, column
+//      DH, DL = lower-right row, column
+//
 void Machine::int10_scroll_window_up()
 {
-    throw std::runtime_error("Unimplemented: Scroll window up");
+    scroll_window(1);
 }
 
 void Machine::int10_scroll_window_down()
 {
-    throw std::runtime_error("Unimplemented: Scroll window down");
+    scroll_window(-1);
+}
+
+void Machine::scroll_window(int dir)
+{
+    unsigned ulx = cpu.get_cl();
+    unsigned uly = cpu.get_ch();
+    unsigned lrx = cpu.get_dl();
+    unsigned lry = cpu.get_dh();
+    unsigned nbrows = bda.video_rows + 1;
+    unsigned nbcols = bda.video_cols;
+
+    if (lry >= nbrows)
+        lry = nbrows - 1;
+    if (lrx >= nbcols)
+        lrx = nbcols - 1;
+
+    int wincols = static_cast<int>(lrx - ulx + 1);
+    int winrows = static_cast<int>(lry - uly + 1);
+    if (wincols <= 0 || winrows <= 0)
+        return;
+
+    int lines = cpu.get_al();
+    if (lines >= winrows)
+        lines = 0;
+    lines *= dir;
+
+    unsigned page_offset = bda.video_pagesize * bda.video_page;
+    if (page_offset == 0)
+        page_offset = bda.video_cols * (bda.video_rows + 1) * 2;
+
+    int stride = bda.video_cols * 2;
+    Byte *base =
+        memory.get_ptr(0xb8000) + page_offset;
+    uint16_t fill = (cpu.get_bh() << 8) | 0x20;  // space + attribute
+
+    auto cell_addr = [&](int x, int y) {
+        return base + static_cast<ptrdiff_t>(y) * stride + x * 2;
+    };
+
+    auto store_cell = [&](int x, int y) {
+        memory.store16(0xb8000 + page_offset +
+                          (static_cast<unsigned>(y) * stride + x * 2),
+                      fill);
+    };
+
+    if (lines == 0) {
+        // Clear entire window.
+        for (int y = 0; y < winrows; y++) {
+            for (int x = 0; x < wincols; x++) {
+                store_cell(ulx + x, uly + y);
+            }
+        }
+        return;
+    }
+
+    if (lines > 0) {
+        // Scroll up: move block from (ulx, uly+lines) to (ulx, uly).
+        int nlines = winrows - lines;
+        Byte *dest = cell_addr(ulx, uly);
+        Byte *src = cell_addr(ulx, uly + lines);
+        int line_bytes = wincols * 2;
+
+        for (int i = 0; i < nlines; i++) {
+            std::memcpy(dest + i * stride, src + i * stride,
+                        static_cast<size_t>(line_bytes));
+        }
+
+        // Clear bottom lines.
+        for (int y = winrows - lines; y < winrows; y++) {
+            for (int x = 0; x < wincols; x++) {
+                store_cell(ulx + x, uly + y);
+            }
+        }
+    } else {
+        // Scroll down: move block from (ulx, uly) to (ulx, uly + abs(lines)).
+        int abs_lines = -lines;
+        int nlines = winrows - abs_lines;
+        Byte *dest = cell_addr(ulx, uly + abs_lines);
+        Byte *src = cell_addr(ulx, uly);
+        int line_bytes = wincols * 2;
+
+        for (int i = nlines - 1; i >= 0; i--) {
+            std::memcpy(dest + i * stride, src + i * stride,
+                        static_cast<size_t>(line_bytes));
+        }
+
+        // Clear top lines.
+        for (int y = 0; y < abs_lines; y++) {
+            for (int x = 0; x < wincols; x++) {
+                store_cell(ulx + x, uly + y);
+            }
+        }
+    }
 }
 
 void Machine::int10_read_char()
