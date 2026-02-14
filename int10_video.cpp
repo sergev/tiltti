@@ -134,6 +134,7 @@ void Machine::handle_int10_video()
 //
 void Machine::int10_set_video_mode()
 {
+    // TODO: update CRTC port and video hardware for mode switch
     throw std::runtime_error("Unimplemented: Set video mode");
 }
 
@@ -148,6 +149,7 @@ void Machine::int10_set_video_mode()
 void Machine::int10_set_cursor_shape()
 {
     bda.cursor_type = cpu.get_cx();
+    // TODO: update CRTC port (cursor shape registers 0x0a, 0x0b)
 }
 
 //
@@ -168,6 +170,7 @@ void Machine::int10_set_cursor_position()
     unsigned row = cpu.get_dh();
     unsigned col = cpu.get_dl();
     bda.cursor_pos[page] = (row << 8) | col;
+    // TODO: update CRTC port (cursor position 0x0e, 0x0f) when page == active page
 }
 
 void Machine::int10_get_cursor_position()
@@ -182,6 +185,7 @@ void Machine::int10_read_light_pen_position()
 
 void Machine::int10_select_display_page()
 {
+    // TODO: update CRTC port (display start address) and BDA video_page
     throw std::runtime_error("Unimplemented: Select display page");
 }
 
@@ -364,14 +368,15 @@ void Machine::int10_write_char()
     while (count--) {
         unsigned addr = 0xb8000 + page_offset + row * stride + col * 2;
         memory.store16(addr, (attr << 8) | ch);
-//std::cout << ch; // debug
+        //std::cout << ch; // debug
+
         col++;
         if (col >= bda.video_cols) {
             col = 0;
             row++;
         }
     }
-//std::cout << std::flush; // debug
+    //std::cout << std::flush; // debug
 
     bda.cursor_pos[page] = (row << 8) | col;
 }
@@ -383,6 +388,7 @@ void Machine::int10_write_char_only()
 
 void Machine::int10_set_cga_palette()
 {
+    // TODO: update CRTC port (CGA palette/background)
     throw std::runtime_error("Unimplemented: Set color palette");
 }
 
@@ -399,21 +405,81 @@ void Machine::int10_read_pixel()
 //
 // AH=0Eh - Teletype output.
 //
-// Output a character with interpretation: BEL (7), BS (8), CR, LF.
+// Output a character with interpretation: BEL (7), BS (8), CR (13), LF (10).
 // Other characters are written at the current cursor on the active page
-// and cursor advances. Screen scrolls when past bottom.
+// (character only, attribute preserved); cursor advances. Screen scrolls when past bottom.
 // Inputs:
 //      AL = character
-//      BL = attribute
+//      BL = attribute (unused; teletype preserves existing attribute)
 //
 void Machine::int10_teletype_output()
 {
-    // For now, print on stdout.
-    // Ignore attribute.
-    unsigned ch = cpu.get_al();
+    unsigned page = bda.video_page;
+    unsigned col = bda.cursor_pos[page] & 0xff;
+    unsigned row = bda.cursor_pos[page] >> 8;
+    uint8_t ch = cpu.get_al();
 
-    utf8_putc(cp437_to_unicode_table[ch]);
-    std::cout << std::flush;
+    unsigned page_offset = bda.video_pagesize * page;
+    if (page_offset == 0)
+        page_offset = bda.video_cols * (bda.video_rows + 1) * 2;
+    int stride = bda.video_cols * 2;
+    unsigned nbrows = bda.video_rows;
+#if 1
+    utf8_putc(cp437_to_unicode_table[ch]); // debug
+    std::cout << std::flush; // debug
+#endif
+    switch (ch) {
+    case 7:  // BEL - beep
+        std::cout << '\a' << std::flush;
+        break;
+    case 8:  // BS - backspace
+        if (col > 0)
+            col--;
+        break;
+    case '\r':  // CR - carriage return
+        col = 0;
+        break;
+    case '\n':  // LF - line feed
+        row++;
+        break;
+    default: {
+        // Write character only, preserve attribute.
+        unsigned addr = 0xb8000 + page_offset + row * stride + col * 2;
+        memory.store8(addr, ch);
+        col++;
+        if (col >= bda.video_cols) {
+            col = 0;
+            row++;
+        }
+        break;
+    }
+    }
+
+    // Scroll if past bottom.
+    if (row > nbrows) {
+        row = nbrows;
+
+        // Scroll full screen up by one line.
+        Byte *base = memory.get_ptr(0xb8000) + page_offset;
+        int wincols = bda.video_cols;
+        int winrows = nbrows + 1;
+
+        Byte *dest = base;
+        Byte *src = base + stride;
+        int line_bytes = wincols * 2;
+        for (int i = 0; i < winrows - 1; i++) {
+            std::memcpy(dest + i * stride, src + i * stride,
+                        static_cast<size_t>(line_bytes));
+        }
+        for (int x = 0; x < wincols; x++) {
+            memory.store16(0xb8000 + page_offset +
+                              (static_cast<unsigned>(winrows - 1) * stride + x * 2),
+                          (0x07 << 8) | 0x20);  // space, default attribute
+        }
+    }
+
+    bda.cursor_pos[page] = (row << 8) | col;
+    // TODO: update CRTC port (cursor position) when writing to video RAM
 }
 
 //
@@ -434,11 +500,13 @@ void Machine::int10_get_current_video_mode()
 
 void Machine::int10_palette_control()
 {
+    // TODO: update CRTC port (attribute controller, DAC)
     throw std::runtime_error("Unimplemented: Palette and DAC functions");
 }
 
 void Machine::int10_char_generator()
 {
+    // TODO: update CRTC port (font loading, character height)
     throw std::runtime_error("Unimplemented: Character generator");
 }
 
