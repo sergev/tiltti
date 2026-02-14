@@ -142,9 +142,24 @@ void Machine::int10_set_cursor_shape()
     throw std::runtime_error("Unimplemented: Set cursor shape");
 }
 
+//
+// AH=02h - Set cursor position.
+//
+// Set the cursor position on a given page.
+// Inputs:
+//      BH = page (0-7)
+//      DH = row
+//      DL = column
+//
 void Machine::int10_set_cursor_position()
 {
-    throw std::runtime_error("Unimplemented: Set cursor position");
+    unsigned page = cpu.get_bh();
+    if (page > 7)
+        return;
+
+    unsigned row = cpu.get_dh();
+    unsigned col = cpu.get_dl();
+    bda.cursor_pos[page] = (row << 8) | col;
 }
 
 void Machine::int10_get_cursor_position()
