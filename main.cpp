@@ -70,8 +70,9 @@ static void print_usage(std::ostream &out, const char *prog_name)
 
 //
 // Pump SDL events: keyboard -> machine queue, modifiers -> BDA, set quit on SDL_QUIT.
+// Return false when no events were processed.
 //
-static void pump_sdl_events(Machine &machine, bool &quit)
+static bool pump_sdl_events(Machine &machine, bool &quit)
 {
     SDL_Event event;
     unsigned count = 0;
@@ -79,7 +80,7 @@ static void pump_sdl_events(Machine &machine, bool &quit)
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) {
             quit = true;
-            return;
+            return true;
         }
         if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
             uint32_t sdl_sc = event.key.keysym.scancode;
@@ -121,23 +122,7 @@ static void pump_sdl_events(Machine &machine, bool &quit)
             }
         }
     }
-    if (count == 0) {
-        constexpr unsigned msec = 20;
-        SDL_Delay(msec);
-    }
-}
-
-//
-// Refresh SDL window from machine memory and BDA.
-//
-static void refresh_video(Machine &machine, Video_Adapter &video_adapter)
-{
-    if (!video_adapter.has_window())
-        return;
-    VideoRefreshParams p = machine.get_video_refresh_params();
-    if (p.need_refresh) {
-        video_adapter.refresh_from_memory(p.text_buf, p.cursor_col, p.cursor_row, p.cursor_type);
-    }
+    return (count > 0);
 }
 
 //
@@ -248,13 +233,22 @@ int main(int argc, char *argv[])
             return !quit;
         });
 
-        constexpr unsigned steps_per_frame = 5000;
         while (!quit) {
-            pump_sdl_events(machine, quit);
-            machine.run_batch(steps_per_frame);
-            refresh_video(machine, video_adapter);
+            bool active = pump_sdl_events(machine, quit);
             if (quit)
                 break;
+
+            constexpr unsigned steps_per_frame = 5000;
+            machine.run_batch(steps_per_frame);
+
+            // Refresh SDL window from machine memory and BDA.
+            VideoRefreshParams p = machine.get_video_refresh_params();
+            if (p.need_refresh) {
+                video_adapter.refresh_from_memory(p.text_buf, p.cursor_col, p.cursor_row, p.cursor_type);
+            } else if (!active) {
+                constexpr unsigned msec = 20;
+                SDL_Delay(msec);
+            }
         }
 
         // Finish the trace output.
