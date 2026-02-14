@@ -25,45 +25,12 @@
 #include <cstdlib>
 #include <iomanip>
 #include <sstream>
-#include <termios.h>
-#include <unistd.h>
-#include <sys/select.h>
 
 #include <SDL.h>
 
 #include "encoding.h"
 #include "machine.h"
 #include "pc86_arch.h"
-
-static struct termios tios_orig;
-static bool termios_was_set = false;
-
-void Machine::setup_keyboard()
-{
-    struct termios tios;
-
-    if (tcgetattr(1, &tios) >= 0) {
-        tios_orig     = tios;
-        termios_was_set = true;
-        tios.c_iflag &= ~(ISTRIP | INLCR | ICRNL | IXON | IXOFF);
-        tios.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN);
-        tios.c_cc[VMIN] = 1;
-        tios.c_cc[VTIME] = 0;
-        if (tcsetattr(0, TCSANOW, &tios) < 0) {
-            throw std::runtime_error("Cannot set stdout mode");
-        }
-    }
-}
-
-void Machine::close_keyboard()
-{
-    if (termios_was_set) {
-        termios_was_set = false;
-        if (tcsetattr(0, TCSANOW, &tios_orig) < 0) {
-            std::cerr << "Error: Cannot restore stdout mode\n";
-        }
-    }
-}
 
 //
 // Process Int 16h request: Keyboard.
@@ -130,31 +97,14 @@ void Machine::handle_int16_keyboard()
 //
 void Machine::int16_read_keyboard_input()
 {
-    if (use_sdl_display()) {
-        while (!has_keystroke()) {
-            pump_sdl_events();
-            if (sdl_quit_requested())
-                std::exit(0);
-            SDL_Delay(5);
-        }
-        uint16_t ax = pop_keystroke();
-        cpu.set_ax(ax);
-        return;
+    while (!has_keystroke()) {
+        pump_sdl_events();
+        if (sdl_quit_requested())
+            std::exit(0);
+        SDL_Delay(5);
     }
-
-    char c;
-    for (;;) {
-        switch (read(0, &c, 1)) {
-        case 0:
-            continue;
-        case 1:
-            cpu.set_al(static_cast<uint8_t>(c));
-            cpu.set_ah(static_cast<uint8_t>(c));
-            return;
-        default:
-            std::exit(-1);
-        }
-    }
+    uint16_t ax = pop_keystroke();
+    cpu.set_ax(ax);
 }
 
 //
@@ -172,23 +122,10 @@ void Machine::int16_read_keyboard_input()
 //
 void Machine::int16_check_keyboard_status()
 {
-    if (use_sdl_display()) {
-        pump_sdl_events();
-        if (has_keystroke()) {
-            cpu.set_zf(0);
-            cpu.set_ax(peek_keystroke());
-        } else {
-            cpu.set_zf(1);
-        }
-        return;
-    }
-
-    fd_set rfds;
-    struct timeval tout{};
-    FD_ZERO(&rfds);
-    FD_SET(0, &rfds);
-    if (select(1, &rfds, nullptr, nullptr, &tout) == 1) {
+    pump_sdl_events();
+    if (has_keystroke()) {
         cpu.set_zf(0);
+        cpu.set_ax(peek_keystroke());
     } else {
         cpu.set_zf(1);
     }

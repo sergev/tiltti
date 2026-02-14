@@ -59,8 +59,7 @@ private:
     bool after_call{};          // right after JVM instruction
     bool after_return{};        // right after UJ(13) instruction
 
-    // SDL display and keyboard (when use_sdl_display_ is true).
-    bool use_sdl_display_{};
+    // SDL display and keyboard.
     bool sdl_quit_requested_{};
     std::unique_ptr<Video_Adapter> video_adapter_;
     std::queue<uint16_t> keyboard_queue_;
@@ -82,8 +81,7 @@ public:
     Byte *bios;                    // Bios ROM at 0xf0000
     Floppy_Extended_Disk_Base_Table &diskette_param_table2;
 
-    // Constructor. When use_sdl_display is true, create SDL window and use SDL for keyboard.
-    explicit Machine(Memory &memory, bool use_sdl_display = false);
+    explicit Machine(Memory &memory);
 
     // Destructor.
     ~Machine();
@@ -91,15 +89,13 @@ public:
     // Run simulation.
     void run();
 
-    bool use_sdl_display() const { return use_sdl_display_; }
-
-    // Keyboard queue (used when SDL display is active). AX = (scancode << 8) | ASCII.
+    // Keyboard queue. AX = (scancode << 8) | ASCII.
     void push_keystroke(uint16_t ax);
     bool has_keystroke() const;
     uint16_t peek_keystroke() const;
     uint16_t pop_keystroke();
 
-    // Refresh SDL window from memory at 0xb8000 and BDA (no-op when no display).
+    // Refresh SDL window from memory at 0xb8000 and BDA.
     void refresh_video();
 
     // Pump SDL events (keyboard -> queue, modifiers -> BDA, QUIT flag). Return false if QUIT.
@@ -186,9 +182,6 @@ public:
     static void print_exception(const char *message);
     static void print_byte_access(unsigned addr, Byte val, const char *opname);
     static void print_word_access(unsigned addr, Word val, const char *opname);
-
-    static void setup_keyboard();
-    static void close_keyboard();
 
 private:
     void setup_bios_config_table();

@@ -424,7 +424,7 @@ void Machine::int10_teletype_output()
         page_offset = bda.video_cols * (bda.video_rows + 1) * 2;
     int stride = bda.video_cols * 2;
     unsigned nbrows = bda.video_rows;
-#if 1
+#if 0
     utf8_putc(cp437_to_unicode_table[ch]); // debug
     std::cout << std::flush; // debug
 #endif

@@ -45,12 +45,10 @@ bool Machine::verbose                    = false;
 uint64_t Machine::simulated_instructions = 0;
 
 //
-// Initialize the machine.
-// When use_sdl_display is true, create SDL window and use SDL for keyboard; otherwise termios.
+// Initialize the machine. Create SDL window and use SDL for display and keyboard.
 //
-Machine::Machine(Memory &m, bool use_sdl_display)
-    : use_sdl_display_(use_sdl_display),
-      memory(m), cpu(*this), ivt(*(Interrupt_Vector_Table *)memory.get_ptr(0x0)),
+Machine::Machine(Memory &m)
+    : memory(m), cpu(*this), ivt(*(Interrupt_Vector_Table *)memory.get_ptr(0x0)),
       bda(*(Bios_Data_Area *)memory.get_ptr(0x400)),
       ebda(*(Extended_Bios_Data_Area *)memory.get_ptr(0x9fc00)), bios(memory.get_ptr(0xf0000)),
       diskette_param_table2(*(Floppy_Extended_Disk_Base_Table *)bios)
@@ -73,16 +71,10 @@ Machine::Machine(Memory &m, bool use_sdl_display)
     // Floppy disk installed.
     setup_floppy();
 
-    if (use_sdl_display) {
-        video_adapter_ = std::make_unique<Video_Adapter>(true, memory.get_ptr(0xb8000));
-        if (!video_adapter_->has_window()) {
-            video_adapter_.reset();
-            use_sdl_display_ = false;
-            setup_keyboard();
-        }
+    video_adapter_ = std::make_unique<Video_Adapter>(true, memory.get_ptr(0xb8000));
+    if (!video_adapter_->has_window()) {
+        throw std::runtime_error("SDL: cannot create display window");
     }
-    if (!use_sdl_display_)
-        setup_keyboard();
 
     // Setup video.
     bda.video_mode = 3; // Text mode: 80 columns, 25 rows, 16 colors
@@ -99,12 +91,10 @@ Machine::~Machine()
 {
     redirect_trace(nullptr, "");
     enable_trace("");
-    close_keyboard();
 }
 
 //
-// Run the machine until completion.
-// When SDL display is active: poll events, run a batch of steps, refresh video, ~60 fps.
+// Run the machine until completion. Poll SDL events, run a batch of steps, refresh video, ~60 fps.
 //
 void Machine::run()
 {
@@ -112,29 +102,17 @@ void Machine::run()
     constexpr unsigned steps_per_frame = 5000;
     constexpr unsigned frame_ms        = 16;
 
-    if (use_sdl_display_ && video_adapter_) {
-        while (pump_sdl_events()) {
-            for (unsigned i = 0; i < steps_per_frame && !sdl_quit_requested_; i++) {
-                after_call   = false;
-                after_return = false;
-                cpu.step();
-                simulated_instructions++;
-            }
-            refresh_video();
-            if (sdl_quit_requested_)
-                break;
-            SDL_Delay(frame_ms);
+    while (pump_sdl_events()) {
+        for (unsigned i = 0; i < steps_per_frame && !sdl_quit_requested_; i++) {
+            after_call   = false;
+            after_return = false;
+            cpu.step();
+            simulated_instructions++;
         }
-        return;
-    }
-
-    for (;;) {
-        after_call   = false;
-        after_return = false;
-
-        cpu.step();
-
-        simulated_instructions++;
+        refresh_video();
+        if (sdl_quit_requested_)
+            break;
+        SDL_Delay(frame_ms);
     }
 }
 
@@ -179,8 +157,6 @@ void Machine::refresh_video()
 
 bool Machine::pump_sdl_events()
 {
-    if (!use_sdl_display_)
-        return true;
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) {
