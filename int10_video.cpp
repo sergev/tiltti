@@ -137,9 +137,17 @@ void Machine::int10_set_video_mode()
     throw std::runtime_error("Unimplemented: Set video mode");
 }
 
+//
+// AH=01h - Set cursor shape.
+//
+// Set the cursor shape or hide the cursor.
+// Inputs:
+//      CX = cursor type (CH = start scan line, CL = end scan line).
+//           CX=0x0000 hides the cursor.
+//
 void Machine::int10_set_cursor_shape()
 {
-    throw std::runtime_error("Unimplemented: Set cursor shape");
+    bda.cursor_type = cpu.get_cx();
 }
 
 //
@@ -291,14 +299,81 @@ void Machine::scroll_window(int dir)
     }
 }
 
+//
+// AH=08h - Read character and attribute at cursor.
+//
+// Read the character and attribute at the current cursor position on the given page.
+// Inputs:
+//      BH = page (0-7)
+// Outputs:
+//      AL = character code
+//      AH = attribute
+//
 void Machine::int10_read_char()
 {
-    throw std::runtime_error("Unimplemented: Read character and attribute");
+    unsigned page = cpu.get_bh();
+    if (page > 7) {
+        cpu.set_al(0);
+        cpu.set_ah(0);
+        return;
+    }
+
+    unsigned col = bda.cursor_pos[page] & 0xff;
+    unsigned row = bda.cursor_pos[page] >> 8;
+
+    unsigned page_offset = bda.video_pagesize * page;
+    if (page_offset == 0)
+        page_offset = bda.video_cols * (bda.video_rows + 1) * 2;
+    int stride = bda.video_cols * 2;
+
+    unsigned addr = 0xb8000 + page_offset + row * stride + col * 2;
+    uint16_t v = memory.load16(addr);
+
+    cpu.set_al(v & 0xff);
+    cpu.set_ah(v >> 8);
 }
 
+//
+// AH=09h - Write character and attribute.
+//
+// Write a character with attribute at the cursor position, repeated CX times;
+// cursor advances for each character.
+// Inputs:
+//      AL = character
+//      BH = page (0-7)
+//      BL = attribute
+//      CX = count
+//
 void Machine::int10_write_char()
 {
-    throw std::runtime_error("Unimplemented: Write character and attribute");
+    unsigned page = cpu.get_bh();
+    if (page > 7)
+        return;
+
+    unsigned col = bda.cursor_pos[page] & 0xff;
+    unsigned row = bda.cursor_pos[page] >> 8;
+    unsigned count = cpu.get_cx();
+    uint8_t ch = cpu.get_al();
+    uint8_t attr = cpu.get_bl();
+
+    unsigned page_offset = bda.video_pagesize * page;
+    if (page_offset == 0)
+        page_offset = bda.video_cols * (bda.video_rows + 1) * 2;
+    int stride = bda.video_cols * 2;
+
+    while (count--) {
+        unsigned addr = 0xb8000 + page_offset + row * stride + col * 2;
+        memory.store16(addr, (attr << 8) | ch);
+//std::cout << ch; // debug
+        col++;
+        if (col >= bda.video_cols) {
+            col = 0;
+            row++;
+        }
+    }
+//std::cout << std::flush; // debug
+
+    bda.cursor_pos[page] = (row << 8) | col;
 }
 
 void Machine::int10_write_char_only()
