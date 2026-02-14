@@ -90,9 +90,9 @@ enum {
 //
 class Processor {
 private:
-    Machine &machine;        // Reference to the machine
-    struct CoreState core{}; // Current state
-    struct CoreState prev{}; // Previous state, for tracing
+    Machine &machine;         // Reference to the machine
+    struct CoreState core {}; // Current state
+    struct CoreState prev {}; // Previous state, for tracing
 
     // Current opcode being executed.
     std::vector<Byte> opcode{};

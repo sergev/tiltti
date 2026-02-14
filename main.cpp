@@ -244,7 +244,8 @@ int main(int argc, char *argv[])
             // Refresh SDL window from machine memory and BDA.
             VideoRefreshParams p = machine.get_video_refresh_params();
             if (p.need_refresh) {
-                video_adapter.refresh_from_memory(p.text_buf, p.cursor_col, p.cursor_row, p.cursor_type);
+                video_adapter.refresh_from_memory(p.text_buf, p.cursor_col, p.cursor_row,
+                                                  p.cursor_type);
             } else if (!active) {
                 constexpr unsigned msec = 20;
                 SDL_Delay(msec);

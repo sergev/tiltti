@@ -124,11 +124,10 @@ VideoRefreshParams Machine::get_video_refresh_params()
 
 void Machine::set_kbd_modifiers(uint16_t flags)
 {
-    uint16_t &f0 = bda.kbd_flag0;
-    f0 &= static_cast<uint16_t>(
-        ~(KF0_RSHIFT | KF0_LSHIFT | KF0_CTRL | KF0_ALT | KF0_SCROLL | KF0_NUMLOCK | KF0_CAPSLOCK));
-    f0 |= (flags & (KF0_RSHIFT | KF0_LSHIFT | KF0_CTRL | KF0_ALT | KF0_SCROLL | KF0_NUMLOCK |
-                    KF0_CAPSLOCK));
+    bda.kbd_flag0 &=
+        ~(KF0_RSHIFT | KF0_LSHIFT | KF0_CTRL | KF0_ALT | KF0_SCROLL | KF0_NUMLOCK | KF0_CAPSLOCK);
+    bda.kbd_flag0 |= flags & (KF0_RSHIFT | KF0_LSHIFT | KF0_CTRL | KF0_ALT | KF0_SCROLL |
+                              KF0_NUMLOCK | KF0_CAPSLOCK);
 }
 
 void Machine::push_keystroke(uint16_t ax)
