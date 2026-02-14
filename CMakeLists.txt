@@ -57,6 +57,17 @@ add_executable(${PROJECT_NAME} main.cpp)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CAPSTONE_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} simulator ${CAPSTONE_LIBRARIES})
 
+# Build image of Basic ROM.
+add_dependencies(${PROJECT_NAME} generate_basic_rom_h)
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/basic_rom.h
+    COMMAND xxd -i -n basic_rom ${CMAKE_CURRENT_SOURCE_DIR}/images/ibm-basic-1.10.rom > ${CMAKE_CURRENT_SOURCE_DIR}/basic_rom.h
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/images/ibm-basic-1.10.rom
+    COMMENT "Generating basic_rom.h"
+    VERBATIM
+)
+add_custom_target(generate_basic_rom_h DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/basic_rom.h)
+
 # Get git commit hash and revision count
 execute_process(
     COMMAND git log -1 --format=%h

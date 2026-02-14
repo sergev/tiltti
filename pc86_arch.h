@@ -230,6 +230,14 @@ enum {
 };
 
 //
+// Basic Addresses.
+//
+enum {
+    BASIC_ROM_ADDR = 0xd6000, // Start of Basic ROM in memory
+    BASIC_ROM_LEN  = 0x8000,  // Size in bytes
+};
+
+//
 // Bios Config Table.
 //
 struct Bios_Config_Table {

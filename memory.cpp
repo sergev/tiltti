@@ -29,6 +29,21 @@
 #include <iostream>
 #include <sstream>
 
+// Use namespace to hide the Basic ROM as static.
+namespace {
+const
+#include "basic_rom.h"
+};
+
+//
+// Constructor.
+//
+Memory::Memory()
+{
+    // Initialize Basic ROM.
+    memcpy(&mem[BASIC_ROM_ADDR], basic_rom, basic_rom_len);
+}
+
 //
 // Dump block of memory to file.
 //

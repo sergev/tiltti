@@ -34,7 +34,7 @@ private:
     std::array<Byte, MEMORY_NBYTES> mem{};
 
 public:
-    explicit Memory() = default;
+    explicit Memory();
     virtual ~Memory() = default;
 
     // Load/store byte from/to memory.

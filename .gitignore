@@ -1,4 +1,5 @@
 build/
+basic_rom.h
 legacy/
 outdir*/
 .idea

@@ -123,6 +123,7 @@ public:
 
     // Boot from disk or floppy image.
     void boot_disk(const std::string &filename);
+    void start_basic();
 
     // Syscalls.
     bool is_syscall(int type);

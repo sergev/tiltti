@@ -95,13 +95,18 @@ void Machine::run()
     }
 }
 
+static bool basic_area(unsigned addr)
+{
+    return addr >= BASIC_ROM_ADDR && addr < BASIC_ROM_ADDR + BASIC_ROM_LEN;
+}
+
 //
 // Fetch one byte of instruction from memory.
 // No tracing.
 //
 Byte Machine::mem_fetch_byte(unsigned addr)
 {
-    if (mode_640k && addr >= 0xa0000) {
+    if (mode_640k && addr >= 0xa0000 && !basic_area(addr)) {
         throw std::runtime_error("Jump to Upper Memory Area");
     }
     Byte val = memory.load8(addr);
@@ -291,7 +296,7 @@ void Machine::disk_mount(unsigned disk_unit, const std::string &path, bool write
 }
 
 //
-// Load binary program (overlay).
+// Boot from floppy image.
 //
 void Machine::boot_disk(const std::string &filename)
 {
@@ -312,6 +317,19 @@ void Machine::boot_disk(const std::string &filename)
     if (disk_io_chs('r', FLOPPY_A, 0, 0, 1, addr, SECTOR_NBYTES) != DISK_RET_SUCCESS) {
         throw std::runtime_error("Cannot read boot sector");
     }
+}
+
+//
+// Start Basic from ROM.
+//
+void Machine::start_basic()
+{
+    // Enable Upper Memory Area.
+    mode_640k = true;
+
+    // Start at address 6d00:0000.
+    cpu.set_cs(BASIC_ROM_ADDR >> 4);
+    cpu.set_ip(0);
 }
 
 //

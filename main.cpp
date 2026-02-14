@@ -154,7 +154,11 @@ int main(int argc, char *argv[])
 
     try {
         // Boot from disk.
-        machine.boot_disk(disk_file);
+        if (disk_file == "-") {
+            machine.start_basic();
+        } else {
+            machine.boot_disk(disk_file);
+        }
 
         // Run simulation.
         machine.run();
