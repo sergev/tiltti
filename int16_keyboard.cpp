@@ -22,26 +22,30 @@
 // SOFTWARE.
 //
 #include <cstdint>
+#include <cstdlib>
 #include <iomanip>
 #include <sstream>
 #include <termios.h>
 #include <unistd.h>
 #include <sys/select.h>
 
+#include <SDL.h>
+
 #include "encoding.h"
 #include "machine.h"
 #include "pc86_arch.h"
 
 static struct termios tios_orig;
+static bool termios_was_set = false;
 
 void Machine::setup_keyboard()
 {
     struct termios tios;
 
     if (tcgetattr(1, &tios) >= 0) {
-        tios_orig = tios;
+        tios_orig     = tios;
+        termios_was_set = true;
         tios.c_iflag &= ~(ISTRIP | INLCR | ICRNL | IXON | IXOFF);
-        //tios.c_oflag &= ~OPOST;
         tios.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN);
         tios.c_cc[VMIN] = 1;
         tios.c_cc[VTIME] = 0;
@@ -53,8 +57,11 @@ void Machine::setup_keyboard()
 
 void Machine::close_keyboard()
 {
-    if (tios_orig.c_cc[VMIN] == 1 && tcsetattr(0, TCSANOW, &tios_orig) < 0) {
-        std::cerr << "Error: Cannot restore stdout mode\n";
+    if (termios_was_set) {
+        termios_was_set = false;
+        if (tcsetattr(0, TCSANOW, &tios_orig) < 0) {
+            std::cerr << "Error: Cannot restore stdout mode\n";
+        }
     }
 }
 
@@ -123,21 +130,29 @@ void Machine::handle_int16_keyboard()
 //
 void Machine::int16_read_keyboard_input()
 {
-    char c;
+    if (use_sdl_display()) {
+        while (!has_keystroke()) {
+            pump_sdl_events();
+            if (sdl_quit_requested())
+                std::exit(0);
+            SDL_Delay(5);
+        }
+        uint16_t ax = pop_keystroke();
+        cpu.set_ax(ax);
+        return;
+    }
 
+    char c;
     for (;;) {
         switch (read(0, &c, 1)) {
         case 0:
-            // No input - wait.
             continue;
         case 1:
-            // Valid input.
-            cpu.set_al(c);
-            cpu.set_ah(c); // TODO: scancode
+            cpu.set_al(static_cast<uint8_t>(c));
+            cpu.set_ah(static_cast<uint8_t>(c));
             return;
         default:
-            // EOF
-            exit(-1);
+            std::exit(-1);
         }
     }
 }
@@ -157,13 +172,22 @@ void Machine::int16_read_keyboard_input()
 //
 void Machine::int16_check_keyboard_status()
 {
+    if (use_sdl_display()) {
+        pump_sdl_events();
+        if (has_keystroke()) {
+            cpu.set_zf(0);
+            cpu.set_ax(peek_keystroke());
+        } else {
+            cpu.set_zf(1);
+        }
+        return;
+    }
+
     fd_set rfds;
     struct timeval tout{};
-
-    // Check input on stdin.
     FD_ZERO(&rfds);
     FD_SET(0, &rfds);
-    if (select(1, &rfds, NULL, NULL, &tout) == 1) {
+    if (select(1, &rfds, nullptr, nullptr, &tout) == 1) {
         cpu.set_zf(0);
     } else {
         cpu.set_zf(1);
@@ -184,7 +208,7 @@ void Machine::int16_check_keyboard_status()
 //
 void Machine::int16_get_shift_flag_status()
 {
-    // No flags for now.
+    cpu.set_al(static_cast<uint8_t>(bda.kbd_flag0 & 0xff));
     cpu.set_ah(0);
 }
 

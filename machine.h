@@ -27,12 +27,15 @@
 #include <array>
 #include <chrono>
 #include <memory>
+#include <queue>
 #include <set>
 #include <unordered_map>
 #include <vector>
 
 #include "disk.h"
 #include "processor.h"
+
+class Video_Adapter;
 
 class Machine {
 private:
@@ -56,6 +59,12 @@ private:
     bool after_call{};          // right after JVM instruction
     bool after_return{};        // right after UJ(13) instruction
 
+    // SDL display and keyboard (when use_sdl_display_ is true).
+    bool use_sdl_display_{};
+    bool sdl_quit_requested_{};
+    std::unique_ptr<Video_Adapter> video_adapter_;
+    std::queue<uint16_t> keyboard_queue_;
+
     // Static stuff.
     static bool verbose;                    // Verbose flag for tracing
     static uint64_t simulated_instructions; // Count of instructions
@@ -73,14 +82,30 @@ public:
     Byte *bios;                    // Bios ROM at 0xf0000
     Floppy_Extended_Disk_Base_Table &diskette_param_table2;
 
-    // Constructor.
-    explicit Machine(Memory &memory);
+    // Constructor. When use_sdl_display is true, create SDL window and use SDL for keyboard.
+    explicit Machine(Memory &memory, bool use_sdl_display = false);
 
     // Destructor.
     ~Machine();
 
     // Run simulation.
     void run();
+
+    bool use_sdl_display() const { return use_sdl_display_; }
+
+    // Keyboard queue (used when SDL display is active). AX = (scancode << 8) | ASCII.
+    void push_keystroke(uint16_t ax);
+    bool has_keystroke() const;
+    uint16_t peek_keystroke() const;
+    uint16_t pop_keystroke();
+
+    // Refresh SDL window from memory at 0xb8000 and BDA (no-op when no display).
+    void refresh_video();
+
+    // Pump SDL events (keyboard -> queue, modifiers -> BDA, QUIT flag). Return false if QUIT.
+    bool pump_sdl_events();
+
+    bool sdl_quit_requested() const { return sdl_quit_requested_; }
 
     // Get instruction count.
     static uint64_t get_instr_count() { return simulated_instructions; }

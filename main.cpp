@@ -34,6 +34,7 @@ static const struct option long_options[] = {
     { "help",           no_argument,        nullptr,    'h' },
     { "version",        no_argument,        nullptr,    'V' },
     { "verbose",        no_argument,        nullptr,    'v' },
+    { "display",        no_argument,        nullptr,    'd' },
     { "output",         required_argument,  nullptr,    'o' },
     { "regs",           required_argument,  nullptr,    'r' },
     { "ports",          required_argument,  nullptr,    'p' },
@@ -53,6 +54,7 @@ static void print_usage(std::ostream &out, const char *prog_name)
     out << "Input files:" << std::endl;
     out << "    disk.img                Image of bootable PC floppy or disk" << std::endl;
     out << "Options:" << std::endl;
+    out << "    -d, --display           Show VGA display in SDL window and use SDL keyboard" << std::endl;
     out << "    -v, --verbose           Verbose mode" << std::endl;
     out << "    -V, --version           Print the version number and exit" << std::endl;
     out << "    -h, --help              Display available options" << std::endl;
@@ -77,16 +79,14 @@ int main(int argc, char *argv[])
         prog_name++;
     }
 
-    // Instantiate the machine.
     Memory memory;
-    Machine machine{ memory };
-
-    // A name of disk file.
+    bool use_display = false;
+    bool verbose     = false;
     std::string disk_file;
 
     // Parse command line options.
     for (;;) {
-        switch (getopt_long(argc, argv, "-hVvrspo:", long_options, nullptr)) {
+        switch (getopt_long(argc, argv, "-hVvdrspo:", long_options, nullptr)) {
         case EOF:
             break;
 
@@ -109,8 +109,11 @@ int main(int argc, char *argv[])
             exit(EXIT_SUCCESS);
 
         case 'v':
-            // Verbose.
-            machine.set_verbose(true);
+            verbose = true;
+            continue;
+
+        case 'd':
+            use_display = true;
             continue;
 
         case 'V':
@@ -151,6 +154,10 @@ int main(int argc, char *argv[])
         print_usage(std::cerr, prog_name);
         exit(EXIT_FAILURE);
     }
+
+    Machine machine{ memory, use_display };
+    if (verbose)
+        machine.set_verbose(true);
 
     try {
         // Boot from disk.

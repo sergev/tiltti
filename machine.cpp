@@ -23,6 +23,7 @@
 //
 #include "machine.h"
 
+#include <SDL.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -36,15 +37,20 @@
 #include <regex>
 #include <sstream>
 
+#include "sdl_scancode_map.h"
+#include "video_adapter.h"
+
 // Static fields.
 bool Machine::verbose                    = false;
 uint64_t Machine::simulated_instructions = 0;
 
 //
 // Initialize the machine.
+// When use_sdl_display is true, create SDL window and use SDL for keyboard; otherwise termios.
 //
-Machine::Machine(Memory &m)
-    : memory(m), cpu(*this), ivt(*(Interrupt_Vector_Table *)memory.get_ptr(0x0)),
+Machine::Machine(Memory &m, bool use_sdl_display)
+    : use_sdl_display_(use_sdl_display),
+      memory(m), cpu(*this), ivt(*(Interrupt_Vector_Table *)memory.get_ptr(0x0)),
       bda(*(Bios_Data_Area *)memory.get_ptr(0x400)),
       ebda(*(Extended_Bios_Data_Area *)memory.get_ptr(0x9fc00)), bios(memory.get_ptr(0xf0000)),
       diskette_param_table2(*(Floppy_Extended_Disk_Base_Table *)bios)
@@ -66,7 +72,17 @@ Machine::Machine(Memory &m)
 
     // Floppy disk installed.
     setup_floppy();
-    setup_keyboard();
+
+    if (use_sdl_display) {
+        video_adapter_ = std::make_unique<Video_Adapter>(true, memory.get_ptr(0xb8000));
+        if (!video_adapter_->has_window()) {
+            video_adapter_.reset();
+            use_sdl_display_ = false;
+            setup_keyboard();
+        }
+    }
+    if (!use_sdl_display_)
+        setup_keyboard();
 
     // Setup video.
     bda.video_mode = 3; // Text mode: 80 columns, 25 rows, 16 colors
@@ -88,10 +104,30 @@ Machine::~Machine()
 
 //
 // Run the machine until completion.
+// When SDL display is active: poll events, run a batch of steps, refresh video, ~60 fps.
 //
 void Machine::run()
 {
     trace_registers();
+    constexpr unsigned steps_per_frame = 5000;
+    constexpr unsigned frame_ms        = 16;
+
+    if (use_sdl_display_ && video_adapter_) {
+        while (pump_sdl_events()) {
+            for (unsigned i = 0; i < steps_per_frame && !sdl_quit_requested_; i++) {
+                after_call   = false;
+                after_return = false;
+                cpu.step();
+                simulated_instructions++;
+            }
+            refresh_video();
+            if (sdl_quit_requested_)
+                break;
+            SDL_Delay(frame_ms);
+        }
+        return;
+    }
+
     for (;;) {
         after_call   = false;
         after_return = false;
@@ -100,6 +136,100 @@ void Machine::run()
 
         simulated_instructions++;
     }
+}
+
+void Machine::push_keystroke(uint16_t ax)
+{
+    keyboard_queue_.push(ax);
+}
+
+bool Machine::has_keystroke() const
+{
+    return !keyboard_queue_.empty();
+}
+
+uint16_t Machine::peek_keystroke() const
+{
+    return keyboard_queue_.front();
+}
+
+uint16_t Machine::pop_keystroke()
+{
+    uint16_t ax = keyboard_queue_.front();
+    keyboard_queue_.pop();
+    return ax;
+}
+
+void Machine::refresh_video()
+{
+    if (!video_adapter_ || !video_adapter_->has_window())
+        return;
+    unsigned page = bda.video_page;
+    if (page > 7)
+        page = 0;
+    unsigned pos = bda.cursor_pos[page];
+    unsigned col = pos & 0xff;
+    unsigned row = pos >> 8;
+    unsigned page_offset = bda.video_pagesize * page;
+    if (page_offset == 0)
+        page_offset = bda.video_cols * (bda.video_rows + 1) * 2;
+    const uint8_t *text_buf = memory.get_ptr(0xb8000) + page_offset;
+    video_adapter_->refresh_from_memory(text_buf, col, row, bda.cursor_type);
+}
+
+bool Machine::pump_sdl_events()
+{
+    if (!use_sdl_display_)
+        return true;
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            sdl_quit_requested_ = true;
+            return false;
+        }
+        if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
+            uint32_t sdl_sc = event.key.keysym.scancode;
+            bool down       = (event.type == SDL_KEYDOWN);
+
+            // Update modifier flags in BDA (low byte of kbd_flag0).
+            uint16_t mod = SDL_GetModState();
+            uint16_t &f0 = bda.kbd_flag0;
+            f0 &= static_cast<uint16_t>(~(KF0_RSHIFT | KF0_LSHIFT | KF0_CTRL | KF0_ALT));
+            if (mod & KMOD_RSHIFT)
+                f0 |= KF0_RSHIFT;
+            if (mod & KMOD_LSHIFT)
+                f0 |= KF0_LSHIFT;
+            if (mod & KMOD_CTRL)
+                f0 |= KF0_CTRL;
+            if (mod & KMOD_ALT)
+                f0 |= KF0_ALT;
+            const Uint8 *state = SDL_GetKeyboardState(nullptr);
+            if (state[SDL_SCANCODE_SCROLLLOCK])
+                f0 |= KF0_SCROLL;
+            if (state[SDL_SCANCODE_NUMLOCKCLEAR])
+                f0 |= KF0_NUMLOCK;
+            if (state[SDL_SCANCODE_CAPSLOCK])
+                f0 |= KF0_CAPSLOCK;
+
+            if (down) {
+                uint8_t bios_sc = sdl_to_bios_scancode(sdl_sc);
+                uint8_t bios_ext = sdl_to_bios_scancode_extended(sdl_sc);
+                uint8_t ascii    = 0;
+                if (mod & KMOD_SHIFT)
+                    ascii = sdl_scancode_to_ascii_shifted(sdl_sc);
+                if (ascii == 0)
+                    ascii = sdl_scancode_to_ascii_unshifted(sdl_sc);
+                if (bios_ext) {
+                    // Extended key: BIOS expects 0xE0 in low byte, scan in high for some; or 0x00, 0xE0xx.
+                    // INT 16h returns AX = (scancode << 8) | ASCII. Extended often: AL=0, AH=ext_scan.
+                    push_keystroke((static_cast<uint16_t>(bios_ext) << 8) | 0x00);
+                } else if (bios_sc) {
+                    push_keystroke((static_cast<uint16_t>(bios_sc) << 8) | ascii);
+                }
+            }
+        }
+    }
+    return true;
 }
 
 static bool basic_area(unsigned addr)

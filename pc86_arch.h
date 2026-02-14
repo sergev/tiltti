@@ -340,4 +340,17 @@ struct Extended_Bios_Data_Area {
 #define EXTSTART_HD 0x80 // Hard disk
 #define EXTSTART_CD 0xE0 // CD-ROM
 
+//
+// BDA kbd_flag0 bits (low byte).
+//
+enum {
+    KF0_RSHIFT   = 0x01,
+    KF0_LSHIFT   = 0x02,
+    KF0_CTRL     = 0x04,
+    KF0_ALT      = 0x08,
+    KF0_SCROLL   = 0x10,
+    KF0_NUMLOCK  = 0x20,
+    KF0_CAPSLOCK = 0x40,
+};
+
 #endif // TILTTI_I86_ARCH_H

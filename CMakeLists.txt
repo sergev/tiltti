@@ -12,6 +12,7 @@ endif()
 
 include(FindPkgConfig)
 pkg_check_modules(CAPSTONE REQUIRED capstone)
+find_package(SDL2 REQUIRED)
 
 #
 # TODO: Enable cppcheck by default
@@ -50,7 +51,10 @@ add_library(simulator STATIC
     int16_keyboard.cpp
     int17_printer.cpp
     int1a_rtc_timer.cpp
+    video_adapter.cpp
+    sdl_scancode_map.cpp
 )
+target_link_libraries(simulator PUBLIC SDL2::SDL2)
 
 # Build executable file
 add_executable(${PROJECT_NAME} main.cpp)
