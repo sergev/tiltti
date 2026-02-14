@@ -21,10 +21,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
+#include <sys/time.h>
+
 #include <cstdint>
 #include <iomanip>
 #include <sstream>
-#include <sys/time.h>
 
 #include "encoding.h"
 #include "machine.h"
@@ -72,10 +73,10 @@ void Machine::handle_int1a_rtc_timer()
     }
 }
 
-//static unsigned bcd2bin(unsigned val)
+// static unsigned bcd2bin(unsigned val)
 //{
-//    return (val & 0xf) + ((val >> 4) * 10);
-//}
+//     return (val & 0xf) + ((val >> 4) * 10);
+// }
 
 static unsigned bin2bcd(unsigned val)
 {
@@ -98,7 +99,7 @@ void Machine::int1a_read_system_clock_count()
     struct timeval tv;
     gettimeofday(&tv, 0);
 
-    time_t now = tv.tv_sec;
+    time_t now      = tv.tv_sec;
     struct tm *info = localtime(&now);
 
     // Get milliseconds since midnight.
@@ -136,7 +137,7 @@ void Machine::int1a_read_cmos_time()
     struct timeval tv;
     gettimeofday(&tv, 0);
 
-    time_t now = tv.tv_sec;
+    time_t now      = tv.tv_sec;
     struct tm *info = localtime(&now);
 
     cpu.set_ch(bin2bcd(info->tm_hour));
@@ -171,9 +172,9 @@ void Machine::int1a_read_cmos_date()
     struct timeval tv;
     gettimeofday(&tv, 0);
 
-    time_t now = tv.tv_sec;
+    time_t now      = tv.tv_sec;
     struct tm *info = localtime(&now);
-    int century = 0x20;
+    int century     = 0x20;
 
     cpu.set_ch(century);
     cpu.set_cl(bin2bcd(info->tm_year % 100));

@@ -54,7 +54,7 @@ constexpr unsigned CURSOR_BLINK_MS = 400;
 // Construct the adapter; optionally create an SDL window for display.
 // When text_buffer != nullptr, read from it (e.g. memory at 0xb8000); else use internal buffer.
 //
-Video_Adapter::Video_Adapter(bool create_window, uint8_t *text_buffer)
+Video_Adapter::Video_Adapter(const char *title, uint8_t *text_buffer)
     : text_buf_ptr_(text_buffer ? text_buffer : text_buf_.data())
 {
     font_buf_.fill(0);
@@ -64,15 +64,12 @@ Video_Adapter::Video_Adapter(bool create_window, uint8_t *text_buffer)
         text_snapshot_.fill(0);
     }
 
-    if (!create_window)
-        return;
-
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
         return;
 
     SDL_Window *win =
-        SDL_CreateWindow("VGA Text Mode", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                         SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN);
+        SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH,
+                         SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN);
     if (!win) {
         SDL_Quit();
         return;
@@ -87,7 +84,7 @@ Video_Adapter::Video_Adapter(bool create_window, uint8_t *text_buffer)
     }
 
     SDL_Texture *tex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
-                                        SCREEN_WIDTH, SCREEN_HEIGHT);
+                                         SCREEN_WIDTH, SCREEN_HEIGHT);
     if (!tex) {
         SDL_DestroyRenderer(ren);
         SDL_DestroyWindow(win);
@@ -190,8 +187,7 @@ void Video_Adapter::puts(const char *s, uint8_t attr)
 // Render one text cell (9x16 pixels) into the framebuffer.
 // Optionally draw a block cursor by inverting the cell.
 //
-void Video_Adapter::draw_cell(const uint8_t *text_buf, unsigned col, unsigned row,
-                              bool draw_cursor)
+void Video_Adapter::draw_cell(const uint8_t *text_buf, unsigned col, unsigned row, bool draw_cursor)
 {
     unsigned cell_off = (row * TEXT_COLS + col) * 2;
     uint8_t ch        = text_buf[cell_off];
@@ -265,37 +261,6 @@ void Video_Adapter::present()
     SDL_RenderCopy(static_cast<SDL_Renderer *>(renderer_), static_cast<SDL_Texture *>(texture_),
                    nullptr, &dst);
     SDL_RenderPresent(static_cast<SDL_Renderer *>(renderer_));
-}
-
-//
-// Compare the text buffer to the snapshot. Redraw changed cells and blinking cursor, then present.
-// Uses internal text_buf_ptr_ (legacy / demo).
-//
-void Video_Adapter::refresh()
-{
-    if (window_) {
-        uint64_t now    = static_cast<uint64_t>(SDL_GetTicks());
-        uint64_t period = now / CURSOR_BLINK_MS;
-        cursor_visible_ = (period % 2 == 0);
-    } else {
-        constexpr unsigned toggles_per_blink = 30;
-        cursor_visible_                      = ((refresh_count_ / toggles_per_blink) % 2) == 0;
-        refresh_count_++;
-    }
-
-    const uint8_t *buf = text_buf_ptr_;
-    for (unsigned row = 0; row < TEXT_ROWS; row++) {
-        for (unsigned col = 0; col < TEXT_COLS; col++) {
-            unsigned off = (row * TEXT_COLS + col) * 2;
-            bool changed = (buf[off] != text_snapshot_[off]) || (buf[off + 1] != text_snapshot_[off + 1]);
-            bool is_cursor = (col == cursor_col_ && row == cursor_row_);
-            if (changed || is_cursor)
-                draw_cell(buf, col, row, cursor_visible_);
-        }
-    }
-
-    std::memcpy(text_snapshot_.data(), buf, TEXT_BUFFER_SIZE);
-    present();
 }
 
 //

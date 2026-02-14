@@ -151,8 +151,8 @@ void Machine::print_exception(const char *message)
 void Machine::print_exception_ah(const char *message)
 {
     auto &out = Machine::get_trace_stream();
-    out << "------- " << message << ", AH=" << std::hex << std::setfill('0')
-        << std::setw(2) << (unsigned)cpu.get_ah() << std::dec << "h\n";
+    out << "------- " << message << ", AH=" << std::hex << std::setfill('0') << std::setw(2)
+        << (unsigned)cpu.get_ah() << std::dec << "h\n";
 }
 
 //
@@ -226,41 +226,29 @@ void Processor::print_registers()
     auto save_flags = out.flags();
 
     if (core.ax != prev.ax)
-        out << "\tAX = " << std::hex << std::setfill('0') << std::setw(4) << core.ax
-            << std::endl;
+        out << "\tAX = " << std::hex << std::setfill('0') << std::setw(4) << core.ax << std::endl;
     if (core.bx != prev.bx)
-        out << "\tBX = " << std::hex << std::setfill('0') << std::setw(4) << core.bx
-            << std::endl;
+        out << "\tBX = " << std::hex << std::setfill('0') << std::setw(4) << core.bx << std::endl;
     if (core.cx != prev.cx)
-        out << "\tCX = " << std::hex << std::setfill('0') << std::setw(4) << core.cx
-            << std::endl;
+        out << "\tCX = " << std::hex << std::setfill('0') << std::setw(4) << core.cx << std::endl;
     if (core.dx != prev.dx)
-        out << "\tDX = " << std::hex << std::setfill('0') << std::setw(4) << core.dx
-            << std::endl;
+        out << "\tDX = " << std::hex << std::setfill('0') << std::setw(4) << core.dx << std::endl;
     if (core.sp != prev.sp)
-        out << "\tSP = " << std::hex << std::setfill('0') << std::setw(4) << core.sp
-            << std::endl;
+        out << "\tSP = " << std::hex << std::setfill('0') << std::setw(4) << core.sp << std::endl;
     if (core.bp != prev.bp)
-        out << "\tBP = " << std::hex << std::setfill('0') << std::setw(4) << core.bp
-            << std::endl;
+        out << "\tBP = " << std::hex << std::setfill('0') << std::setw(4) << core.bp << std::endl;
     if (core.si != prev.si)
-        out << "\tSI = " << std::hex << std::setfill('0') << std::setw(4) << core.si
-            << std::endl;
+        out << "\tSI = " << std::hex << std::setfill('0') << std::setw(4) << core.si << std::endl;
     if (core.di != prev.di)
-        out << "\tDI = " << std::hex << std::setfill('0') << std::setw(4) << core.di
-            << std::endl;
+        out << "\tDI = " << std::hex << std::setfill('0') << std::setw(4) << core.di << std::endl;
     if (core.cs != prev.cs)
-        out << "\tCS = " << std::hex << std::setfill('0') << std::setw(4) << core.cs
-            << std::endl;
+        out << "\tCS = " << std::hex << std::setfill('0') << std::setw(4) << core.cs << std::endl;
     if (core.ds != prev.ds)
-        out << "\tDS = " << std::hex << std::setfill('0') << std::setw(4) << core.ds
-            << std::endl;
+        out << "\tDS = " << std::hex << std::setfill('0') << std::setw(4) << core.ds << std::endl;
     if (core.ss != prev.ss)
-        out << "\tSS = " << std::hex << std::setfill('0') << std::setw(4) << core.ss
-            << std::endl;
+        out << "\tSS = " << std::hex << std::setfill('0') << std::setw(4) << core.ss << std::endl;
     if (core.es != prev.es)
-        out << "\tES = " << std::hex << std::setfill('0') << std::setw(4) << core.es
-            << std::endl;
+        out << "\tES = " << std::hex << std::setfill('0') << std::setw(4) << core.es << std::endl;
     if (core.flags.w != prev.flags.w) {
         out << "\tFlags = " << std::hex << std::setfill('0') << std::setw(4) << core.flags.w;
         if (core.flags.w & 0x800)

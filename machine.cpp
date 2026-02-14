@@ -68,11 +68,11 @@ Machine::Machine(Memory &m)
     setup_floppy();
 
     // Setup video (BDA only; main() creates the display).
-    bda.video_mode = 3; // Text mode: 80 columns, 25 rows, 16 colors
-    bda.video_rows = 25;
-    bda.video_cols = 80;
-    bda.video_pagesize = 80 * 25 * 2;  // 4000 bytes per page
-    bda.video_ctl  = 0x60;
+    bda.video_mode     = 3; // Text mode: 80 columns, 25 rows, 16 colors
+    bda.video_rows     = 25;
+    bda.video_cols     = 80;
+    bda.video_pagesize = 80 * 25 * 2; // 4000 bytes per page
+    bda.video_ctl      = 0x60;
 }
 
 //
@@ -98,28 +98,37 @@ void Machine::run_batch(unsigned n)
     }
 }
 
-VideoRefreshParams Machine::get_video_refresh_params() const
+VideoRefreshParams Machine::get_video_refresh_params()
 {
     VideoRefreshParams p{};
+
     unsigned page = bda.video_page;
     if (page > 7)
         page = 0;
-    unsigned pos = bda.cursor_pos[page];
-    p.cursor_col   = pos & 0xff;
-    p.cursor_row   = pos >> 8;
-    p.cursor_type  = bda.cursor_type;
+
+    unsigned pos  = bda.cursor_pos[page];
+    p.cursor_col  = pos & 0xff;
+    p.cursor_row  = pos >> 8;
+    p.cursor_type = bda.cursor_type;
+
     unsigned page_offset = bda.video_pagesize * page;
     if (page_offset == 0)
         page_offset = bda.video_cols * (bda.video_rows + 1) * 2;
+
     p.text_buf = memory.get_ptr(0xb8000) + page_offset;
+
+    p.need_refresh = video_dirty;
+    video_dirty    = false;
     return p;
 }
 
 void Machine::set_kbd_modifiers(uint16_t flags)
 {
     uint16_t &f0 = bda.kbd_flag0;
-    f0 &= static_cast<uint16_t>(~(KF0_RSHIFT | KF0_LSHIFT | KF0_CTRL | KF0_ALT | KF0_SCROLL | KF0_NUMLOCK | KF0_CAPSLOCK));
-    f0 |= (flags & (KF0_RSHIFT | KF0_LSHIFT | KF0_CTRL | KF0_ALT | KF0_SCROLL | KF0_NUMLOCK | KF0_CAPSLOCK));
+    f0 &= static_cast<uint16_t>(
+        ~(KF0_RSHIFT | KF0_LSHIFT | KF0_CTRL | KF0_ALT | KF0_SCROLL | KF0_NUMLOCK | KF0_CAPSLOCK));
+    f0 |= (flags & (KF0_RSHIFT | KF0_LSHIFT | KF0_CTRL | KF0_ALT | KF0_SCROLL | KF0_NUMLOCK |
+                    KF0_CAPSLOCK));
 }
 
 void Machine::push_keystroke(uint16_t ax)
@@ -298,7 +307,8 @@ Word Machine::port_in_word(unsigned port)
 // Disk read/write.
 // Return disk status.
 //
-unsigned Machine::disk_io_chs(char op, unsigned disk_unit, unsigned cylinder, unsigned head, unsigned sector, unsigned addr, unsigned nbytes)
+unsigned Machine::disk_io_chs(char op, unsigned disk_unit, unsigned cylinder, unsigned head,
+                              unsigned sector, unsigned addr, unsigned nbytes)
 {
     if (disk_unit >= NDISKS || sector < 1) {
         // Invalid disk unit
@@ -350,10 +360,8 @@ void Machine::disk_mount(unsigned disk_unit, const std::string &path, bool write
     if (trace_enabled()) {
         auto &disk = *disks[disk_unit].get();
         std::cout << "Mount image '" << path << "' as disk " << disk_unit
-                  << ", CHS = " << disk.num_cylinders
-                  << "/" << disk.num_heads
-                  << "/" << disk.num_sectors
-                  << std::endl;
+                  << ", CHS = " << disk.num_cylinders << "/" << disk.num_heads << "/"
+                  << disk.num_sectors << std::endl;
     }
 }
 
@@ -433,16 +441,16 @@ void Machine::setup_floppy()
 void Machine::setup_bios_config_table()
 {
     enum {
-        F1_DMA3USED = 1<<7,  // DMA channel 3 used by hard disk BIOS
-        F1_2NDPIC   = 1<<6,  // 2nd interrupt controller (8259) installed
-        F1_RTC      = 1<<5,  // Real-Time Clock installed
-        F1_INT154F  = 1<<4,  // INT 15/AH=4Fh called upon INT 09h
-        F1_WAITEXT  = 1<<3,  // wait for external event (INT 15/AH=41h) supported
-        F1_EBDA     = 1<<2,  // extended BIOS area allocated (usually at top of RAM)
-        F1_MCA      = 1<<1,  // bus is Micro Channel instead of ISA
-        F1_MCAISA   = 1<<0,  // system has dual bus (Micro Channel + ISA)
+        F1_DMA3USED = 1 << 7, // DMA channel 3 used by hard disk BIOS
+        F1_2NDPIC   = 1 << 6, // 2nd interrupt controller (8259) installed
+        F1_RTC      = 1 << 5, // Real-Time Clock installed
+        F1_INT154F  = 1 << 4, // INT 15/AH=4Fh called upon INT 09h
+        F1_WAITEXT  = 1 << 3, // wait for external event (INT 15/AH=41h) supported
+        F1_EBDA     = 1 << 2, // extended BIOS area allocated (usually at top of RAM)
+        F1_MCA      = 1 << 1, // bus is Micro Channel instead of ISA
+        F1_MCAISA   = 1 << 0, // system has dual bus (Micro Channel + ISA)
 
-        F2_INT1609  = 1<<6,  // INT 16/AH=09h (keyboard functionality) supported
+        F2_INT1609 = 1 << 6, // INT 16/AH=09h (keyboard functionality) supported
     };
 
     static const Bios_Config_Table config_table = {
@@ -451,12 +459,11 @@ void Machine::setup_bios_config_table()
         .submodel = 0x00,
         .biosrev  = 0x01,
         .feature1 = // F1_2NDPIC |
-                    F1_RTC |
-                    F1_EBDA |
-                    // F1_INT154F |
-                    0,
+        F1_RTC | F1_EBDA |
+        // F1_INT154F |
+        0,
         .feature2 = // F2_INT1609 // INT 16/AH=09h (keyboard functionality) supported
-                    0,
+        0,
         .feature3 = 0,
         .feature4 = 0,
         .feature5 = 0,

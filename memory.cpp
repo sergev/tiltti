@@ -33,7 +33,7 @@
 namespace {
 const
 #include "basic_rom.h"
-};
+}; // namespace
 
 //
 // Constructor.

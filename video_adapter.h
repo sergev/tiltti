@@ -40,8 +40,7 @@ public:
     static constexpr unsigned FONT_BUFFER_SIZE = 256 * 16 * 2;
 
     // Create adapter. When text_buffer != nullptr, read from it (e.g. memory at 0xb8000).
-    // Otherwise use internal buffer (legacy demo compatibility).
-    explicit Video_Adapter(bool create_window, uint8_t *text_buffer = nullptr);
+    explicit Video_Adapter(const char *title, uint8_t *text_buffer = nullptr);
     ~Video_Adapter();
 
     Video_Adapter(const Video_Adapter &)            = delete;
@@ -55,13 +54,10 @@ public:
     const uint8_t *font_buffer() const { return font_buf_.data(); }
     size_t font_buffer_size() const { return font_buf_.size(); }
 
-    // Refresh from internal buffer (legacy use).
-    void refresh();
-
     // Refresh reading from given buffer and BDA-style cursor/page state.
     // text_buf points to the active page (e.g. 0xb8000 + page_offset).
-    void refresh_from_memory(const uint8_t *text_buf, unsigned cursor_col,
-                            unsigned cursor_row, uint16_t cursor_type);
+    void refresh_from_memory(const uint8_t *text_buf, unsigned cursor_col, unsigned cursor_row,
+                             uint16_t cursor_type);
 
     void putchar(uint8_t ch, uint8_t attr);
     void puts(const char *s, uint8_t attr);

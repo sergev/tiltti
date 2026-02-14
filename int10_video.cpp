@@ -149,6 +149,7 @@ void Machine::int10_set_video_mode()
 void Machine::int10_set_cursor_shape()
 {
     bda.cursor_type = cpu.get_cx();
+    video_dirty     = true;
     // TODO: update CRTC port (cursor shape registers 0x0a, 0x0b)
 }
 
@@ -167,9 +168,10 @@ void Machine::int10_set_cursor_position()
     if (page > 7)
         return;
 
-    unsigned row = cpu.get_dh();
-    unsigned col = cpu.get_dl();
+    unsigned row         = cpu.get_dh();
+    unsigned col         = cpu.get_dl();
     bda.cursor_pos[page] = (row << 8) | col;
+    video_dirty          = true;
     // TODO: update CRTC port (cursor position 0x0e, 0x0f) when page == active page
 }
 
@@ -212,10 +214,10 @@ void Machine::int10_scroll_window_down()
 
 void Machine::scroll_window(int dir)
 {
-    unsigned ulx = cpu.get_cl();
-    unsigned uly = cpu.get_ch();
-    unsigned lrx = cpu.get_dl();
-    unsigned lry = cpu.get_dh();
+    unsigned ulx    = cpu.get_cl();
+    unsigned uly    = cpu.get_ch();
+    unsigned lrx    = cpu.get_dl();
+    unsigned lry    = cpu.get_dh();
     unsigned nbrows = bda.video_rows + 1;
     unsigned nbcols = bda.video_cols;
 
@@ -238,19 +240,16 @@ void Machine::scroll_window(int dir)
     if (page_offset == 0)
         page_offset = bda.video_cols * (bda.video_rows + 1) * 2;
 
-    int stride = bda.video_cols * 2;
-    Byte *base =
-        memory.get_ptr(0xb8000) + page_offset;
-    uint16_t fill = (cpu.get_bh() << 8) | 0x20;  // space + attribute
+    int stride    = bda.video_cols * 2;
+    Byte *base    = memory.get_ptr(0xb8000) + page_offset;
+    uint16_t fill = (cpu.get_bh() << 8) | 0x20; // space + attribute
 
     auto cell_addr = [&](int x, int y) {
         return base + static_cast<ptrdiff_t>(y) * stride + x * 2;
     };
 
     auto store_cell = [&](int x, int y) {
-        memory.store16(0xb8000 + page_offset +
-                          (static_cast<unsigned>(y) * stride + x * 2),
-                      fill);
+        memory.store16(0xb8000 + page_offset + (static_cast<unsigned>(y) * stride + x * 2), fill);
     };
 
     if (lines == 0) {
@@ -260,19 +259,19 @@ void Machine::scroll_window(int dir)
                 store_cell(ulx + x, uly + y);
             }
         }
+        video_dirty = true;
         return;
     }
 
     if (lines > 0) {
         // Scroll up: move block from (ulx, uly+lines) to (ulx, uly).
-        int nlines = winrows - lines;
-        Byte *dest = cell_addr(ulx, uly);
-        Byte *src = cell_addr(ulx, uly + lines);
+        int nlines     = winrows - lines;
+        Byte *dest     = cell_addr(ulx, uly);
+        Byte *src      = cell_addr(ulx, uly + lines);
         int line_bytes = wincols * 2;
 
         for (int i = 0; i < nlines; i++) {
-            std::memcpy(dest + i * stride, src + i * stride,
-                        static_cast<size_t>(line_bytes));
+            std::memcpy(dest + i * stride, src + i * stride, static_cast<size_t>(line_bytes));
         }
 
         // Clear bottom lines.
@@ -283,15 +282,14 @@ void Machine::scroll_window(int dir)
         }
     } else {
         // Scroll down: move block from (ulx, uly) to (ulx, uly + abs(lines)).
-        int abs_lines = -lines;
-        int nlines = winrows - abs_lines;
-        Byte *dest = cell_addr(ulx, uly + abs_lines);
-        Byte *src = cell_addr(ulx, uly);
+        int abs_lines  = -lines;
+        int nlines     = winrows - abs_lines;
+        Byte *dest     = cell_addr(ulx, uly + abs_lines);
+        Byte *src      = cell_addr(ulx, uly);
         int line_bytes = wincols * 2;
 
         for (int i = nlines - 1; i >= 0; i--) {
-            std::memcpy(dest + i * stride, src + i * stride,
-                        static_cast<size_t>(line_bytes));
+            std::memcpy(dest + i * stride, src + i * stride, static_cast<size_t>(line_bytes));
         }
 
         // Clear top lines.
@@ -301,6 +299,7 @@ void Machine::scroll_window(int dir)
             }
         }
     }
+    video_dirty = true;
 }
 
 //
@@ -331,7 +330,7 @@ void Machine::int10_read_char()
     int stride = bda.video_cols * 2;
 
     unsigned addr = 0xb8000 + page_offset + row * stride + col * 2;
-    uint16_t v = memory.load16(addr);
+    uint16_t v    = memory.load16(addr);
 
     cpu.set_al(v & 0xff);
     cpu.set_ah(v >> 8);
@@ -354,11 +353,11 @@ void Machine::int10_write_char()
     if (page > 7)
         return;
 
-    unsigned col = bda.cursor_pos[page] & 0xff;
-    unsigned row = bda.cursor_pos[page] >> 8;
+    unsigned col   = bda.cursor_pos[page] & 0xff;
+    unsigned row   = bda.cursor_pos[page] >> 8;
     unsigned count = cpu.get_cx();
-    uint8_t ch = cpu.get_al();
-    uint8_t attr = cpu.get_bl();
+    uint8_t ch     = cpu.get_al();
+    uint8_t attr   = cpu.get_bl();
 
     unsigned page_offset = bda.video_pagesize * page;
     if (page_offset == 0)
@@ -368,7 +367,7 @@ void Machine::int10_write_char()
     while (count--) {
         unsigned addr = 0xb8000 + page_offset + row * stride + col * 2;
         memory.store16(addr, (attr << 8) | ch);
-        //std::cout << ch; // debug
+        // std::cout << ch; // debug
 
         col++;
         if (col >= bda.video_cols) {
@@ -376,8 +375,9 @@ void Machine::int10_write_char()
             row++;
         }
     }
-    //std::cout << std::flush; // debug
+    // std::cout << std::flush; // debug
 
+    video_dirty          = true;
     bda.cursor_pos[page] = (row << 8) | col;
 }
 
@@ -415,31 +415,31 @@ void Machine::int10_read_pixel()
 void Machine::int10_teletype_output()
 {
     unsigned page = bda.video_page;
-    unsigned col = bda.cursor_pos[page] & 0xff;
-    unsigned row = bda.cursor_pos[page] >> 8;
-    uint8_t ch = cpu.get_al();
+    unsigned col  = bda.cursor_pos[page] & 0xff;
+    unsigned row  = bda.cursor_pos[page] >> 8;
+    uint8_t ch    = cpu.get_al();
 
     unsigned page_offset = bda.video_pagesize * page;
     if (page_offset == 0)
         page_offset = bda.video_cols * (bda.video_rows + 1) * 2;
-    int stride = bda.video_cols * 2;
+    int stride      = bda.video_cols * 2;
     unsigned nbrows = bda.video_rows;
 #if 0
     utf8_putc(cp437_to_unicode_table[ch]); // debug
     std::cout << std::flush; // debug
 #endif
     switch (ch) {
-    case 7:  // BEL - beep
+    case 7: // BEL - beep
         std::cout << '\a' << std::flush;
         break;
-    case 8:  // BS - backspace
+    case 8: // BS - backspace
         if (col > 0)
             col--;
         break;
-    case '\r':  // CR - carriage return
+    case '\r': // CR - carriage return
         col = 0;
         break;
-    case '\n':  // LF - line feed
+    case '\n': // LF - line feed
         row++;
         break;
     default: {
@@ -460,24 +460,24 @@ void Machine::int10_teletype_output()
         row = nbrows;
 
         // Scroll full screen up by one line.
-        Byte *base = memory.get_ptr(0xb8000) + page_offset;
+        Byte *base  = memory.get_ptr(0xb8000) + page_offset;
         int wincols = bda.video_cols;
         int winrows = nbrows + 1;
 
-        Byte *dest = base;
-        Byte *src = base + stride;
+        Byte *dest     = base;
+        Byte *src      = base + stride;
         int line_bytes = wincols * 2;
         for (int i = 0; i < winrows - 1; i++) {
-            std::memcpy(dest + i * stride, src + i * stride,
-                        static_cast<size_t>(line_bytes));
+            std::memcpy(dest + i * stride, src + i * stride, static_cast<size_t>(line_bytes));
         }
         for (int x = 0; x < wincols; x++) {
-            memory.store16(0xb8000 + page_offset +
-                              (static_cast<unsigned>(winrows - 1) * stride + x * 2),
-                          (0x07 << 8) | 0x20);  // space, default attribute
+            memory.store16(
+                0xb8000 + page_offset + (static_cast<unsigned>(winrows - 1) * stride + x * 2),
+                (0x07 << 8) | 0x20); // space, default attribute
         }
     }
 
+    video_dirty          = true;
     bda.cursor_pos[page] = (row << 8) | col;
     // TODO: update CRTC port (cursor position) when writing to video RAM
 }

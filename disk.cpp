@@ -67,7 +67,7 @@ Disk::Disk(const std::string &p, Memory &m, bool wp, unsigned offset)
     case 80 * 2 * 20: // 1.6M
         num_sectors = 20;
         break;
-    case 80 * 2 * 9:  // 720K
+    case 80 * 2 * 9: // 720K
         num_sectors = 9;
         break;
     case 80 * 2 * 10: // 800K
@@ -95,8 +95,8 @@ Disk::Disk(const std::string &p, Memory &m, bool wp, unsigned offset)
         num_sectors = 9;
         break;
     default:
-        throw std::runtime_error("Unrecognized size of floppy image: " +
-                                 std::to_string(size_sectors / 2) + " kbytes");
+        throw std::runtime_error(
+            "Unrecognized size of floppy image: " + std::to_string(size_sectors / 2) + " kbytes");
     }
 }
 

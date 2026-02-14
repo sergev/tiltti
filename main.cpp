@@ -19,8 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include <getopt.h>
 #include <SDL.h>
+#include <getopt.h>
 
 #include <cstring>
 #include <iostream>
@@ -74,6 +74,8 @@ static void print_usage(std::ostream &out, const char *prog_name)
 static void pump_sdl_events(Machine &machine, bool &quit)
 {
     SDL_Event event;
+    unsigned count = 0;
+
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) {
             quit = true;
@@ -82,9 +84,10 @@ static void pump_sdl_events(Machine &machine, bool &quit)
         if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
             uint32_t sdl_sc = event.key.keysym.scancode;
             bool down       = (event.type == SDL_KEYDOWN);
+            uint16_t mod    = SDL_GetModState();
+            uint16_t f0     = 0;
 
-            uint16_t mod = SDL_GetModState();
-            uint16_t f0  = 0;
+            count++;
             if (mod & KMOD_RSHIFT)
                 f0 |= KF0_RSHIFT;
             if (mod & KMOD_LSHIFT)
@@ -118,6 +121,10 @@ static void pump_sdl_events(Machine &machine, bool &quit)
             }
         }
     }
+    if (count == 0) {
+        constexpr unsigned msec = 20;
+        SDL_Delay(msec);
+    }
 }
 
 //
@@ -128,7 +135,9 @@ static void refresh_video(Machine &machine, Video_Adapter &video_adapter)
     if (!video_adapter.has_window())
         return;
     VideoRefreshParams p = machine.get_video_refresh_params();
-    video_adapter.refresh_from_memory(p.text_buf, p.cursor_col, p.cursor_row, p.cursor_type);
+    if (p.need_refresh) {
+        video_adapter.refresh_from_memory(p.text_buf, p.cursor_col, p.cursor_row, p.cursor_type);
+    }
 }
 
 //
@@ -220,17 +229,17 @@ int main(int argc, char *argv[])
     if (verbose)
         machine.set_verbose(true);
 
+    Video_Adapter video_adapter("Tiltti v" VERSION_STRING, memory.get_ptr(0xb8000));
+    if (!video_adapter.has_window()) {
+        throw std::runtime_error("SDL: cannot create display window");
+    }
+
     try {
         // Boot from disk.
         if (disk_file == "-") {
             machine.start_basic();
         } else {
             machine.boot_disk(disk_file);
-        }
-
-        Video_Adapter video_adapter(true, memory.get_ptr(0xb8000));
-        if (!video_adapter.has_window()) {
-            throw std::runtime_error("SDL: cannot create display window");
         }
 
         bool quit = false;
@@ -240,15 +249,12 @@ int main(int argc, char *argv[])
         });
 
         constexpr unsigned steps_per_frame = 5000;
-        constexpr unsigned frame_ms        = 16;
-
         while (!quit) {
             pump_sdl_events(machine, quit);
             machine.run_batch(steps_per_frame);
             refresh_video(machine, video_adapter);
             if (quit)
                 break;
-            SDL_Delay(frame_ms);
         }
 
         // Finish the trace output.

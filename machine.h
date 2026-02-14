@@ -44,6 +44,7 @@ struct VideoRefreshParams {
     unsigned cursor_col;
     unsigned cursor_row;
     uint16_t cursor_type;
+    bool need_refresh;
 };
 
 class Machine {
@@ -72,6 +73,8 @@ private:
     std::queue<uint16_t> keyboard_queue_;
     std::function<bool()> pump_callback_;
 
+    bool video_dirty{}; // Video memory was changed
+
     // Static stuff.
     static bool verbose;                    // Verbose flag for tracing
     static uint64_t simulated_instructions; // Count of instructions
@@ -98,7 +101,8 @@ public:
     void run_batch(unsigned n);
 
     // Parameters for main() to refresh the display from memory at 0xb8000 and BDA.
-    VideoRefreshParams get_video_refresh_params() const;
+    // Clear video_dirty flag.
+    VideoRefreshParams get_video_refresh_params();
 
     // Called when blocking (e.g. INT 16h wait). Returns false to request quit.
     void set_pump_callback(std::function<bool()> cb) { pump_callback_ = std::move(cb); }
@@ -148,7 +152,8 @@ public:
     void port_out_word(unsigned port, Word val);
 
     // Disk i/o.
-    unsigned disk_io_chs(char op, unsigned disk_unit, unsigned cylinder, unsigned head, unsigned sector, unsigned addr, unsigned nbytes);
+    unsigned disk_io_chs(char op, unsigned disk_unit, unsigned cylinder, unsigned head,
+                         unsigned sector, unsigned addr, unsigned nbytes);
     void disk_mount(unsigned disk_unit, const std::string &path, bool write_permit);
 
     // Boot from disk or floppy image.

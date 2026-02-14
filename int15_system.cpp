@@ -21,10 +21,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
+#include <unistd.h>
+
 #include <cstdint>
 #include <iomanip>
 #include <sstream>
-#include <unistd.h>
 
 #include "encoding.h"
 #include "machine.h"
