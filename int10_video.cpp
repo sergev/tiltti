@@ -134,8 +134,68 @@ void Machine::handle_int10_video()
 //
 void Machine::int10_set_video_mode()
 {
-    // TODO: update CRTC port and video hardware for mode switch
-    throw std::runtime_error("Unimplemented: Set video mode");
+    unsigned mode = cpu.get_al() & 0x7f;
+    bool no_clear = (cpu.get_al() & 0x80) != 0;
+
+    // Mode-to-BDA mapping. Unsupported modes (4, 5, 8+) use mode 3 as fallback.
+    unsigned cols, rows, pagesize;
+    bool is_text;
+    unsigned video_base;
+    if (mode <= 1) {
+        cols       = 40;
+        rows       = 24;
+        pagesize   = 40 * 25 * 2;
+        is_text    = true;
+        video_base = 0xb8000;
+    } else if (mode <= 3 || mode == 7) {
+        cols       = 80;
+        rows       = 24;
+        pagesize   = 80 * 25 * 2;
+        is_text    = true;
+        video_base = (mode == 7) ? 0xb0000 : 0xb8000;
+    } else if (mode == 6) {
+        cols       = 80;
+        rows       = 24;
+        pagesize   = 80 * 25 * 2;
+        is_text    = false;
+        video_base = 0xb8000;
+    } else {
+        // Fallback for modes 4, 5, 8+
+        cols       = 80;
+        rows       = 24;
+        pagesize   = 80 * 25 * 2;
+        is_text    = true;
+        video_base = 0xb8000;
+    }
+
+    if (!no_clear) {
+        uint16_t fill = (mode == 6) ? 0x0000 : 0x0720; // 0x0720 = space + attr 0x07
+        for (unsigned i = 0; i < 32 * 1024; i += 2)
+            memory.store16(video_base + i, fill);
+    }
+
+    bda.video_mode     = (mode < 0x100) ? static_cast<uint8_t>(mode) : 0xff;
+    bda.video_cols     = cols;
+    bda.video_rows     = rows;
+    bda.video_pagesize = pagesize;
+    bda.cursor_type    = is_text ? 0x0607 : 0x0000;
+    bda.video_ctl      = 0x60 | (no_clear ? 0x80 : 0x00);
+    bda.modeset_ctl &= 0x7f;
+    for (int i = 0; i < 8; i++)
+        bda.cursor_pos[i] = 0x0000;
+    bda.video_pagestart = 0x0000;
+    bda.video_page      = 0x00;
+
+    if (mode > 7)
+        cpu.set_al(0x20);
+    else if (mode == 6)
+        cpu.set_al(0x3f);
+    else if (mode <= 1)
+        cpu.set_al(0x20);
+    else
+        cpu.set_al(0x30);
+
+    video_dirty = true;
 }
 
 //
@@ -237,8 +297,6 @@ void Machine::scroll_window(int dir)
     lines *= dir;
 
     unsigned page_offset = bda.video_pagesize * bda.video_page;
-    if (page_offset == 0)
-        page_offset = bda.video_cols * (bda.video_rows + 1) * 2;
 
     int stride    = bda.video_cols * 2;
     Byte *base    = memory.get_ptr(0xb8000) + page_offset;
@@ -325,9 +383,7 @@ void Machine::int10_read_char()
     unsigned row = bda.cursor_pos[page] >> 8;
 
     unsigned page_offset = bda.video_pagesize * page;
-    if (page_offset == 0)
-        page_offset = bda.video_cols * (bda.video_rows + 1) * 2;
-    int stride = bda.video_cols * 2;
+    int stride           = bda.video_cols * 2;
 
     unsigned addr = 0xb8000 + page_offset + row * stride + col * 2;
     uint16_t v    = memory.load16(addr);
@@ -360,9 +416,7 @@ void Machine::int10_write_char()
     uint8_t attr   = cpu.get_bl();
 
     unsigned page_offset = bda.video_pagesize * page;
-    if (page_offset == 0)
-        page_offset = bda.video_cols * (bda.video_rows + 1) * 2;
-    int stride = bda.video_cols * 2;
+    int stride           = bda.video_cols * 2;
 
     while (count--) {
         unsigned addr = 0xb8000 + page_offset + row * stride + col * 2;
@@ -420,10 +474,8 @@ void Machine::int10_teletype_output()
     uint8_t ch    = cpu.get_al();
 
     unsigned page_offset = bda.video_pagesize * page;
-    if (page_offset == 0)
-        page_offset = bda.video_cols * (bda.video_rows + 1) * 2;
-    int stride      = bda.video_cols * 2;
-    unsigned nbrows = bda.video_rows;
+    int stride           = bda.video_cols * 2;
+    unsigned nbrows      = bda.video_rows;
 #if 0
     utf8_putc(cp437_to_unicode_table[ch]); // debug
     std::cout << std::flush; // debug

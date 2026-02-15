@@ -112,8 +112,6 @@ VideoRefreshParams Machine::get_video_refresh_params()
     p.cursor_type = bda.cursor_type;
 
     unsigned page_offset = bda.video_pagesize * page;
-    if (page_offset == 0)
-        page_offset = bda.video_cols * (bda.video_rows + 1) * 2;
 
     p.text_buf = memory.get_ptr(0xb8000) + page_offset;
 
