@@ -205,6 +205,8 @@ public:
 
     void setup_bios_config_table();
     void setup_floppy();
+    void set_video_mode(unsigned mode);
+    void clear_video_memory();
     void read_dap(unsigned addr, unsigned &count, Word &buf_seg, Word &buf_off,
                   uint64_t &lba) const;
     void disk_ret(unsigned drive, unsigned code);

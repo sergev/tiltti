@@ -121,6 +121,66 @@ void Machine::handle_int10_video()
 }
 
 //
+// Fill video memory with spaces,
+// Use attribute 0x07 (grey on black).
+//
+void Machine::clear_video_memory()
+{
+    unsigned video_base = (bda.video_mode == 7) ? 0xb0000 : 0xb8000;
+    unsigned fill       = (bda.video_mode == 6) ? 0x0000 : 0x0720;
+
+    for (unsigned i = 0; i < 32 * 1024; i += 2)
+        memory.store16(video_base + i, fill);
+}
+
+//
+// Set video mode: update BDA and optionally clear display memory.
+// Does not touch CPU registers.
+//
+void Machine::set_video_mode(unsigned mode)
+{
+    // Mode-to-BDA mapping. Unsupported modes (4, 5, 8+) use mode 3 as fallback.
+    unsigned cols, rows, pagesize;
+    bool is_text;
+    if (mode <= 1) {
+        cols     = 40;
+        rows     = 24;
+        pagesize = 40 * 25 * 2;
+        is_text  = true;
+    } else if (mode <= 3 || mode == 7) {
+        cols     = 80;
+        rows     = 24;
+        pagesize = 80 * 25 * 2;
+        is_text  = true;
+    } else if (mode == 6) {
+        cols     = 80;
+        rows     = 24;
+        pagesize = 80 * 25 * 2;
+        is_text  = false;
+    } else {
+        cols     = 80;
+        rows     = 24;
+        pagesize = 80 * 25 * 2;
+        is_text  = true;
+    }
+
+    bda.video_mode      = (mode < 0x100) ? static_cast<uint8_t>(mode) : 0xff;
+    bda.video_cols      = cols;
+    bda.video_rows      = rows;
+    bda.video_pagesize  = pagesize;
+    bda.video_pagestart = 0x0000;
+    bda.video_page      = 0x00;
+    bda.cursor_type     = is_text ? 0x0607 : 0x0000;
+    bda.video_ctl       = 0x60;
+    bda.modeset_ctl &= 0x7f;
+    for (int i = 0; i < 8; i++) {
+        bda.cursor_pos[i] = 0x0000;
+    }
+
+    video_dirty = true;
+}
+
+//
 // AH=00h - Set video mode
 //
 // Set the video mode and optionally clear display memory.
@@ -134,57 +194,15 @@ void Machine::handle_int10_video()
 //
 void Machine::int10_set_video_mode()
 {
-    unsigned mode = cpu.get_al() & 0x7f;
-    bool no_clear = (cpu.get_al() & 0x80) != 0;
+    unsigned mode   = cpu.get_al() & 0x7f;
+    bool clear_flag = (cpu.get_al() & 0x80) == 0;
 
-    // Mode-to-BDA mapping. Unsupported modes (4, 5, 8+) use mode 3 as fallback.
-    unsigned cols, rows, pagesize;
-    bool is_text;
-    unsigned video_base;
-    if (mode <= 1) {
-        cols       = 40;
-        rows       = 24;
-        pagesize   = 40 * 25 * 2;
-        is_text    = true;
-        video_base = 0xb8000;
-    } else if (mode <= 3 || mode == 7) {
-        cols       = 80;
-        rows       = 24;
-        pagesize   = 80 * 25 * 2;
-        is_text    = true;
-        video_base = (mode == 7) ? 0xb0000 : 0xb8000;
-    } else if (mode == 6) {
-        cols       = 80;
-        rows       = 24;
-        pagesize   = 80 * 25 * 2;
-        is_text    = false;
-        video_base = 0xb8000;
+    set_video_mode(mode);
+    if (clear_flag) {
+        clear_video_memory();
     } else {
-        // Fallback for modes 4, 5, 8+
-        cols       = 80;
-        rows       = 24;
-        pagesize   = 80 * 25 * 2;
-        is_text    = true;
-        video_base = 0xb8000;
+        bda.video_ctl |= 0x80;
     }
-
-    if (!no_clear) {
-        uint16_t fill = (mode == 6) ? 0x0000 : 0x0720; // 0x0720 = space + attr 0x07
-        for (unsigned i = 0; i < 32 * 1024; i += 2)
-            memory.store16(video_base + i, fill);
-    }
-
-    bda.video_mode     = (mode < 0x100) ? static_cast<uint8_t>(mode) : 0xff;
-    bda.video_cols     = cols;
-    bda.video_rows     = rows;
-    bda.video_pagesize = pagesize;
-    bda.cursor_type    = is_text ? 0x0607 : 0x0000;
-    bda.video_ctl      = 0x60 | (no_clear ? 0x80 : 0x00);
-    bda.modeset_ctl &= 0x7f;
-    for (int i = 0; i < 8; i++)
-        bda.cursor_pos[i] = 0x0000;
-    bda.video_pagestart = 0x0000;
-    bda.video_page      = 0x00;
 
     if (mode > 7)
         cpu.set_al(0x20);
@@ -194,8 +212,6 @@ void Machine::int10_set_video_mode()
         cpu.set_al(0x20);
     else
         cpu.set_al(0x30);
-
-    video_dirty = true;
 }
 
 //
