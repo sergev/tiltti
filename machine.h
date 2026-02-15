@@ -234,7 +234,7 @@ public:
     void int10_write_string();
     void int10_display_combination_code();
     void int10_video_bios_functionality();
-    void int10_save_rrestore_video_state();
+    void int10_save_restore_video_state();
     void int10_vbe();
     void scroll_window(int dir);
 

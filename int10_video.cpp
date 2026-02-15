@@ -103,7 +103,7 @@ void Machine::handle_int10_video()
         int10_video_bios_functionality();
         break;
     case 0x1C:
-        int10_save_rrestore_video_state();
+        int10_save_restore_video_state();
         break;
     case 0x4F:
         int10_vbe();
@@ -642,7 +642,7 @@ void Machine::int10_video_bios_functionality()
     throw std::runtime_error("Unimplemented: Video BIOS functionality");
 }
 
-void Machine::int10_save_rrestore_video_state()
+void Machine::int10_save_restore_video_state()
 {
     throw std::runtime_error("Unimplemented: Save/restore video state");
 }

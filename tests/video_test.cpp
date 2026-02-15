@@ -40,15 +40,45 @@ TEST_F(MachineTest, SetVideoModeNoClear)
 //
 TEST_F(MachineTest, TeletypeOutput)
 {
-    Byte const ch = 'Q';
-    Byte *base    = memory.get_ptr(0xb8000);
+    const Byte *base = memory.get_ptr(0xb8000);
+    const auto page  = machine.bda.video_page;
 
-    EXPECT_NE(base[0], ch);
+    // Initial contents: spaces.
+    EXPECT_EQ(base[0], ' ');
+    EXPECT_EQ(machine.bda.cursor_pos[page], 0x00'00);
 
     // Output a character.
-    cpu.set_al(ch);
+    cpu.set_al('f');
     machine.int10_teletype_output();
 
     // Check result in video memory.
-    EXPECT_EQ(base[0], ch);
+    EXPECT_EQ(base[0], 'f');
+    EXPECT_EQ(machine.bda.cursor_pos[page], 0x00'01);
+
+    // Another character.
+    cpu.set_al('o');
+    machine.int10_teletype_output();
+    EXPECT_EQ(base[2], 'o');
+    EXPECT_EQ(machine.bda.cursor_pos[page], 0x00'02);
+
+    // Newline.
+    cpu.set_al('\n');
+    machine.int10_teletype_output();
+    EXPECT_EQ(machine.bda.cursor_pos[page], 0x01'02);
+
+    // Carriage return.
+    cpu.set_al('\r');
+    machine.int10_teletype_output();
+    EXPECT_EQ(machine.bda.cursor_pos[page], 0x01'00);
+
+    // Another character.
+    cpu.set_al('b');
+    machine.int10_teletype_output();
+    EXPECT_EQ(base[2*80], 'b');
+    EXPECT_EQ(machine.bda.cursor_pos[page], 0x01'01);
+
+    // Backspace.
+    cpu.set_al('\b');
+    machine.int10_teletype_output();
+    EXPECT_EQ(machine.bda.cursor_pos[page], 0x01'00);
 }
