@@ -69,7 +69,7 @@ Machine::Machine(Memory &m)
 
     // Setup video (BDA only; main() creates the display).
     bda.video_mode     = 3; // Text mode: 80 columns, 25 rows, 16 colors
-    bda.video_rows     = 25;
+    bda.video_rows     = 24;
     bda.video_cols     = 80;
     bda.video_pagesize = 80 * 25 * 2; // 4000 bytes per page
     bda.video_ctl      = 0x60;

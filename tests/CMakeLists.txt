@@ -23,6 +23,7 @@ add_definitions(-DBUILD_DIR="${CMAKE_BINARY_DIR}")
 set(TEST_SOURCES
     fixture.cpp
     machine_test.cpp
+    video_test.cpp
     add_adc.cpp
     and_or_xor.cpp
     call_ret_jmp_loop_int.cpp

@@ -197,7 +197,7 @@ public:
     static void print_byte_access(unsigned addr, Byte val, const char *opname);
     static void print_word_access(unsigned addr, Word val, const char *opname);
 
-private:
+//private:
     // Invoke pump callback (used by INT 16h when blocking). Returns false if quit requested.
     bool pump_events();
     // Throw if pump callback not set (used when blocking for keyboard input).
