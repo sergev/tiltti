@@ -69,26 +69,17 @@ static void print_usage(std::ostream &out, const char *prog_name)
 }
 
 //
-// Delay SDL when waiting for user input.
-//
-static void delay_sdl()
-{
-    SDL_Delay(20);
-}
-
-//
 // Pump SDL events: keyboard -> machine queue, modifiers -> BDA, set quit on SDL_QUIT.
-// Return false when no events were processed.
+// Refresh screen.
 //
-static bool pump_sdl_events(Machine &machine, bool &quit)
+void Video_Adapter::pump_events(Machine &machine, bool &quit)
 {
     SDL_Event event;
-    unsigned count = 0;
 
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) {
             quit = true;
-            return true;
+            return;
         }
         if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
             uint32_t sdl_sc = event.key.keysym.scancode;
@@ -96,7 +87,6 @@ static bool pump_sdl_events(Machine &machine, bool &quit)
             uint16_t mod    = SDL_GetModState();
             uint16_t f0     = 0;
 
-            count++;
             if (mod & KMOD_RSHIFT)
                 f0 |= KF0_RSHIFT;
             if (mod & KMOD_LSHIFT)
@@ -130,7 +120,17 @@ static bool pump_sdl_events(Machine &machine, bool &quit)
             }
         }
     }
-    return (count > 0);
+#if 1
+    // Refresh each 10 msec.
+    uint64_t msec = SDL_GetTicks();
+    static uint64_t last_refresh;
+    if (msec > last_refresh + 10) {
+        // Refresh SDL window from machine memory and BDA.
+        VideoRefreshParams p = machine.get_video_refresh_params();
+        refresh(p.text_buf, p.cursor_col, p.cursor_row, p.cursor_type);
+    }
+    last_refresh = msec;
+#endif
 }
 
 //
@@ -218,15 +218,18 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    Video_Adapter video_adapter("Tiltti v" VERSION_STRING, memory.get_ptr(0xb8000));
-    if (!video_adapter.has_window()) {
+    Video_Adapter vga("Tiltti v" VERSION_STRING, memory.get_ptr(0xb8000));
+    if (!vga.has_window()) {
         std::cerr << "Cannot create VGA window\n";
         exit(EXIT_FAILURE);
     }
 
     bool quit = false;
-    Machine machine{ memory, delay_sdl, [&machine, &quit]() {
-            pump_sdl_events(machine, quit);
+    Machine machine{ memory, [&vga, &machine, &quit](bool with_delay) {
+            if (with_delay) {
+                SDL_Delay(20);
+            }
+            vga.pump_events(machine, quit);
             return !quit;
         }
     };
@@ -242,24 +245,10 @@ int main(int argc, char *argv[])
         }
 
         while (!quit) {
-            pump_sdl_events(machine, quit);
-            if (quit)
-                break;
-
             constexpr unsigned steps_per_frame = 5000;
             machine.run_batch(steps_per_frame);
 
-            // Refresh each 10 msec.
-            uint64_t msec = SDL_GetTicks();
-            static uint64_t last_refresh;
-            if (msec > last_refresh + 10) {
-                // Refresh SDL window from machine memory and BDA.
-                VideoRefreshParams p = machine.get_video_refresh_params();
-//                if (p.need_refresh) {
-                    video_adapter.refresh(p.text_buf, p.cursor_col, p.cursor_row, p.cursor_type);
-//                }
-            }
-            last_refresh = msec;
+            vga.pump_events(machine, quit);
         }
 
         // Finish the trace output.

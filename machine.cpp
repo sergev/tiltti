@@ -43,9 +43,8 @@ uint64_t Machine::simulated_instructions = 0;
 //
 // Initialize the machine (SDL-free; main() owns display and input).
 //
-Machine::Machine(Memory &m, std::function<void()> delay_cb, std::function<bool()> pump_cb)
+Machine::Machine(Memory &m, std::function<bool(bool)> pump_cb)
     : pump_callback_(std::move(pump_cb)),
-      delay_callback_(std::move(delay_cb)),
       memory(m), cpu(*this),
       ivt(*(Interrupt_Vector_Table *)memory.get_ptr(0x0)),
       bda(*(Bios_Data_Area *)memory.get_ptr(0x400)),
@@ -150,9 +149,19 @@ uint16_t Machine::pop_keystroke()
     return ax;
 }
 
-bool Machine::pump_events()
+void Machine::pump_events_blocking()
 {
-    return pump_callback_();
+    // With delay.
+    if (!pump_callback_(true)) {
+        // Window closed.
+        std::exit(0);
+    }
+}
+
+void Machine::pump_events_nonblocking()
+{
+    // No delay.
+    pump_callback_(false);
 }
 
 static bool basic_area(unsigned addr)

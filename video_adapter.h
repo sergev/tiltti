@@ -23,6 +23,8 @@
 #include <cstddef>
 #include <cstdint>
 
+class Machine;
+
 //
 // VGA color text mode: 80x25, glyph 9x16, display 720x400.
 // Text buffer: 4000 bytes (VGA 0xB8000 layout).
@@ -66,6 +68,10 @@ public:
     void get_cursor(unsigned &col, unsigned &row) const;
 
     bool has_window() const { return window_ != nullptr; }
+
+    // Pump SDL events: keyboard -> machine queue, modifiers -> BDA, set quit on SDL_QUIT.
+    // Refresh screen.
+    void pump_events(Machine &machine, bool &quit);
 
 private:
     std::array<uint8_t, TEXT_BUFFER_SIZE> text_buf_{};
