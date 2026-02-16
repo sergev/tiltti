@@ -163,3 +163,31 @@ TEST_F(MachineTest, TeletypeOutput)
     machine.int10_teletype_output();
     EXPECT_EQ(machine.bda.cursor_pos[page], 0x01'00);
 }
+
+//
+// INT 10h AH=1Bh: Video BIOS functionality — fill video_func_info at ES:DI.
+//
+TEST_F(MachineTest, VideoBiosFunctionality)
+{
+    const unsigned buf_linear = 0x500;
+    cpu.set_es(0x50);
+    cpu.set_di(0);
+    machine.int10_video_bios_functionality();
+
+    EXPECT_EQ(cpu.get_al(), 0x1B);
+
+    EXPECT_EQ(memory.load16(buf_linear + 0), 0x0000);
+    EXPECT_EQ(memory.load16(buf_linear + 2), static_cast<uint16_t>(BIOS_VIDEO_FUNC_STATIC >> 4));
+
+    EXPECT_EQ(memory.load16(buf_linear + 39), 16);  // colors
+    EXPECT_EQ(memory.load8(buf_linear + 41), 8);   // pages
+    EXPECT_EQ(memory.load8(buf_linear + 42), 2);   // scan_lines
+    EXPECT_EQ(memory.load8(buf_linear + 49), 3);   // video_mem
+
+    EXPECT_EQ(memory.load8(buf_linear + 37), machine.bda.dcc_index);
+
+    for (unsigned i = 0; i < 30; i++)
+        EXPECT_EQ(memory.load8(buf_linear + 4 + i), memory.load8(0x449 + i)) << "bda_0x49[" << i << "]";
+    for (unsigned i = 0; i < 3; i++)
+        EXPECT_EQ(memory.load8(buf_linear + 34 + i), memory.load8(0x484 + i)) << "bda_0x84[" << i << "]";
+}

@@ -772,7 +772,30 @@ void Machine::int10_display_combination_code()
 //
 void Machine::int10_video_bios_functionality()
 {
-    throw std::runtime_error("Unimplemented: Video BIOS functionality");
+    const unsigned addr = pc86_linear_addr(cpu.get_es(), cpu.get_di());
+    constexpr unsigned info_size = 64; // sizeof(video_func_info)
+
+    std::memset(memory.get_ptr(addr), 0, info_size);
+
+    // static_functionality: seg:off of table at BIOS_VIDEO_FUNC_STATIC
+    memory.store16(addr + 0, 0);
+    memory.store16(addr + 2, static_cast<uint16_t>(BIOS_VIDEO_FUNC_STATIC >> 4));
+
+    // BDA 0x49–0x66 (30 bytes)
+    const Byte *bda49 = memory.get_ptr(0x449);
+    std::memcpy(memory.get_ptr(addr + 4), bda49, 30);
+
+    // BDA 0x84–0x86 (3 bytes)
+    const Byte *bda84 = memory.get_ptr(0x484);
+    std::memcpy(memory.get_ptr(addr + 34), bda84, 3);
+
+    memory.store8(addr + 37, bda.dcc_index);
+    memory.store16(addr + 39, 16);   // colors
+    memory.store8(addr + 41, 8);     // pages
+    memory.store8(addr + 42, 2);     // scan_lines
+    memory.store8(addr + 49, 3);     // video_mem
+
+    cpu.set_al(0x1B);
 }
 
 void Machine::int10_save_restore_video_state()

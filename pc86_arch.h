@@ -222,6 +222,7 @@ enum {
     BIOS_BAUD_TABLE           = 0xe729, // 16 bytes - Baud rate generator table
     BIOS_DISKETTE_PARAM_TABLE = 0xefc7, // 11 bytes - Floppy Disk Base Table
     BIOS_VIDEO_PARAMS         = 0xf0a4, // 88 bytes - Video parameter tables (INT 1D pointer)
+    BIOS_VIDEO_FUNC_STATIC    = 0xf0100, // 16 bytes - INT 10h AH=1Bh static functionality table
     BIOS_VGA_FONT8            = 0xfa6e, // 1024 bytes - 8x8 VGA font for lower 128 characters
     BIOS_INIT_VECTORS = 0xfef3, // 13 bytes - Initial interrupt vector offsets loaded by POST
     BIOS_DATE         = 0xfff5, // 8 bytes - BIOS build date string "MM/DD/YY"
