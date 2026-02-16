@@ -7,150 +7,140 @@
 //
 #include "sdl_scancode_map.h"
 
+#include <SDL.h>
+
 namespace {
 
-// SDL scancode (0..511) -> BIOS scancode set 1 (0 = unmapped).
-constexpr unsigned MAP_SIZE     = 512;
-uint8_t bios_scancode[MAP_SIZE] = {};
+// SDL scancode (0..511) -> BIOS scancode set 1 and US ASCII.
+constexpr unsigned MAP_SIZE = 512;
 
-// Extended keys (E0 xx): second byte only; caller uses 0xE0 prefix for BIOS.
-uint8_t bios_extended[MAP_SIZE] = {};
+struct Scancode_Map {
+    uint8_t bios_scancode;
+    uint8_t bios_extended;
+    uint8_t ascii_unshifted;
+    uint8_t ascii_shifted;
+};
 
-// Unshifted ASCII (US layout). 0 = no character.
-uint8_t ascii_unshifted[MAP_SIZE] = {};
-
-// Shifted ASCII (US layout). 0 = no character.
-uint8_t ascii_shifted[MAP_SIZE] = {};
+Scancode_Map keymap[MAP_SIZE] = {};
 
 void init_tables()
 {
-    for (unsigned i = 0; i < MAP_SIZE; i++) {
-        bios_scancode[i]   = 0;
-        bios_extended[i]   = 0;
-        ascii_unshifted[i] = 0;
-        ascii_shifted[i]   = 0;
-    }
+    // Letters: A..Z
+    keymap[SDL_SCANCODE_A] = { 0x1E, 0, 'a', 'A' };
+    keymap[SDL_SCANCODE_B] = { 0x30, 0, 'b', 'B' };
+    keymap[SDL_SCANCODE_C] = { 0x2E, 0, 'c', 'C' };
+    keymap[SDL_SCANCODE_D] = { 0x20, 0, 'd', 'D' };
+    keymap[SDL_SCANCODE_E] = { 0x12, 0, 'e', 'E' };
+    keymap[SDL_SCANCODE_F] = { 0x21, 0, 'f', 'F' };
+    keymap[SDL_SCANCODE_G] = { 0x22, 0, 'g', 'G' };
+    keymap[SDL_SCANCODE_H] = { 0x23, 0, 'h', 'H' };
+    keymap[SDL_SCANCODE_I] = { 0x17, 0, 'i', 'I' };
+    keymap[SDL_SCANCODE_J] = { 0x24, 0, 'j', 'J' };
+    keymap[SDL_SCANCODE_K] = { 0x25, 0, 'k', 'K' };
+    keymap[SDL_SCANCODE_L] = { 0x26, 0, 'l', 'L' };
+    keymap[SDL_SCANCODE_M] = { 0x32, 0, 'm', 'M' };
+    keymap[SDL_SCANCODE_N] = { 0x31, 0, 'n', 'N' };
+    keymap[SDL_SCANCODE_O] = { 0x18, 0, 'o', 'O' };
+    keymap[SDL_SCANCODE_P] = { 0x19, 0, 'p', 'P' };
+    keymap[SDL_SCANCODE_Q] = { 0x10, 0, 'q', 'Q' };
+    keymap[SDL_SCANCODE_R] = { 0x13, 0, 'r', 'R' };
+    keymap[SDL_SCANCODE_S] = { 0x1F, 0, 's', 'S' };
+    keymap[SDL_SCANCODE_T] = { 0x14, 0, 't', 'T' };
+    keymap[SDL_SCANCODE_U] = { 0x16, 0, 'u', 'U' };
+    keymap[SDL_SCANCODE_V] = { 0x2F, 0, 'v', 'V' };
+    keymap[SDL_SCANCODE_W] = { 0x11, 0, 'w', 'W' };
+    keymap[SDL_SCANCODE_X] = { 0x2D, 0, 'x', 'X' };
+    keymap[SDL_SCANCODE_Y] = { 0x15, 0, 'y', 'Y' };
+    keymap[SDL_SCANCODE_Z] = { 0x2C, 0, 'z', 'Z' };
 
-    // Letters: SDL A=4..Z=29 -> BIOS A=0x1E, B=0x30, C=0x2E, D=0x20, E=0x12, F=0x21, G=0x22,
-    // H=0x23, I=0x17, J=0x24, K=0x25, L=0x26, M=0x32, N=0x31, O=0x18, P=0x19, Q=0x10, R=0x13,
-    // S=0x1F, T=0x14, U=0x16, V=0x2F, W=0x11, X=0x2D, Y=0x15, Z=0x2C
-    const uint8_t letter_bios[] = { 0x1E, 0x30, 0x2E, 0x20, 0x12, 0x21, 0x22, 0x23, 0x17,
-                                    0x24, 0x25, 0x26, 0x32, 0x31, 0x18, 0x19, 0x10, 0x13,
-                                    0x1F, 0x14, 0x16, 0x2F, 0x11, 0x2D, 0x15, 0x2C };
-    for (int i = 0; i < 26; i++) {
-        unsigned sdl         = 4 + i; // SDL_SCANCODE_A + i
-        bios_scancode[sdl]   = letter_bios[i];
-        ascii_unshifted[sdl] = static_cast<uint8_t>('a' + i);
-        ascii_shifted[sdl]   = static_cast<uint8_t>('A' + i);
-    }
+    // Digits:  1..0
+    keymap[SDL_SCANCODE_1] = { 0x02, 0, '1', '!' };
+    keymap[SDL_SCANCODE_2] = { 0x03, 0, '2', '@' };
+    keymap[SDL_SCANCODE_3] = { 0x04, 0, '3', '#' };
+    keymap[SDL_SCANCODE_4] = { 0x05, 0, '4', '$' };
+    keymap[SDL_SCANCODE_5] = { 0x06, 0, '5', '%' };
+    keymap[SDL_SCANCODE_6] = { 0x07, 0, '6', '^' };
+    keymap[SDL_SCANCODE_7] = { 0x08, 0, '7', '&' };
+    keymap[SDL_SCANCODE_8] = { 0x09, 0, '8', '*' };
+    keymap[SDL_SCANCODE_9] = { 0x0A, 0, '9', '(' };
+    keymap[SDL_SCANCODE_0] = { 0x0B, 0, '0', ')' };
 
-    // Digits: SDL 1=30..0=39 -> BIOS 1=0x02..0=0x0B
-    const uint8_t digit_bios[] = { 0x0B, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A };
-    const char digit_unch[]    = "0123456789";
-    const char digit_shift[]   = ")!@#$%^&*(";
-    for (int i = 0; i < 10; i++) {
-        unsigned sdl         = 30 + i;       // SDL_SCANCODE_1 + i (1 is index 0, 0 is index 9)
-        unsigned idx         = (i + 9) % 10; // SDL 30=1, 31=2, ... 39=0
-        bios_scancode[sdl]   = digit_bios[idx];
-        ascii_unshifted[sdl] = static_cast<uint8_t>(digit_unch[idx]);
-        ascii_shifted[sdl]   = static_cast<uint8_t>(digit_shift[idx]);
-    }
+    // Return, Escape, Backspace, Tab, Space
+    keymap[SDL_SCANCODE_RETURN]    = { 0x1C, 0, '\r', 0 };
+    keymap[SDL_SCANCODE_ESCAPE]    = { 0x01, 0, 0x1B, 0 };
+    keymap[SDL_SCANCODE_BACKSPACE] = { 0x0E, 0, 0x08, 0 };
+    keymap[SDL_SCANCODE_TAB]       = { 0x0F, 0, '\t', 0 };
+    keymap[SDL_SCANCODE_SPACE]     = { 0x39, 0, ' ', 0 };
 
-    // Return=40 -> 0x1C, Escape=41 -> 0x01, Backspace=42 -> 0x0E, Tab=43 -> 0x0F, Space=44 -> 0x39
-    bios_scancode[40]   = 0x1C;
-    ascii_unshifted[40] = '\r';
-    bios_scancode[41]   = 0x01;
-    ascii_unshifted[41] = 0x1B; // ESC
-    bios_scancode[42]   = 0x0E;
-    ascii_unshifted[42] = 0x08; // BS
-    bios_scancode[43]   = 0x0F;
-    ascii_unshifted[43] = '\t';
-    bios_scancode[44]   = 0x39;
-    ascii_unshifted[44] = ' ';
+    // Punctuation
+    keymap[SDL_SCANCODE_MINUS]          = { 0x0C, 0, '-', '_' };
+    keymap[SDL_SCANCODE_EQUALS]         = { 0x0D, 0, '=', '+' };
+    keymap[SDL_SCANCODE_LEFTBRACKET]    = { 0x1A, 0, '[', '{' };
+    keymap[SDL_SCANCODE_RIGHTBRACKET]   = { 0x1B, 0, ']', '}' };
+    keymap[SDL_SCANCODE_BACKSLASH]      = { 0x2B, 0, '\\', '|' };
+    keymap[SDL_SCANCODE_SEMICOLON]      = { 0x27, 0, ';', ':' };
+    keymap[SDL_SCANCODE_APOSTROPHE]     = { 0x28, 0, '\'', '"' };
+    keymap[SDL_SCANCODE_GRAVE]          = { 0x29, 0, '`', '~' };
+    keymap[SDL_SCANCODE_COMMA]          = { 0x33, 0, ',', '<' };
+    keymap[SDL_SCANCODE_PERIOD]         = { 0x34, 0, '.', '>' };
+    keymap[SDL_SCANCODE_SLASH]          = { 0x35, 0, '/', '?' };
+    keymap[SDL_SCANCODE_NONUSBACKSLASH] = { 0x56, 0, '\\', '|' };
 
-    // Minus=45, Equals=46, LeftBracket=47, RightBracket=48, Backslash=49, Semicolon=51,
-    // Apostrophe=52, Grave=53, Comma=54, Period=55, Slash=56
-    bios_scancode[45]   = 0x0C;
-    ascii_unshifted[45] = '-';
-    ascii_shifted[45]   = '_';
-    bios_scancode[46]   = 0x0D;
-    ascii_unshifted[46] = '=';
-    ascii_shifted[46]   = '+';
-    bios_scancode[47]   = 0x1A;
-    ascii_unshifted[47] = '[';
-    ascii_shifted[47]   = '{';
-    bios_scancode[48]   = 0x1B;
-    ascii_unshifted[48] = ']';
-    ascii_shifted[48]   = '}';
-    bios_scancode[49]   = 0x2B;
-    ascii_unshifted[49] = '\\';
-    ascii_shifted[49]   = '|';
-    bios_scancode[51]   = 0x27;
-    ascii_unshifted[51] = ';';
-    ascii_shifted[51]   = ':';
-    bios_scancode[52]   = 0x28;
-    ascii_unshifted[52] = '\'';
-    ascii_shifted[52]   = '"';
-    bios_scancode[53]   = 0x29;
-    ascii_unshifted[53] = '`';
-    ascii_shifted[53]   = '~';
-    bios_scancode[54]   = 0x33;
-    ascii_unshifted[54] = ',';
-    ascii_shifted[54]   = '<';
-    bios_scancode[55]   = 0x34;
-    ascii_unshifted[55] = '.';
-    ascii_shifted[55]   = '>';
-    bios_scancode[56]   = 0x35;
-    ascii_unshifted[56] = '/';
-    ascii_shifted[56]   = '?';
+    // CapsLock, F1..F12
+    keymap[SDL_SCANCODE_CAPSLOCK] = { 0x3A, 0, 0, 0 };
+    keymap[SDL_SCANCODE_F1]       = { 0x3B, 0, 0, 0 };
+    keymap[SDL_SCANCODE_F2]       = { 0x3C, 0, 0, 0 };
+    keymap[SDL_SCANCODE_F3]       = { 0x3D, 0, 0, 0 };
+    keymap[SDL_SCANCODE_F4]       = { 0x3E, 0, 0, 0 };
+    keymap[SDL_SCANCODE_F5]       = { 0x3F, 0, 0, 0 };
+    keymap[SDL_SCANCODE_F6]       = { 0x40, 0, 0, 0 };
+    keymap[SDL_SCANCODE_F7]       = { 0x41, 0, 0, 0 };
+    keymap[SDL_SCANCODE_F8]       = { 0x42, 0, 0, 0 };
+    keymap[SDL_SCANCODE_F9]       = { 0x43, 0, 0, 0 };
+    keymap[SDL_SCANCODE_F10]      = { 0x44, 0, 0, 0 };
+    keymap[SDL_SCANCODE_F11]      = { 0x45, 0, 0, 0 };
+    keymap[SDL_SCANCODE_F12]      = { 0x46, 0, 0, 0 };
 
-    // CapsLock=57, F1..F12=58..69
-    bios_scancode[57] = 0x3A;
-    for (int i = 0; i < 12; i++) {
-        bios_scancode[58 + i] = static_cast<uint8_t>(0x3B + i);
-        // F-keys: ASCII 0 for normal; some BIOS use 0x00, 0x3B+ for scan
-    }
+    // Extended keys (E0 xx): Insert, Home, PageUp, Delete, End, PageDown
+    keymap[SDL_SCANCODE_INSERT]   = { 0, 0x52, 0, 0 };
+    keymap[SDL_SCANCODE_HOME]     = { 0, 0x47, 0, 0 };
+    keymap[SDL_SCANCODE_PAGEUP]   = { 0, 0x49, 0, 0 };
+    keymap[SDL_SCANCODE_DELETE]   = { 0, 0x53, 0, 0 };
+    keymap[SDL_SCANCODE_END]      = { 0, 0x4F, 0, 0 };
+    keymap[SDL_SCANCODE_PAGEDOWN] = { 0, 0x51, 0, 0 };
 
-    // PrintScreen=70, ScrollLock=71, Pause=72, Insert=73, Home=74, PageUp=75, Delete=76, End=77,
-    // PageDown=78, Right=79, Left=80, Down=81, Up=82 These are E0 extended in BIOS. Store second
-    // byte in bios_extended.
-    bios_extended[73] = 0x52; // Insert
-    bios_extended[74] = 0x47; // Home
-    bios_extended[75] = 0x49; // PageUp
-    bios_extended[76] = 0x53; // Delete
-    bios_extended[77] = 0x4F; // End
-    bios_extended[78] = 0x51; // PageDown
-    bios_extended[79] = 0x4D; // Right
-    bios_extended[80] = 0x4B; // Left
-    bios_extended[81] = 0x50; // Down
-    bios_extended[82] = 0x48; // Up
+    // Arrow keys (E0 xx)
+    keymap[SDL_SCANCODE_RIGHT] = { 0, 0x4D, 0, 0 };
+    keymap[SDL_SCANCODE_LEFT]  = { 0, 0x4B, 0, 0 };
+    keymap[SDL_SCANCODE_DOWN]  = { 0, 0x50, 0, 0 };
+    keymap[SDL_SCANCODE_UP]    = { 0, 0x48, 0, 0 };
 
-    // NumLock=83, KP_Divide=84..KP_Period=99 - numpad with E0 prefix
-    bios_scancode[83] = 0x45; // NumLock
-    bios_extended[84] = 0x35; // KP_Divide
-    bios_extended[85] = 0x37; // KP_Multiply
-    bios_extended[86] = 0x4A; // KP_Minus
-    bios_extended[87] = 0x4E; // KP_Plus
-    bios_extended[88] = 0x1C; // KP_Enter (E0 1C)
-    bios_extended[89] = 0x4F; // KP_1 End
-    bios_extended[90] = 0x50; // KP_2 Down
-    bios_extended[91] = 0x51; // KP_3 PageDn
-    bios_extended[92] = 0x4B; // KP_4 Left
-    bios_extended[93] = 0x4C; // KP_5
-    bios_extended[94] = 0x4D; // KP_6 Right
-    bios_extended[95] = 0x47; // KP_7 Home
-    bios_extended[96] = 0x48; // KP_8 Up
-    bios_extended[97] = 0x49; // KP_9 PageUp
-    bios_extended[98] = 0x52; // KP_0 Insert
-    bios_extended[99] = 0x53; // KP_Period Delete
+    // NumLock, numpad with E0 prefix
+    keymap[SDL_SCANCODE_NUMLOCKCLEAR] = { 0x45, 0, 0, 0 };
+    keymap[SDL_SCANCODE_KP_DIVIDE]    = { 0, 0x35, 0, 0 };
+    keymap[SDL_SCANCODE_KP_MULTIPLY]  = { 0, 0x37, 0, 0 };
+    keymap[SDL_SCANCODE_KP_MINUS]     = { 0, 0x4A, 0, 0 };
+    keymap[SDL_SCANCODE_KP_PLUS]      = { 0, 0x4E, 0, 0 };
+    keymap[SDL_SCANCODE_KP_ENTER]     = { 0, 0x1C, 0, 0 };
+    keymap[SDL_SCANCODE_KP_1]         = { 0, 0x4F, 0, 0 };
+    keymap[SDL_SCANCODE_KP_2]         = { 0, 0x50, 0, 0 };
+    keymap[SDL_SCANCODE_KP_3]         = { 0, 0x51, 0, 0 };
+    keymap[SDL_SCANCODE_KP_4]         = { 0, 0x4B, 0, 0 };
+    keymap[SDL_SCANCODE_KP_5]         = { 0, 0x4C, 0, 0 };
+    keymap[SDL_SCANCODE_KP_6]         = { 0, 0x4D, 0, 0 };
+    keymap[SDL_SCANCODE_KP_7]         = { 0, 0x47, 0, 0 };
+    keymap[SDL_SCANCODE_KP_8]         = { 0, 0x48, 0, 0 };
+    keymap[SDL_SCANCODE_KP_9]         = { 0, 0x49, 0, 0 };
+    keymap[SDL_SCANCODE_KP_0]         = { 0, 0x52, 0, 0 };
+    keymap[SDL_SCANCODE_KP_PERIOD]    = { 0, 0x53, 0, 0 };
 
-    // Modifiers: LCtrl=224, LShift=225, LAlt=226, RCtrl=228, RShift=229, RAlt=230
-    bios_scancode[224] = 0x1D; // LCtrl
-    bios_scancode[225] = 0x2A; // LShift
-    bios_scancode[226] = 0x38; // LAlt
-    bios_extended[228] = 0x1D; // RCtrl (E0 1D)
-    bios_extended[229] = 0x36; // RShift
-    bios_extended[230] = 0x38; // RAlt (E0 38)
+    // Modifiers
+    keymap[SDL_SCANCODE_LCTRL]  = { 0x1D, 0, 0, 0 };
+    keymap[SDL_SCANCODE_LSHIFT] = { 0x2A, 0, 0, 0 };
+    keymap[SDL_SCANCODE_LALT]   = { 0x38, 0, 0, 0 };
+    keymap[SDL_SCANCODE_RCTRL]  = { 0, 0x1D, 0, 0 };
+    keymap[SDL_SCANCODE_RSHIFT] = { 0, 0x36, 0, 0 };
+    keymap[SDL_SCANCODE_RALT]   = { 0, 0x38, 0, 0 };
 }
 
 bool tables_initialized = false;
@@ -165,7 +155,7 @@ uint8_t sdl_to_bios_scancode(uint32_t sdl_scancode)
     }
     if (sdl_scancode >= MAP_SIZE)
         return 0;
-    return bios_scancode[sdl_scancode];
+    return keymap[sdl_scancode].bios_scancode;
 }
 
 uint8_t sdl_to_bios_scancode_extended(uint32_t sdl_scancode)
@@ -176,7 +166,7 @@ uint8_t sdl_to_bios_scancode_extended(uint32_t sdl_scancode)
     }
     if (sdl_scancode >= MAP_SIZE)
         return 0;
-    return bios_extended[sdl_scancode];
+    return keymap[sdl_scancode].bios_extended;
 }
 
 uint8_t sdl_scancode_to_ascii_unshifted(uint32_t sdl_scancode)
@@ -187,7 +177,7 @@ uint8_t sdl_scancode_to_ascii_unshifted(uint32_t sdl_scancode)
     }
     if (sdl_scancode >= MAP_SIZE)
         return 0;
-    return ascii_unshifted[sdl_scancode];
+    return keymap[sdl_scancode].ascii_unshifted;
 }
 
 uint8_t sdl_scancode_to_ascii_shifted(uint32_t sdl_scancode)
@@ -198,5 +188,5 @@ uint8_t sdl_scancode_to_ascii_shifted(uint32_t sdl_scancode)
     }
     if (sdl_scancode >= MAP_SIZE)
         return 0;
-    return ascii_shifted[sdl_scancode];
+    return keymap[sdl_scancode].ascii_shifted;
 }
