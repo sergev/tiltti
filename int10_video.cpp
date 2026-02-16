@@ -641,10 +641,67 @@ void Machine::int10_get_current_video_mode()
     cpu.set_ah(bda.video_cols);
 }
 
+//
+// AH=10h — Palette and DAC control (EGA/VGA).
+//
+// Subfunction in AL. Minimal implementation: set operations are no-ops; read operations
+// return safe defaults. Future: maintain attribute controller palette (16 regs), overscan,
+// DAC colour registers (256× RGB), DAC mask, and colour paging; sync to CRTC/port I/O when
+// implemented.
+//
 void Machine::int10_palette_control()
 {
-    // TODO: update CRTC port (attribute controller, DAC)
-    throw std::runtime_error("Unimplemented: Palette and DAC functions");
+    const unsigned al = cpu.get_al();
+
+    switch (al) {
+    case 0x00: // Set single palette register (BL=index, BH=value). Future: store in palette state.
+        break;
+    case 0x01: // Set overscan/border (BH=value). Future: store in overscan register.
+        break;
+    case 0x02: // Set all 16 palette regs + overscan from ES:DX (17 bytes). Future: bulk load.
+        break;
+    case 0x03: // Toggle intensity/blink (BL=0 intensity, 1 blink). Future: update attribute ctrl.
+        break;
+    case 0x07: // Read palette register (BL=index). Future: return from palette state.
+        cpu.set_bh(0);
+        break;
+    case 0x08: // Read overscan. Future: return overscan register.
+        cpu.set_bh(0);
+        break;
+    case 0x09: // Read all palette + overscan to ES:DX (17 bytes). Future: copy from state.
+        break;
+    case 0x10: // Set one DAC register (BX=index, CH=G, DH=R, CL=B 6-bit). Future: DAC RAM.
+        break;
+    case 0x12: // Set block of DAC registers (BX=start, CX=count, ES:DX=table). Future: DAC RAM.
+        break;
+    case 0x13: // Select video DAC colour page (BL=sub: 0h select page in BH, 1h get page in BH).
+        if (cpu.get_bl() == 1)
+            cpu.set_bh(0);
+        break;
+    case 0x15: // Read one DAC register (BX=index). Future: return from DAC RAM.
+        cpu.set_dh(0);
+        cpu.set_ch(0);
+        cpu.set_cl(0);
+        break;
+    case 0x17: // Read block of DAC (BX=start, CX=count, ES:DX=buffer). Future: copy from DAC.
+        break;
+    case 0x18: // Set DAC mask (BL=value). Future: store DAC mask.
+        break;
+    case 0x19: // Read DAC mask. Future: return DAC mask.
+        cpu.set_bl(0xff);
+        break;
+    case 0x1a: // Get/set colour paging (BL=0 get in BH/BL, BL=1 set from BH). Future: paging state.
+        if (cpu.get_bl() == 0) {
+            cpu.set_bh(0);
+            cpu.set_bl(0);
+        }
+        break;
+    case 0x1b: // Sum colours to grayscale (BX=start, CX=count). Future: compute and write back.
+        break;
+    default:
+        // Unknown AL: no-op (many BIOSes ignore unsupported subfunctions).
+        break;
+    }
 }
 
 //
