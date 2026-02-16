@@ -78,7 +78,6 @@ private:
     size_t font_buf_size_ = 0;
 
     // Static stuff.
-    static bool verbose;                    // Verbose flag for tracing
     static uint64_t simulated_instructions; // Count of instructions
 
 public:
@@ -122,10 +121,6 @@ public:
     // Get instruction count.
     static uint64_t get_instr_count() { return simulated_instructions; }
     static void incr_simulated_instructions() { simulated_instructions++; }
-
-    // Verbose flag for tracing.
-    static void set_verbose(bool on) { verbose = on; }
-    static bool get_verbose() { return verbose; }
 
     // Enable trace output to the given file,
     // or to std::cout when filename not present.

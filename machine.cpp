@@ -37,7 +37,6 @@
 #include <sstream>
 
 // Static fields.
-bool Machine::verbose                    = false;
 uint64_t Machine::simulated_instructions = 0;
 
 //

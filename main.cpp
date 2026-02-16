@@ -37,7 +37,6 @@ static const struct option long_options[] = {
     // clang-format off
     { "help",           no_argument,        nullptr,    'h' },
     { "version",        no_argument,        nullptr,    'V' },
-    { "verbose",        no_argument,        nullptr,    'v' },
     { "output",         required_argument,  nullptr,    'o' },
     { "regs",           required_argument,  nullptr,    'r' },
     { "ports",          required_argument,  nullptr,    'p' },
@@ -57,7 +56,6 @@ static void print_usage(std::ostream &out, const char *prog_name)
     out << "Input files:" << std::endl;
     out << "    disk.img                Image of bootable PC floppy or disk" << std::endl;
     out << "Options:" << std::endl;
-    out << "    -v, --verbose           Verbose mode" << std::endl;
     out << "    -V, --version           Print the version number and exit" << std::endl;
     out << "    -h, --help              Display available options" << std::endl;
     out << "Trace modes:" << std::endl;
@@ -82,12 +80,11 @@ int main(int argc, char *argv[])
     }
 
     Memory memory;
-    bool verbose = false;
     std::string disk_file;
 
     // Parse command line options.
     for (;;) {
-        switch (getopt_long(argc, argv, "-hVvrspo:", long_options, nullptr)) {
+        switch (getopt_long(argc, argv, "-hVrspo:", long_options, nullptr)) {
         case EOF:
             break;
 
@@ -108,10 +105,6 @@ int main(int argc, char *argv[])
             // Show usage message and exit.
             print_usage(std::cout, prog_name);
             exit(EXIT_SUCCESS);
-
-        case 'v':
-            verbose = true;
-            continue;
 
         case 'V':
             // Show version and exit.
@@ -165,8 +158,6 @@ int main(int argc, char *argv[])
                             std::exit(0);
                         }
                     } };
-    if (verbose)
-        machine.set_verbose(true);
     machine.set_font_buffer(vga.font_buffer(), vga.font_buffer_size());
 
     try {
