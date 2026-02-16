@@ -191,3 +191,61 @@ TEST_F(MachineTest, VideoBiosFunctionality)
     for (unsigned i = 0; i < 3; i++)
         EXPECT_EQ(memory.load8(buf_linear + 34 + i), memory.load8(0x484 + i)) << "bda_0x84[" << i << "]";
 }
+
+//
+// INT 10h AH=1Ch: Save/restore video state — query returns size in 64-byte blocks.
+//
+TEST_F(MachineTest, SaveRestoreVideoStateQuery)
+{
+    cpu.set_al(0);
+    cpu.set_cx(0x02); // BDA only
+    machine.int10_save_restore_video_state();
+
+    EXPECT_EQ(cpu.get_al(), 0x1c);
+    EXPECT_EQ(cpu.get_bx(), 1);
+}
+
+//
+// INT 10h AH=1Ch: Save then restore BDA video state.
+//
+TEST_F(MachineTest, SaveRestoreVideoStateSaveRestore)
+{
+    memory.store8(0x449, 3);   // BDA video_mode
+    memory.store8(0x462, 0);   // BDA video_page
+
+    cpu.set_es(0x50);
+    cpu.set_bx(0);
+
+    cpu.set_al(1);
+    cpu.set_cx(0x02);
+    machine.int10_save_restore_video_state();
+    EXPECT_EQ(cpu.get_al(), 0x1c);
+    EXPECT_EQ(memory.load8(0x500), 3);
+
+    memory.store8(0x449, 6);
+    memory.store8(0x462, 2);
+
+    cpu.set_al(2);
+    cpu.set_cx(0x02);
+    machine.int10_save_restore_video_state();
+    EXPECT_EQ(cpu.get_al(), 0x1c);
+
+    EXPECT_EQ(memory.load8(0x449), 3);
+    EXPECT_EQ(memory.load8(0x462), 0);
+}
+
+//
+// INT 10h AH=1Ch: Invalid AL or CX leaves registers unchanged.
+//
+TEST_F(MachineTest, SaveRestoreVideoStateInvalid)
+{
+    cpu.set_al(3);
+    cpu.set_cx(0x02);
+    machine.int10_save_restore_video_state();
+    EXPECT_NE(cpu.get_al(), 0x1c);
+
+    cpu.set_al(0);
+    cpu.set_cx(0x08);
+    machine.int10_save_restore_video_state();
+    EXPECT_NE(cpu.get_al(), 0x1c);
+}

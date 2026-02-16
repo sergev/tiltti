@@ -798,9 +798,44 @@ void Machine::int10_video_bios_functionality()
     cpu.set_al(0x1B);
 }
 
+//
+// AH=1Ch - Save/restore video state.
+//
+// AL=0: return buffer size in 64-byte blocks (BX). AL=1: save. AL=2: restore.
+// CX = state flags (bits 0-2 only); bit 1 = BDA. Only BDA state is supported.
+// ES:BX = buffer for save/restore.
+//
 void Machine::int10_save_restore_video_state()
 {
-    throw std::runtime_error("Unimplemented: Save/restore video state");
+    constexpr unsigned SR_BDA          = 0x02;
+    constexpr unsigned SAVE_BDA_BLOCKS = 1;
+
+    unsigned cx = cpu.get_cx();
+    unsigned al = cpu.get_al();
+
+    if ((cx & ~0x07u) != 0 || al > 2)
+        return;
+    if ((cx & SR_BDA) == 0)
+        return;
+
+    if (al == 0) {
+        cpu.set_bx(SAVE_BDA_BLOCKS);
+        cpu.set_al(0x1c);
+        return;
+    }
+
+    const unsigned addr = pc86_linear_addr(cpu.get_es(), cpu.get_bx());
+
+    if (al == 1) {
+        std::memcpy(memory.get_ptr(addr), memory.get_ptr(0x449), 28);
+        std::memcpy(memory.get_ptr(addr + 28), memory.get_ptr(0x484), 6);
+        std::memset(memory.get_ptr(addr + 34), 0, 10);
+    } else {
+        std::memcpy(memory.get_ptr(0x449), memory.get_ptr(addr), 28);
+        std::memcpy(memory.get_ptr(0x484), memory.get_ptr(addr + 28), 6);
+    }
+
+    cpu.set_al(0x1c);
 }
 
 void Machine::int10_vbe()
