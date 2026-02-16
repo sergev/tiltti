@@ -73,16 +73,15 @@ private:
     std::array<uint8_t, FONT_BUFFER_SIZE> font_buf_{};
     std::array<uint8_t, TEXT_BUFFER_SIZE> text_snapshot_{};
 
-    unsigned cursor_col_ = 0;
-    unsigned cursor_row_ = 0;
-
     void *window_   = nullptr;
     void *renderer_ = nullptr;
     void *texture_  = nullptr;
     std::array<uint8_t, SCREEN_WIDTH * SCREEN_HEIGHT * 4> framebuffer_{};
 
-    bool cursor_visible_    = true;
-    unsigned refresh_count_ = 0; // used for cursor blink when no window
+    // Cursor located at this position.
+    unsigned cursor_col_ = 0;
+    unsigned cursor_row_ = 0;
+    bool cursor_visible_ = false;
 
     void init_font();
     void draw_cell(const uint8_t *text_buf, unsigned col, unsigned row, bool draw_cursor);

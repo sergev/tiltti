@@ -46,8 +46,6 @@ constexpr unsigned PALETTE[16][3] = {
     { 255, 255, 255 }  // 15 white
 };
 
-constexpr unsigned CURSOR_BLINK_MS = 400;
-
 } // namespace
 
 //
@@ -122,72 +120,17 @@ void Video_Adapter::init_font()
         for (unsigned row = 0; row < 16; row++) {
             uint16_t val       = vga_font_9x16[c][row];
             unsigned off       = c * 32 + row * 2;
-            font_buf_[off]     = static_cast<uint8_t>(val & 0xff);
-            font_buf_[off + 1] = static_cast<uint8_t>(val >> 8);
+            font_buf_[off]     = val;
+            font_buf_[off + 1] = val >> 8;
         }
     }
-}
-
-//
-// Set the cursor position; column and row are clamped to the screen bounds.
-//
-void Video_Adapter::set_cursor(unsigned col, unsigned row)
-{
-    cursor_col_ = (col < TEXT_COLS) ? col : TEXT_COLS - 1;
-    cursor_row_ = (row < TEXT_ROWS) ? row : TEXT_ROWS - 1;
-}
-
-//
-// Return the current cursor column and row.
-//
-void Video_Adapter::get_cursor(unsigned &col, unsigned &row) const
-{
-    col = cursor_col_;
-    row = cursor_row_;
-}
-
-//
-// Write one character with the given attribute at the cursor and advance the cursor.
-// Wrap and scroll when needed. Only valid when using internal buffer.
-//
-void Video_Adapter::putchar(uint8_t ch, uint8_t attr)
-{
-    if (text_buf_ptr_ != text_buf_.data() || cursor_row_ >= TEXT_ROWS)
-        return;
-
-    unsigned off       = (cursor_row_ * TEXT_COLS + cursor_col_) * 2;
-    text_buf_[off]     = ch;
-    text_buf_[off + 1] = attr;
-
-    cursor_col_++;
-    if (cursor_col_ >= TEXT_COLS) {
-        cursor_col_ = 0;
-        cursor_row_++;
-        if (cursor_row_ >= TEXT_ROWS) {
-            cursor_row_ = TEXT_ROWS - 1;
-            std::memmove(text_buf_.data(), text_buf_.data() + TEXT_COLS * 2,
-                         (TEXT_ROWS - 1) * TEXT_COLS * 2);
-            std::memset(text_buf_.data() + (TEXT_ROWS - 1) * TEXT_COLS * 2, 0, TEXT_COLS * 2);
-        }
-    }
-}
-
-//
-// Write a null-terminated string with the given attribute at the cursor.
-//
-void Video_Adapter::puts(const char *s, uint8_t attr)
-{
-    if (!s)
-        return;
-    while (*s)
-        putchar(static_cast<uint8_t>(*s++), attr);
 }
 
 //
 // Render one text cell (9x16 pixels) into the framebuffer.
 // Optionally draw a block cursor by inverting the cell.
 //
-void Video_Adapter::draw_cell(const uint8_t *text_buf, unsigned col, unsigned row, bool draw_cursor)
+void Video_Adapter::draw_cell(const uint8_t *text_buf, unsigned col, unsigned row, bool is_cursor_cell)
 {
     unsigned cell_off = (row * TEXT_COLS + col) * 2;
     uint8_t ch        = text_buf[cell_off];
@@ -195,11 +138,9 @@ void Video_Adapter::draw_cell(const uint8_t *text_buf, unsigned col, unsigned ro
     unsigned fg       = attr & 0x0f;
     unsigned bg       = (attr >> 4) & 0x0f;
 
-    unsigned font_off = static_cast<unsigned>(ch) * 32;
-    int px            = static_cast<int>(col * GLYPH_WIDTH);
-    int py            = static_cast<int>(row * GLYPH_HEIGHT);
-
-    bool is_cursor_cell = draw_cursor && (col == cursor_col_ && row == cursor_row_);
+    unsigned font_off = ch * 32;
+    unsigned px       = col * GLYPH_WIDTH;
+    unsigned py       = row * GLYPH_HEIGHT;
 
     if (is_cursor_cell && fg == bg) {
         fg = 15;
@@ -208,8 +149,7 @@ void Video_Adapter::draw_cell(const uint8_t *text_buf, unsigned col, unsigned ro
 
     for (unsigned dy = 0; dy < GLYPH_HEIGHT; dy++) {
         uint16_t row_bits;
-        row_bits = static_cast<uint16_t>(font_buf_[font_off + dy * 2]) |
-                   (static_cast<uint16_t>(font_buf_[font_off + dy * 2 + 1]) << 8);
+        row_bits = font_buf_[font_off + dy * 2] | (font_buf_[font_off + dy * 2 + 1] << 8);
         row_bits &= 0x1ff;
 
         for (unsigned dx = 0; dx < GLYPH_WIDTH; dx++) {
@@ -221,14 +161,13 @@ void Video_Adapter::draw_cell(const uint8_t *text_buf, unsigned col, unsigned ro
             unsigned g         = PALETTE[color_idx][1];
             unsigned b         = PALETTE[color_idx][2];
 
-            int x = px + static_cast<int>(dx);
-            int y = py + static_cast<int>(dy);
-            if (x >= 0 && x < static_cast<int>(SCREEN_WIDTH) && y >= 0 &&
-                y < static_cast<int>(SCREEN_HEIGHT)) {
+            unsigned x = px + dx;
+            unsigned y = py + dy;
+            if (x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT) {
                 unsigned fb_off          = (y * SCREEN_WIDTH + x) * 4;
-                framebuffer_[fb_off]     = static_cast<uint8_t>(b);
-                framebuffer_[fb_off + 1] = static_cast<uint8_t>(g);
-                framebuffer_[fb_off + 2] = static_cast<uint8_t>(r);
+                framebuffer_[fb_off]     = b;
+                framebuffer_[fb_off + 1] = g;
+                framebuffer_[fb_off + 2] = r;
                 framebuffer_[fb_off + 3] = 255;
             }
         }
@@ -240,9 +179,6 @@ void Video_Adapter::draw_cell(const uint8_t *text_buf, unsigned col, unsigned ro
 //
 void Video_Adapter::present()
 {
-    if (!window_ || !renderer_ || !texture_)
-        return;
-
     SDL_UpdateTexture(static_cast<SDL_Texture *>(texture_), nullptr, framebuffer_.data(),
                       SCREEN_WIDTH * 4);
 
@@ -270,19 +206,10 @@ void Video_Adapter::present()
 void Video_Adapter::refresh_from_memory(const uint8_t *text_buf, unsigned cursor_col,
                                         unsigned cursor_row, uint16_t cursor_type)
 {
-    cursor_col_ = (cursor_col < TEXT_COLS) ? cursor_col : TEXT_COLS - 1;
-    cursor_row_ = (cursor_row < TEXT_ROWS) ? cursor_row : TEXT_ROWS - 1;
-
-    if (cursor_type == 0) {
+    if (cursor_visible_) {
+        // Clear previous cursor.
+        draw_cell(text_buf, cursor_col_, cursor_row_, false);
         cursor_visible_ = false;
-    } else if (window_) {
-        uint64_t now    = static_cast<uint64_t>(SDL_GetTicks());
-        uint64_t period = now / CURSOR_BLINK_MS;
-        cursor_visible_ = (period % 2 == 0);
-    } else {
-        constexpr unsigned toggles_per_blink = 30;
-        cursor_visible_                      = ((refresh_count_ / toggles_per_blink) % 2) == 0;
-        refresh_count_++;
     }
 
     for (unsigned row = 0; row < TEXT_ROWS; row++) {
@@ -290,9 +217,16 @@ void Video_Adapter::refresh_from_memory(const uint8_t *text_buf, unsigned cursor
             unsigned off = (row * TEXT_COLS + col) * 2;
             bool changed = (text_buf[off] != text_snapshot_[off]) ||
                            (text_buf[off + 1] != text_snapshot_[off + 1]);
-            bool is_cursor = (col == cursor_col_ && row == cursor_row_);
-            if (changed || is_cursor)
-                draw_cell(text_buf, col, row, cursor_visible_);
+            bool is_cursor = (cursor_type > 0) && (col == cursor_col) && (row == cursor_row);
+
+            if (changed || is_cursor) {
+                draw_cell(text_buf, col, row, is_cursor);
+                if (is_cursor) {
+                    cursor_visible_ = true;
+                    cursor_row_ = row;
+                    cursor_col_ = col;
+                }
+            }
         }
     }
 

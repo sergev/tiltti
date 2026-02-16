@@ -216,7 +216,8 @@ int main(int argc, char *argv[])
 
     Video_Adapter video_adapter("Tiltti v" VERSION_STRING, memory.get_ptr(0xb8000));
     if (!video_adapter.has_window()) {
-        throw std::runtime_error("SDL: cannot create display window");
+        std::cerr << "Cannot create VGA window\n";
+        exit(EXIT_FAILURE);
     }
 
     try {
