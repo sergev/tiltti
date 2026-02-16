@@ -155,7 +155,7 @@ TEST_F(MachineTest, TeletypeOutput)
     // Another character.
     cpu.set_al('b');
     machine.int10_teletype_output();
-    EXPECT_EQ(base[2*80], 'b');
+    EXPECT_EQ(base[2 * 80], 'b');
     EXPECT_EQ(machine.bda.cursor_pos[page], 0x01'01);
 
     // Backspace.
@@ -179,7 +179,7 @@ TEST_F(MachineTest, VideoBiosFunctionality)
     EXPECT_EQ(memory.load16(buf_linear + 0), 0x0000);
     EXPECT_EQ(memory.load16(buf_linear + 2), static_cast<uint16_t>(BIOS_VIDEO_FUNC_STATIC >> 4));
 
-    EXPECT_EQ(memory.load16(buf_linear + 39), 16);  // colors
+    EXPECT_EQ(memory.load16(buf_linear + 39), 16); // colors
     EXPECT_EQ(memory.load8(buf_linear + 41), 8);   // pages
     EXPECT_EQ(memory.load8(buf_linear + 42), 2);   // scan_lines
     EXPECT_EQ(memory.load8(buf_linear + 49), 3);   // video_mem
@@ -187,9 +187,11 @@ TEST_F(MachineTest, VideoBiosFunctionality)
     EXPECT_EQ(memory.load8(buf_linear + 37), machine.bda.dcc_index);
 
     for (unsigned i = 0; i < 30; i++)
-        EXPECT_EQ(memory.load8(buf_linear + 4 + i), memory.load8(0x449 + i)) << "bda_0x49[" << i << "]";
+        EXPECT_EQ(memory.load8(buf_linear + 4 + i), memory.load8(0x449 + i))
+            << "bda_0x49[" << i << "]";
     for (unsigned i = 0; i < 3; i++)
-        EXPECT_EQ(memory.load8(buf_linear + 34 + i), memory.load8(0x484 + i)) << "bda_0x84[" << i << "]";
+        EXPECT_EQ(memory.load8(buf_linear + 34 + i), memory.load8(0x484 + i))
+            << "bda_0x84[" << i << "]";
 }
 
 //
@@ -210,8 +212,8 @@ TEST_F(MachineTest, SaveRestoreVideoStateQuery)
 //
 TEST_F(MachineTest, SaveRestoreVideoStateSaveRestore)
 {
-    memory.store8(0x449, 3);   // BDA video_mode
-    memory.store8(0x462, 0);   // BDA video_page
+    memory.store8(0x449, 3); // BDA video_mode
+    memory.store8(0x462, 0); // BDA video_page
 
     cpu.set_es(0x50);
     cpu.set_bx(0);
@@ -248,4 +250,48 @@ TEST_F(MachineTest, SaveRestoreVideoStateInvalid)
     cpu.set_cx(0x08);
     machine.int10_save_restore_video_state();
     EXPECT_NE(cpu.get_al(), 0x1c);
+}
+
+//
+// INT 10h AH=4Fh: VBE Get controller info (AL=0x00).
+//
+TEST_F(MachineTest, VbeGetControllerInfo)
+{
+    const unsigned buf_linear = 0x500;
+    cpu.set_es(0x50);
+    cpu.set_di(0);
+
+    cpu.set_al(0x00);
+    machine.int10_vbe();
+
+    EXPECT_EQ(cpu.get_ax(), 0x004F);
+    EXPECT_EQ(memory.load32(buf_linear + 0), 0x41534556u);
+    EXPECT_EQ(memory.load16(buf_linear + 4), 0x0200);
+    EXPECT_EQ(memory.load16(buf_linear + 34), 0xFFFF);
+}
+
+//
+// INT 10h AH=4Fh: VBE Get current mode (AL=0x03).
+//
+TEST_F(MachineTest, VbeGetCurrentMode)
+{
+    cpu.set_al(0x03);
+    machine.int10_vbe();
+
+    EXPECT_EQ(cpu.get_ax(), 0x004F);
+    EXPECT_EQ(cpu.get_bx(), 0xFFFF);
+}
+
+//
+// INT 10h AH=4Fh: Unsupported VBE subfunction returns 0x014F.
+//
+TEST_F(MachineTest, VbeUnsupported)
+{
+    cpu.set_al(0x01);
+    machine.int10_vbe();
+    EXPECT_EQ(cpu.get_ax(), 0x014F);
+
+    cpu.set_al(0x02);
+    machine.int10_vbe();
+    EXPECT_EQ(cpu.get_ax(), 0x014F);
 }

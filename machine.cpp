@@ -74,13 +74,13 @@ Machine::Machine(Memory &m, std::function<bool(bool)> pump_cb)
 
     // INT 10h AH=1Bh: static functionality table at BIOS_VIDEO_FUNC_STATIC.
     const unsigned static_addr = BIOS_VIDEO_FUNC_STATIC;
-    memory.store32(static_addr + 0, 0xCF);   // modes: 0,1,2,3,6,7 supported
+    memory.store32(static_addr + 0, 0xCF); // modes: 0,1,2,3,6,7 supported
     memory.store8(static_addr + 4, 0);
     memory.store8(static_addr + 5, 0);
     memory.store8(static_addr + 6, 0);
-    memory.store8(static_addr + 7, 0x07);   // scanlines: 200, 350, 400
-    memory.store8(static_addr + 8, 0x02);   // cblocks
-    memory.store8(static_addr + 9, 0x08);   // active_cblocks
+    memory.store8(static_addr + 7, 0x07);     // scanlines: 200, 350, 400
+    memory.store8(static_addr + 8, 0x02);     // cblocks
+    memory.store8(static_addr + 9, 0x08);     // active_cblocks
     memory.store16(static_addr + 10, 0x0ce7); // misc_flags
     // bytes 12-15 reserved, leave zero
 }

@@ -451,10 +451,11 @@ void Machine::int10_read_char()
 
 //
 // Helper: write 'count' cells at cursor on 'page', advancing cursor.
-// use_fixed_attr: true = store (fixed_attr<<8)|ch; false = preserve attribute (load word, keep high byte).
+// use_fixed_attr: true = store (fixed_attr<<8)|ch; false = preserve attribute (load word, keep high
+// byte).
 //
-void Machine::write_cells_at_cursor(unsigned page, unsigned count, uint8_t ch,
-    bool use_fixed_attr, uint8_t fixed_attr)
+void Machine::write_cells_at_cursor(unsigned page, unsigned count, uint8_t ch, bool use_fixed_attr,
+                                    uint8_t fixed_attr)
 {
     if (page > 7)
         return;
@@ -662,11 +663,13 @@ void Machine::int10_alternate_select()
     unsigned bl = cpu.get_bl();
 
     if (bl == 0x10) {
-        // Get video subsystem config. BX: BH=0 color/1 mono, BL=memory (0=64K..3=256K). CX: switch settings.
+        // Get video subsystem config. BX: BH=0 color/1 mono, BL=memory (0=64K..3=256K). CX: switch
+        // settings.
         cpu.set_bx(0x0003); // color, 256K
         cpu.set_cx(bda.video_switches);
     } else if (bl >= 0x30 && bl <= 0x36) {
-        // Select vertical resolution, palette, addressing, gray-scale, cursor emulation, or reserved; no-op.
+        // Select vertical resolution, palette, addressing, gray-scale, cursor emulation, or
+        // reserved; no-op.
         cpu.set_al(0x12);
     }
 }
@@ -674,8 +677,8 @@ void Machine::int10_alternate_select()
 //
 // AH=13h - Write string.
 //
-// Write a string at (DH,DL) on page BH. AL bit 0: update cursor after; bit 1: string is char,attr pairs.
-// ES:BP = string; CX = character count; BL = attribute (when AL bit 1 = 0).
+// Write a string at (DH,DL) on page BH. AL bit 0: update cursor after; bit 1: string is char,attr
+// pairs. ES:BP = string; CX = character count; BL = attribute (when AL bit 1 = 0).
 //
 void Machine::int10_write_string()
 {
@@ -683,11 +686,11 @@ void Machine::int10_write_string()
     if (page > 7)
         return;
 
-    unsigned row  = cpu.get_dh();
-    unsigned col  = cpu.get_dl();
-    unsigned count = cpu.get_cx();
-    uint8_t al     = cpu.get_al();
-    uint8_t attr   = cpu.get_bl();
+    unsigned row        = cpu.get_dh();
+    unsigned col        = cpu.get_dl();
+    unsigned count      = cpu.get_cx();
+    uint8_t al          = cpu.get_al();
+    uint8_t attr        = cpu.get_bl();
     bool attr_in_string = (al & 2) != 0;
     bool update_cursor  = (al & 1) != 0;
 
@@ -772,7 +775,7 @@ void Machine::int10_display_combination_code()
 //
 void Machine::int10_video_bios_functionality()
 {
-    const unsigned addr = pc86_linear_addr(cpu.get_es(), cpu.get_di());
+    const unsigned addr          = pc86_linear_addr(cpu.get_es(), cpu.get_di());
     constexpr unsigned info_size = 64; // sizeof(video_func_info)
 
     std::memset(memory.get_ptr(addr), 0, info_size);
@@ -790,10 +793,10 @@ void Machine::int10_video_bios_functionality()
     std::memcpy(memory.get_ptr(addr + 34), bda84, 3);
 
     memory.store8(addr + 37, bda.dcc_index);
-    memory.store16(addr + 39, 16);   // colors
-    memory.store8(addr + 41, 8);     // pages
-    memory.store8(addr + 42, 2);     // scan_lines
-    memory.store8(addr + 49, 3);     // video_mem
+    memory.store16(addr + 39, 16); // colors
+    memory.store8(addr + 41, 8);   // pages
+    memory.store8(addr + 42, 2);   // scan_lines
+    memory.store8(addr + 49, 3);   // video_mem
 
     cpu.set_al(0x1B);
 }
@@ -838,7 +841,38 @@ void Machine::int10_save_restore_video_state()
     cpu.set_al(0x1c);
 }
 
+//
+// AH=4Fh - VBE (VESA BIOS Extensions). Minimal stub: AL=0x00 (get controller info),
+// AL=0x03 (get current mode); all other subfunctions return unsupported.
+//
 void Machine::int10_vbe()
 {
-    throw std::runtime_error("Unimplemented: VBE");
+    constexpr uint32_t VESA_SIGNATURE = 0x41534556; // "VESA"
+
+    switch (cpu.get_al()) {
+    case 0x00: {
+        const unsigned addr = pc86_linear_addr(cpu.get_es(), cpu.get_di());
+        const uint16_t es   = cpu.get_es();
+        const uint16_t di   = cpu.get_di();
+
+        std::memset(memory.get_ptr(addr), 0, 256);
+
+        memory.store32(addr + 0, VESA_SIGNATURE);
+        memory.store16(addr + 4, 0x0200);
+        memory.store16(addr + 14, di + 34);
+        memory.store16(addr + 16, es);
+        memory.store16(addr + 18, 4);
+        memory.store16(addr + 34, 0xFFFF);
+
+        cpu.set_ax(0x004F);
+        return;
+    }
+    case 0x03:
+        cpu.set_bx(0xFFFF);
+        cpu.set_ax(0x004F);
+        return;
+    default:
+        cpu.set_ax(0x014F);
+        return;
+    }
 }
