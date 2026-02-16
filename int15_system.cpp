@@ -42,9 +42,7 @@ void Machine::handle_int15_system_services()
         break;
     case 0x41:
         // Wait on External Event.
-        if (!has_keystroke()) {
-            pump_events();
-        }
+        pump_callback(10);
         break;
     case 0x4F:
         int15_keyboard_intercept();

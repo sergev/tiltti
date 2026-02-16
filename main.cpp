@@ -158,9 +158,12 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    Machine machine{ memory, [&vga, &machine]() {
-                        vga.pump_events(machine);
-                        return vga.active();
+    Machine machine{ memory, [&vga, &machine](unsigned timeout) {
+                        vga.pump_events(machine, timeout);
+                        if (!vga.active()) {
+                            // Window closed.
+                            std::exit(0);
+                        }
                     } };
     if (verbose)
         machine.set_verbose(true);
@@ -175,10 +178,10 @@ int main(int argc, char *argv[])
         }
 
         while (vga.active()) {
-            constexpr unsigned steps_per_frame = 5000;
+            constexpr unsigned steps_per_frame = 50000;
             machine.run_batch(steps_per_frame);
 
-            vga.pump_events(machine);
+            vga.pump_events(machine, 10);
         }
 
         // Finish the trace output.

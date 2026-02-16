@@ -72,7 +72,7 @@ public:
     // Pump SDL events: keyboard -> machine queue, modifiers -> BDA.
     // Refresh screen.
     // Clear active on SDL_QUIT.
-    void pump_events(Machine &machine);
+    void pump_events(Machine &machine, unsigned timeout);
 
     bool active() { return active_; }
 

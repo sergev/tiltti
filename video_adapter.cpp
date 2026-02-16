@@ -243,11 +243,11 @@ void Video_Adapter::refresh(const uint8_t *text_buf, unsigned cursor_col, unsign
 // Pump SDL events: keyboard -> machine queue, modifiers -> BDA, clear active on SDL_QUIT.
 // Refresh screen.
 //
-void Video_Adapter::pump_events(Machine &machine)
+void Video_Adapter::pump_events(Machine &machine, unsigned timeout)
 {
     SDL_Event event;
 
-    while (SDL_WaitEventTimeout(&event, 10)) {
+    while (SDL_WaitEventTimeout(&event, timeout)) {
         if (event.type == SDL_QUIT) {
             active_ = false;
             return;
