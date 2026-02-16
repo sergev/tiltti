@@ -43,8 +43,11 @@ uint64_t Machine::simulated_instructions = 0;
 //
 // Initialize the machine (SDL-free; main() owns display and input).
 //
-Machine::Machine(Memory &m)
-    : memory(m), cpu(*this), ivt(*(Interrupt_Vector_Table *)memory.get_ptr(0x0)),
+Machine::Machine(Memory &m, std::function<void()> delay_cb, std::function<bool()> pump_cb)
+    : pump_callback_(std::move(pump_cb)),
+      delay_callback_(std::move(delay_cb)),
+      memory(m), cpu(*this),
+      ivt(*(Interrupt_Vector_Table *)memory.get_ptr(0x0)),
       bda(*(Bios_Data_Area *)memory.get_ptr(0x400)),
       ebda(*(Extended_Bios_Data_Area *)memory.get_ptr(0x9fc00)), bios(memory.get_ptr(0xf0000)),
       diskette_param_table2(*(Floppy_Extended_Disk_Base_Table *)bios)
@@ -149,15 +152,7 @@ uint16_t Machine::pop_keystroke()
 
 bool Machine::pump_events()
 {
-    if (pump_callback_)
-        return pump_callback_();
-    return true;
-}
-
-void Machine::require_pump_callback() const
-{
-    if (!pump_callback_)
-        throw std::runtime_error("Event pump not configured");
+    return pump_callback_();
 }
 
 static bool basic_area(unsigned addr)

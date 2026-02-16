@@ -95,10 +95,17 @@ void Machine::handle_int16_keyboard()
 //
 void Machine::int16_read_keyboard_input()
 {
-    while (!has_keystroke()) {
-        require_pump_callback();
-        if (!pump_events())
-            std::exit(0);
+    pump_events();
+    if (!has_keystroke()) {
+        do {
+            // Pause waiting for input.
+            delay_callback_();
+
+            if (!pump_events()) {
+                // Window closed.
+                std::exit(0);
+            }
+        } while (!has_keystroke());
     }
     uint16_t ax = pop_keystroke();
     cpu.set_ax(ax);

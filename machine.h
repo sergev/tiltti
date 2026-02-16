@@ -72,6 +72,7 @@ private:
     // Keyboard queue (fed by main() from SDL).
     std::queue<uint16_t> keyboard_queue_;
     std::function<bool()> pump_callback_;
+    std::function<void()> delay_callback_;
 
     bool video_dirty{}; // Video memory was changed
 
@@ -92,7 +93,10 @@ public:
     Byte *bios;                    // Bios ROM at 0xf0000
     Floppy_Extended_Disk_Base_Table &diskette_param_table2;
 
-    explicit Machine(Memory &memory);
+    explicit Machine(Memory &memory,
+        std::function<void()> delay_cb = [](){},
+        std::function<bool()> pump_cb  = [](){ return false; }
+    );
 
     // Destructor.
     ~Machine();
@@ -103,9 +107,6 @@ public:
     // Parameters for main() to refresh the display from memory at 0xb8000 and BDA.
     // Clear video_dirty flag.
     VideoRefreshParams get_video_refresh_params();
-
-    // Called when blocking (e.g. INT 16h wait). Returns false to request quit.
-    void set_pump_callback(std::function<bool()> cb) { pump_callback_ = std::move(cb); }
 
     // Update BDA kbd_flag0 from host modifier state (called by main() from SDL).
     void set_kbd_modifiers(uint16_t flags);
@@ -200,8 +201,6 @@ public:
 //private:
     // Invoke pump callback (used by INT 16h when blocking). Returns false if quit requested.
     bool pump_events();
-    // Throw if pump callback not set (used when blocking for keyboard input).
-    void require_pump_callback() const;
 
     void setup_bios_config_table();
     void setup_floppy();

@@ -130,7 +130,8 @@ void Video_Adapter::init_font()
 // Render one text cell (9x16 pixels) into the framebuffer.
 // Optionally draw a block cursor by inverting the cell.
 //
-void Video_Adapter::draw_cell(const uint8_t *text_buf, unsigned col, unsigned row, bool is_cursor_cell)
+void Video_Adapter::draw_cell(const uint8_t *text_buf, unsigned col, unsigned row,
+                              bool is_cursor_cell)
 {
     unsigned cell_off = (row * TEXT_COLS + col) * 2;
     uint8_t ch        = text_buf[cell_off];
@@ -201,10 +202,10 @@ void Video_Adapter::present()
 
 //
 // Refresh reading from external buffer (e.g. memory at 0xb8000 + page_offset).
-// cursor_type == 0 means hide cursor; otherwise use blink.
+// cursor_type == 0 means hide cursor.
 //
-void Video_Adapter::refresh_from_memory(const uint8_t *text_buf, unsigned cursor_col,
-                                        unsigned cursor_row, uint16_t cursor_type)
+void Video_Adapter::refresh(const uint8_t *text_buf, unsigned cursor_col, unsigned cursor_row,
+                            uint16_t cursor_type)
 {
     if (cursor_visible_) {
         // Clear previous cursor.
@@ -223,8 +224,8 @@ void Video_Adapter::refresh_from_memory(const uint8_t *text_buf, unsigned cursor
                 draw_cell(text_buf, col, row, is_cursor);
                 if (is_cursor) {
                     cursor_visible_ = true;
-                    cursor_row_ = row;
-                    cursor_col_ = col;
+                    cursor_row_     = row;
+                    cursor_col_     = col;
                 }
             }
         }

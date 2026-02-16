@@ -56,8 +56,8 @@ public:
 
     // Refresh reading from given buffer and BDA-style cursor/page state.
     // text_buf points to the active page (e.g. 0xb8000 + page_offset).
-    void refresh_from_memory(const uint8_t *text_buf, unsigned cursor_col, unsigned cursor_row,
-                             uint16_t cursor_type);
+    void refresh(const uint8_t *text_buf, unsigned cursor_col, unsigned cursor_row,
+                 uint16_t cursor_type);
 
     void putchar(uint8_t ch, uint8_t attr);
     void puts(const char *s, uint8_t attr);

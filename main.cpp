@@ -69,6 +69,14 @@ static void print_usage(std::ostream &out, const char *prog_name)
 }
 
 //
+// Delay SDL when waiting for user input.
+//
+static void delay_sdl()
+{
+    SDL_Delay(20);
+}
+
+//
 // Pump SDL events: keyboard -> machine queue, modifiers -> BDA, set quit on SDL_QUIT.
 // Return false when no events were processed.
 //
@@ -210,15 +218,20 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    Machine machine{ memory };
-    if (verbose)
-        machine.set_verbose(true);
-
     Video_Adapter video_adapter("Tiltti v" VERSION_STRING, memory.get_ptr(0xb8000));
     if (!video_adapter.has_window()) {
         std::cerr << "Cannot create VGA window\n";
         exit(EXIT_FAILURE);
     }
+
+    bool quit = false;
+    Machine machine{ memory, delay_sdl, [&machine, &quit]() {
+            pump_sdl_events(machine, quit);
+            return !quit;
+        }
+    };
+    if (verbose)
+        machine.set_verbose(true);
 
     try {
         // Boot from disk.
@@ -228,29 +241,25 @@ int main(int argc, char *argv[])
             machine.boot_disk(disk_file);
         }
 
-        bool quit = false;
-        machine.set_pump_callback([&machine, &quit]() {
-            pump_sdl_events(machine, quit);
-            return !quit;
-        });
-
         while (!quit) {
-            bool active = pump_sdl_events(machine, quit);
+            pump_sdl_events(machine, quit);
             if (quit)
                 break;
 
             constexpr unsigned steps_per_frame = 5000;
             machine.run_batch(steps_per_frame);
 
-            // Refresh SDL window from machine memory and BDA.
-            VideoRefreshParams p = machine.get_video_refresh_params();
-            if (p.need_refresh) {
-                video_adapter.refresh_from_memory(p.text_buf, p.cursor_col, p.cursor_row,
-                                                  p.cursor_type);
-            } else if (!active) {
-                constexpr unsigned msec = 20;
-                SDL_Delay(msec);
+            // Refresh each 10 msec.
+            uint64_t msec = SDL_GetTicks();
+            static uint64_t last_refresh;
+            if (msec > last_refresh + 10) {
+                // Refresh SDL window from machine memory and BDA.
+                VideoRefreshParams p = machine.get_video_refresh_params();
+//                if (p.need_refresh) {
+                    video_adapter.refresh(p.text_buf, p.cursor_col, p.cursor_row, p.cursor_type);
+//                }
             }
+            last_refresh = msec;
         }
 
         // Finish the trace output.
