@@ -70,7 +70,7 @@ private:
 
     // Keyboard queue (fed by main() from SDL).
     std::queue<uint16_t> keyboard_queue_;
-    std::function<bool(bool)> pump_callback_;
+    std::function<bool()> pump_callback_;
 
     bool video_dirty{}; // Video memory was changed
 
@@ -96,7 +96,7 @@ public:
     Floppy_Extended_Disk_Base_Table &diskette_param_table2;
 
     explicit Machine(
-        Memory &memory, std::function<bool(bool)> pump_cb = [](bool _) { return false; });
+        Memory &memory, std::function<bool()> pump_cb = []() { return false; });
 
     // Destructor.
     ~Machine();
@@ -199,9 +199,8 @@ public:
     static void print_byte_access(unsigned addr, Byte val, const char *opname);
     static void print_word_access(unsigned addr, Word val, const char *opname);
 
-    // Invoke pump callback (used by INT 16h when blocking). Returns false if quit requested.
-    void pump_events_blocking();
-    void pump_events_nonblocking();
+    // Invoke pump callback (used by INT 16h).
+    void pump_events();
 
     void setup_bios_config_table();
     void setup_floppy();

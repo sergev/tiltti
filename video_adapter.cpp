@@ -94,6 +94,7 @@ Video_Adapter::Video_Adapter(const char *title, uint8_t *text_buffer)
     window_   = win;
     renderer_ = ren;
     texture_  = tex;
+    active_   = true;
 }
 
 //
@@ -239,16 +240,16 @@ void Video_Adapter::refresh(const uint8_t *text_buf, unsigned cursor_col, unsign
 #include "machine.h"
 
 //
-// Pump SDL events: keyboard -> machine queue, modifiers -> BDA, set quit on SDL_QUIT.
+// Pump SDL events: keyboard -> machine queue, modifiers -> BDA, clear active on SDL_QUIT.
 // Refresh screen.
 //
-void Video_Adapter::pump_events(Machine &machine, bool &quit)
+void Video_Adapter::pump_events(Machine &machine)
 {
     SDL_Event event;
 
-    while (SDL_PollEvent(&event)) {
+    while (SDL_WaitEventTimeout(&event, 10)) {
         if (event.type == SDL_QUIT) {
-            quit = true;
+            active_ = false;
             return;
         }
         if (event.type == SDL_WINDOWEVENT) {

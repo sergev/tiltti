@@ -69,9 +69,12 @@ public:
 
     bool has_window() const { return window_ != nullptr; }
 
-    // Pump SDL events: keyboard -> machine queue, modifiers -> BDA, set quit on SDL_QUIT.
+    // Pump SDL events: keyboard -> machine queue, modifiers -> BDA.
     // Refresh screen.
-    void pump_events(Machine &machine, bool &quit);
+    // Clear active on SDL_QUIT.
+    void pump_events(Machine &machine);
+
+    bool active() { return active_; }
 
 private:
     std::array<uint8_t, TEXT_BUFFER_SIZE> text_buf_{};
@@ -83,6 +86,8 @@ private:
     void *renderer_ = nullptr;
     void *texture_  = nullptr;
     std::array<uint8_t, SCREEN_WIDTH * SCREEN_HEIGHT * 4> framebuffer_{};
+
+    bool active_{};
 
     // Cursor located at this position.
     unsigned cursor_col_ = 0;

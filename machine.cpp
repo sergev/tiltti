@@ -43,7 +43,7 @@ uint64_t Machine::simulated_instructions = 0;
 //
 // Initialize the machine (SDL-free; main() owns display and input).
 //
-Machine::Machine(Memory &m, std::function<bool(bool)> pump_cb)
+Machine::Machine(Memory &m, std::function<bool()> pump_cb)
     : pump_callback_(std::move(pump_cb)), memory(m), cpu(*this),
       ivt(*(Interrupt_Vector_Table *)memory.get_ptr(0x0)),
       bda(*(Bios_Data_Area *)memory.get_ptr(0x400)),
@@ -167,19 +167,12 @@ uint16_t Machine::pop_keystroke()
     return ax;
 }
 
-void Machine::pump_events_blocking()
+void Machine::pump_events()
 {
-    // With delay.
-    if (!pump_callback_(true)) {
+    if (!pump_callback_()) {
         // Window closed.
         std::exit(0);
     }
-}
-
-void Machine::pump_events_nonblocking()
-{
-    // No delay.
-    pump_callback_(false);
 }
 
 static bool basic_area(unsigned addr)
@@ -194,7 +187,7 @@ static bool basic_area(unsigned addr)
 Byte Machine::mem_fetch_byte(unsigned addr)
 {
     if (mode_640k && addr >= 0xa0000 && !basic_area(addr)) {
-        throw std::runtime_error("Jump to Upper Memory Area");
+        throw std::runtime_error("Jump to Upper Memory Area " + to_hex(addr));
     }
     Byte val = memory.load8(addr);
     return val;

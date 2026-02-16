@@ -42,9 +42,8 @@ void Machine::handle_int15_system_services()
         break;
     case 0x41:
         // Wait on External Event.
-        pump_events_nonblocking();
         if (!has_keystroke()) {
-            usleep(10000);
+            pump_events();
         }
         break;
     case 0x4F:

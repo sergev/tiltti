@@ -158,13 +158,9 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    bool quit = false;
-    Machine machine{ memory, [&vga, &machine, &quit](bool with_delay) {
-                        if (with_delay) {
-                            SDL_Delay(20);
-                        }
-                        vga.pump_events(machine, quit);
-                        return !quit;
+    Machine machine{ memory, [&vga, &machine]() {
+                        vga.pump_events(machine);
+                        return vga.active();
                     } };
     if (verbose)
         machine.set_verbose(true);
@@ -178,11 +174,11 @@ int main(int argc, char *argv[])
             machine.boot_disk(disk_file);
         }
 
-        while (!quit) {
+        while (vga.active()) {
             constexpr unsigned steps_per_frame = 5000;
             machine.run_batch(steps_per_frame);
 
-            vga.pump_events(machine, quit);
+            vga.pump_events(machine);
         }
 
         // Finish the trace output.
