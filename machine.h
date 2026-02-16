@@ -66,8 +66,6 @@ private:
     static bool debug_all;      // trace CPU registers, instructions, memory and everything else
     static bool debug_syscalls; // trace syscalls
     static bool debug_ports;    // trace i/o ports
-    bool after_call{};          // right after JVM instruction
-    bool after_return{};        // right after UJ(13) instruction
 
     // Keyboard queue (fed by main() from SDL).
     std::queue<uint16_t> keyboard_queue_;
@@ -92,9 +90,8 @@ public:
     Byte *bios;                    // Bios ROM at 0xf0000
     Floppy_Extended_Disk_Base_Table &diskette_param_table2;
 
-    explicit Machine(Memory &memory,
-        std::function<bool(bool)> pump_cb  = [](bool _){ return false; }
-    );
+    explicit Machine(
+        Memory &memory, std::function<bool(bool)> pump_cb = [](bool _) { return false; });
 
     // Destructor.
     ~Machine();
@@ -130,8 +127,6 @@ public:
     static void redirect_trace(const char *file_name, const char *default_mode);
     static void close_trace();
     static bool trace_enabled() { return debug_all | debug_syscalls | debug_ports; }
-    void set_after_call() { after_call = true; };
-    void set_after_return() { after_return = true; };
 
     // Emit trace to this stream.
     static std::ostream &get_trace_stream();
@@ -196,7 +191,6 @@ public:
     static void print_byte_access(unsigned addr, Byte val, const char *opname);
     static void print_word_access(unsigned addr, Word val, const char *opname);
 
-//private:
     // Invoke pump callback (used by INT 16h when blocking). Returns false if quit requested.
     void pump_events_blocking();
     void pump_events_nonblocking();

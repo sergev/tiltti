@@ -22,6 +22,7 @@
 
 #include <cstring>
 
+#include "sdl_scancode_map.h"
 #include "vga_font_9x16.h"
 
 namespace {
@@ -233,4 +234,74 @@ void Video_Adapter::refresh(const uint8_t *text_buf, unsigned cursor_col, unsign
 
     std::memcpy(text_snapshot_.data(), text_buf, TEXT_BUFFER_SIZE);
     present();
+}
+
+#include "machine.h"
+
+//
+// Pump SDL events: keyboard -> machine queue, modifiers -> BDA, set quit on SDL_QUIT.
+// Refresh screen.
+//
+void Video_Adapter::pump_events(Machine &machine, bool &quit)
+{
+    SDL_Event event;
+
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            quit = true;
+            return;
+        }
+        if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
+            uint32_t sdl_sc = event.key.keysym.scancode;
+            bool down       = (event.type == SDL_KEYDOWN);
+            uint16_t mod    = SDL_GetModState();
+            uint16_t f0     = 0;
+
+            if (mod & KMOD_RSHIFT)
+                f0 |= KF0_RSHIFT;
+            if (mod & KMOD_LSHIFT)
+                f0 |= KF0_LSHIFT;
+            if (mod & KMOD_CTRL)
+                f0 |= KF0_CTRL;
+            if (mod & KMOD_ALT)
+                f0 |= KF0_ALT;
+            const Uint8 *state = SDL_GetKeyboardState(nullptr);
+            if (state[SDL_SCANCODE_SCROLLLOCK])
+                f0 |= KF0_SCROLL;
+            if (state[SDL_SCANCODE_NUMLOCKCLEAR])
+                f0 |= KF0_NUMLOCK;
+            if (state[SDL_SCANCODE_CAPSLOCK])
+                f0 |= KF0_CAPSLOCK;
+            machine.set_kbd_modifiers(f0);
+
+            if (down) {
+                uint8_t bios_sc  = sdl_to_bios_scancode(sdl_sc);
+                uint8_t bios_ext = sdl_to_bios_scancode_extended(sdl_sc);
+                uint8_t ascii    = 0;
+                if (mod & KMOD_SHIFT)
+                    ascii = sdl_scancode_to_ascii_shifted(sdl_sc);
+                if (ascii == 0)
+                    ascii = sdl_scancode_to_ascii_unshifted(sdl_sc);
+                if (bios_ext) {
+                    machine.push_keystroke((static_cast<uint16_t>(bios_ext) << 8) | 0x00);
+                } else if (bios_sc) {
+                    machine.push_keystroke((static_cast<uint16_t>(bios_sc) << 8) | ascii);
+                }
+            }
+        }
+    }
+
+    //
+    // Refresh screen every 10 msec.
+    //
+    uint64_t msec = SDL_GetTicks();
+    static uint64_t last_refresh;
+    if (msec > last_refresh + 10) {
+        // Refresh SDL window from machine memory and BDA.
+        VideoRefreshParams p = machine.get_video_refresh_params();
+        if (p.need_refresh) {
+            refresh(p.text_buf, p.cursor_col, p.cursor_row, p.cursor_type);
+        }
+    }
+    last_refresh = msec;
 }

@@ -44,8 +44,7 @@ uint64_t Machine::simulated_instructions = 0;
 // Initialize the machine (SDL-free; main() owns display and input).
 //
 Machine::Machine(Memory &m, std::function<bool(bool)> pump_cb)
-    : pump_callback_(std::move(pump_cb)),
-      memory(m), cpu(*this),
+    : pump_callback_(std::move(pump_cb)), memory(m), cpu(*this),
       ivt(*(Interrupt_Vector_Table *)memory.get_ptr(0x0)),
       bda(*(Bios_Data_Area *)memory.get_ptr(0x400)),
       ebda(*(Extended_Bios_Data_Area *)memory.get_ptr(0x9fc00)), bios(memory.get_ptr(0xf0000)),
@@ -90,8 +89,6 @@ void Machine::run_batch(unsigned n)
 {
     trace_registers();
     for (unsigned i = 0; i < n; i++) {
-        after_call   = false;
-        after_return = false;
         cpu.step();
         simulated_instructions++;
     }
