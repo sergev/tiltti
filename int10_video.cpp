@@ -261,10 +261,26 @@ void Machine::int10_read_light_pen_position()
     throw std::runtime_error("Unimplemented: Read light pen");
 }
 
+//
+// AH=05h - Select display page.
+//
+// Set the active display page (0-7). The display shows the region of video
+// memory for the selected page.
+// Inputs:
+//      AL = page number (0-7)
+// Outputs:
+//      None.
+//
 void Machine::int10_select_display_page()
 {
-    // TODO: update CRTC port (display start address) and BDA video_page
-    throw std::runtime_error("Unimplemented: Select display page");
+    unsigned page = cpu.get_al();
+    if (page > 7)
+        page = 0;
+
+    bda.video_page      = static_cast<uint8_t>(page);
+    bda.video_pagestart = static_cast<uint16_t>(bda.video_pagesize * page);
+    video_dirty         = true;
+    // TODO: update CRTC port (display start address 0x0C, 0x0D) when port I/O is implemented
 }
 
 //

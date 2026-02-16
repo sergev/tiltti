@@ -36,6 +36,27 @@ TEST_F(MachineTest, SetVideoModeNoClear)
 }
 
 //
+// INT 10h AH=05h: Select display page.
+//
+TEST_F(MachineTest, SelectDisplayPage)
+{
+    cpu.set_al(0x03);
+    machine.int10_set_video_mode();
+    EXPECT_EQ(machine.bda.video_page, 0);
+    EXPECT_EQ(machine.bda.video_pagestart, 0);
+
+    cpu.set_al(1);
+    machine.int10_select_display_page();
+
+    EXPECT_EQ(machine.bda.video_page, 1);
+    EXPECT_EQ(machine.bda.video_pagestart, 80 * 25 * 2);
+
+    cpu.set_ah(0x0f);
+    machine.int10_get_current_video_mode();
+    EXPECT_EQ(cpu.get_bh(), 1);
+}
+
+//
 // Output one character via Int 10h syscall, and check result in video memory.
 //
 TEST_F(MachineTest, TeletypeOutput)
