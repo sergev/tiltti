@@ -229,6 +229,8 @@ public:
     void int10_save_restore_video_state();
     void int10_vbe();
     void scroll_window(int dir);
+    void write_cells_at_cursor(unsigned page, unsigned count, uint8_t ch,
+        bool use_fixed_attr, uint8_t fixed_attr);
 
     // Int 13: disk
     void int13_reset_disk_system();

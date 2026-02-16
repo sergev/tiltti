@@ -251,6 +251,15 @@ void Video_Adapter::pump_events(Machine &machine, bool &quit)
             quit = true;
             return;
         }
+        if (event.type == SDL_WINDOWEVENT) {
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED ||
+                event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED ||
+                event.window.event == SDL_WINDOWEVENT_EXPOSED) {
+                VideoRefreshParams p = machine.get_video_refresh_params();
+                refresh(p.text_buf, p.cursor_col, p.cursor_row, p.cursor_type);
+            }
+            continue;
+        }
         if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
             uint32_t sdl_sc = event.key.keysym.scancode;
             bool down       = (event.type == SDL_KEYDOWN);

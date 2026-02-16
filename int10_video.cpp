@@ -251,14 +251,39 @@ void Machine::int10_set_cursor_position()
     // TODO: update CRTC port (cursor position 0x0e, 0x0f) when page == active page
 }
 
+//
+// AH=03h - Get cursor position.
+//
+// Return cursor shape and position for the given page.
+// Inputs:
+//      BH = page (0-7)
+// Outputs:
+//      DH = row, DL = column, CX = cursor type (CH = start scan line, CL = end scan line).
+//
 void Machine::int10_get_cursor_position()
 {
-    throw std::runtime_error("Unimplemented: Get cursor position");
+    unsigned page = cpu.get_bh();
+    if (page > 7) {
+        cpu.set_dh(0);
+        cpu.set_dl(0);
+        cpu.set_cx(0);
+        return;
+    }
+
+    uint16_t pos = bda.cursor_pos[page];
+    cpu.set_dx(pos);
+    cpu.set_cx(bda.cursor_type);
 }
 
+//
+// AH=04h - Read light pen position. No light pen; return zeros.
+//
 void Machine::int10_read_light_pen_position()
 {
-    throw std::runtime_error("Unimplemented: Read light pen");
+    cpu.set_ax(0);
+    cpu.set_bx(0);
+    cpu.set_cx(0);
+    cpu.set_dx(0);
 }
 
 //
@@ -425,6 +450,41 @@ void Machine::int10_read_char()
 }
 
 //
+// Helper: write 'count' cells at cursor on 'page', advancing cursor.
+// use_fixed_attr: true = store (fixed_attr<<8)|ch; false = preserve attribute (load word, keep high byte).
+//
+void Machine::write_cells_at_cursor(unsigned page, unsigned count, uint8_t ch,
+    bool use_fixed_attr, uint8_t fixed_attr)
+{
+    if (page > 7)
+        return;
+
+    unsigned col         = bda.cursor_pos[page] & 0xff;
+    unsigned row         = bda.cursor_pos[page] >> 8;
+    unsigned page_offset = bda.video_pagesize * page;
+    int stride           = bda.video_cols * 2;
+
+    while (count--) {
+        unsigned addr = 0xb8000 + page_offset + row * stride + col * 2;
+        uint16_t word;
+        if (use_fixed_attr)
+            word = (static_cast<uint16_t>(fixed_attr) << 8) | ch;
+        else
+            word = (memory.load16(addr) & 0xff00) | ch;
+        memory.store16(addr, word);
+
+        col++;
+        if (col >= bda.video_cols) {
+            col = 0;
+            row++;
+        }
+    }
+
+    video_dirty          = true;
+    bda.cursor_pos[page] = (row << 8) | col;
+}
+
+//
 // AH=09h - Write character and attribute.
 //
 // Write a character with attribute at the cursor position, repeated CX times;
@@ -437,45 +497,42 @@ void Machine::int10_read_char()
 //
 void Machine::int10_write_char()
 {
-    unsigned page = cpu.get_bh();
-    if (page > 7)
-        return;
-
-    unsigned col   = bda.cursor_pos[page] & 0xff;
-    unsigned row   = bda.cursor_pos[page] >> 8;
-    unsigned count = cpu.get_cx();
-    uint8_t ch     = cpu.get_al();
-    uint8_t attr   = cpu.get_bl();
-
-    unsigned page_offset = bda.video_pagesize * page;
-    int stride           = bda.video_cols * 2;
-
-    while (count--) {
-        unsigned addr = 0xb8000 + page_offset + row * stride + col * 2;
-        memory.store16(addr, (attr << 8) | ch);
-        // std::cout << ch; // debug
-
-        col++;
-        if (col >= bda.video_cols) {
-            col = 0;
-            row++;
-        }
-    }
-    // std::cout << std::flush; // debug
-
-    video_dirty          = true;
-    bda.cursor_pos[page] = (row << 8) | col;
+    write_cells_at_cursor(cpu.get_bh(), cpu.get_cx(), cpu.get_al(), true, cpu.get_bl());
 }
 
+//
+// AH=0Ah - Write character only.
+//
+// Write a character at the cursor position, repeated CX times; attribute is preserved.
+// Cursor advances for each character.
+// Inputs:
+//      AL = character
+//      BH = page (0-7)
+//      CX = count
+//
 void Machine::int10_write_char_only()
 {
-    throw std::runtime_error("Unimplemented: Write character only");
+    write_cells_at_cursor(cpu.get_bh(), cpu.get_cx(), cpu.get_al(), false, 0);
 }
 
+//
+// AH=0Bh - Set color palette (CGA).
+//
+// BH=0: BL = background/border color (0-15).
+// BH=1: BL = palette (0 or 1) for 320x200 4-color graphics.
+// State is stored in BDA; no CRTC or display update yet.
+//
 void Machine::int10_set_cga_palette()
 {
-    // TODO: update CRTC port (CGA palette/background)
-    throw std::runtime_error("Unimplemented: Set color palette");
+    unsigned bh = cpu.get_bh();
+    uint8_t bl  = cpu.get_bl();
+
+    if (bh == 0) {
+        bda.video_pal = bl & 0x0f;
+    } else if (bh == 1) {
+        bda.video_msr = (bda.video_msr & 0xfe) | (bl & 1);
+    }
+    // TODO: update CRTC port (CGA palette/background) when port I/O is implemented
 }
 
 void Machine::int10_write_pixel()
@@ -594,14 +651,74 @@ void Machine::int10_char_generator()
     throw std::runtime_error("Unimplemented: Character generator");
 }
 
+//
+// AH=12h - Alternate select (EGA/VGA).
+//
+// BL=10h: Get video subsystem config. Returns BX (config), CX (switch settings).
+// BL=30h--36h: Set options (vertical resolution, palette, etc.); no-op, return AL=0x12.
+//
 void Machine::int10_alternate_select()
 {
-    throw std::runtime_error("Unimplemented: Alternate select");
+    unsigned bl = cpu.get_bl();
+
+    if (bl == 0x10) {
+        // Get video subsystem config. BX: BH=0 color/1 mono, BL=memory (0=64K..3=256K). CX: switch settings.
+        cpu.set_bx(0x0003); // color, 256K
+        cpu.set_cx(bda.video_switches);
+    } else if (bl >= 0x30 && bl <= 0x36) {
+        // Select vertical resolution, palette, addressing, gray-scale, cursor emulation, or reserved; no-op.
+        cpu.set_al(0x12);
+    }
 }
 
+//
+// AH=13h - Write string.
+//
+// Write a string at (DH,DL) on page BH. AL bit 0: update cursor after; bit 1: string is char,attr pairs.
+// ES:BP = string; CX = character count; BL = attribute (when AL bit 1 = 0).
+//
 void Machine::int10_write_string()
 {
-    throw std::runtime_error("Unimplemented: Write string");
+    unsigned page = cpu.get_bh();
+    if (page > 7)
+        return;
+
+    unsigned row  = cpu.get_dh();
+    unsigned col  = cpu.get_dl();
+    unsigned count = cpu.get_cx();
+    uint8_t al     = cpu.get_al();
+    uint8_t attr   = cpu.get_bl();
+    bool attr_in_string = (al & 2) != 0;
+    bool update_cursor  = (al & 1) != 0;
+
+    unsigned page_offset = bda.video_pagesize * page;
+    int stride           = bda.video_cols * 2;
+    unsigned str_addr    = pc86_linear_addr(cpu.get_es(), cpu.get_bp());
+
+    for (unsigned i = 0; i < count; i++) {
+        uint8_t ch;
+        if (attr_in_string) {
+            ch   = memory.load8(str_addr);
+            attr = memory.load8(str_addr + 1);
+            str_addr += 2;
+        } else {
+            ch = memory.load8(str_addr);
+            str_addr += 1;
+        }
+
+        unsigned cell_addr = 0xb8000 + page_offset + row * stride + col * 2;
+        memory.store16(cell_addr, (static_cast<uint16_t>(attr) << 8) | ch);
+
+        col++;
+        if (col >= bda.video_cols) {
+            col = 0;
+            row++;
+        }
+    }
+
+    video_dirty = true;
+    if (update_cursor)
+        bda.cursor_pos[page] = (row << 8) | col;
 }
 
 //

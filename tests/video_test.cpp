@@ -57,6 +57,66 @@ TEST_F(MachineTest, SelectDisplayPage)
 }
 
 //
+// INT 10h AH=03h: Get cursor position.
+//
+TEST_F(MachineTest, GetCursorPosition)
+{
+    cpu.set_al(0x03);
+    machine.int10_set_video_mode();
+
+    cpu.set_bh(0);
+    cpu.set_dh(5);
+    cpu.set_dl(10);
+    machine.int10_set_cursor_position();
+
+    cpu.set_bh(0);
+    machine.int10_get_cursor_position();
+    EXPECT_EQ(cpu.get_dh(), 5);
+    EXPECT_EQ(cpu.get_dl(), 10);
+    EXPECT_EQ(cpu.get_cx(), 0x0607);
+
+    cpu.set_bh(8); // invalid page
+    machine.int10_get_cursor_position();
+    EXPECT_EQ(cpu.get_dh(), 0);
+    EXPECT_EQ(cpu.get_dl(), 0);
+    EXPECT_EQ(cpu.get_cx(), 0);
+}
+
+//
+// INT 10h AH=0Ah: Write character only; attribute is preserved.
+//
+TEST_F(MachineTest, WriteCharOnlyPreservesAttribute)
+{
+    cpu.set_al(0x03);
+    machine.int10_set_video_mode();
+
+    cpu.set_bh(0);
+    cpu.set_dh(0);
+    cpu.set_dl(0);
+    machine.int10_set_cursor_position();
+
+    cpu.set_al('A');
+    cpu.set_bh(0);
+    cpu.set_bl(0x4e);
+    cpu.set_cx(1);
+    machine.int10_write_char();
+
+    EXPECT_EQ(memory.load16(0xb8000), 0x4e41u); // 'A' with attr 0x4E
+
+    cpu.set_bh(0);
+    cpu.set_dh(0);
+    cpu.set_dl(0);
+    machine.int10_set_cursor_position();
+
+    cpu.set_al('B');
+    cpu.set_bh(0);
+    cpu.set_cx(1);
+    machine.int10_write_char_only();
+
+    EXPECT_EQ(memory.load16(0xb8000), 0x4e42u); // 'B' with attr 0x4E unchanged
+}
+
+//
 // Output one character via Int 10h syscall, and check result in video memory.
 //
 TEST_F(MachineTest, TeletypeOutput)
