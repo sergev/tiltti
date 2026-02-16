@@ -172,6 +172,7 @@ void Machine::set_video_mode(unsigned mode)
     bda.video_page      = 0x00;
     bda.cursor_type     = is_text ? 0x0607 : 0x0000;
     bda.video_ctl       = 0x60;
+    bda.char_height     = is_text ? 16 : 0;
     bda.modeset_ctl &= 0x7f;
     for (int i = 0; i < 8; i++) {
         bda.cursor_pos[i] = 0x0000;
@@ -646,10 +647,63 @@ void Machine::int10_palette_control()
     throw std::runtime_error("Unimplemented: Palette and DAC functions");
 }
 
+//
+// AH=11h — Character generator.
+//
+// AL=00h: Load user font (text). ES:BP=font, CX=chars, DL=rows.
+// AL=10h: Load user font + set height; height in BH.
+// AL=01h,11h: ROM 14-line → bda.char_height=14.
+// AL=02h,12h: ROM 8-line → bda.char_height=8.
+// AL=04h,14h: ROM 16-line → bda.char_height=16.
+// AL=03h: Set block specifier (no-op).
+// AL=30h: Get font info; return ES:BP, CX=bytes/char, DL=rows (from bda.char_height).
+//
 void Machine::int10_char_generator()
 {
-    // TODO: update CRTC port (font loading, character height)
-    throw std::runtime_error("Unimplemented: Character generator");
+    const unsigned al = cpu.get_al();
+
+    if (al == 0x00 || al == 0x10) {
+        // Load user font. ES:BP = font, CX = character count, height from DL (00h) or BH (10h).
+        unsigned height = (al == 0x10) ? cpu.get_bh() : cpu.get_dl();
+        if (height == 0 || height > 16)
+            height = 16;
+        unsigned nchars = cpu.get_cx();
+        if (nchars > 256)
+            nchars = 256;
+        const unsigned src_addr = pc86_linear_addr(cpu.get_es(), cpu.get_bp());
+
+        if (font_buf_ != nullptr && font_buf_size_ >= 256 * 16 * 2u) {
+            for (unsigned c = 0; c < nchars; c++) {
+                for (unsigned r = 0; r < height; r++) {
+                    const unsigned dst_off = c * 32u + r * 2u;
+                    if (dst_off + 2 <= font_buf_size_) {
+                        const uint8_t byte     = memory.load8(src_addr + c * height + r);
+                        font_buf_[dst_off]     = byte;
+                        font_buf_[dst_off + 1] = 0;
+                    }
+                }
+            }
+            video_dirty = true;
+        }
+        bda.char_height = static_cast<uint16_t>(height);
+    } else if (al == 0x01 || al == 0x11) {
+        bda.char_height = 14;
+    } else if (al == 0x02 || al == 0x12) {
+        bda.char_height = 8;
+    } else if (al == 0x04 || al == 0x14) {
+        bda.char_height = 16;
+    } else if (al == 0x03) {
+        // Set block specifier (BL = block): no-op.
+    } else if (al == 0x30) {
+        // Get font information. BH = font type (ignored). Return ES:BP, CX, DL.
+        unsigned height = bda.char_height;
+        if (height == 0)
+            height = 16;
+        cpu.set_es(0);
+        cpu.set_bp(0);
+        cpu.set_cx(static_cast<uint16_t>(height));
+        cpu.set_dl(static_cast<uint8_t>(height));
+    }
 }
 
 //

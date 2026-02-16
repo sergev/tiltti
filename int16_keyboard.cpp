@@ -69,6 +69,9 @@ void Machine::handle_int16_keyboard()
     case 0x92:
         int16_keyboard_capability_dos_keyb();
         break;
+    case 0xa2:
+        int16_122key_capability_check();
+        break;
     default:
         if (Machine::trace_enabled()) {
             auto &out = Machine::get_trace_stream();
@@ -149,9 +152,19 @@ void Machine::int16_store_keystroke_in_buffer()
     throw std::runtime_error("Unimplemented: Store keystroke in buffer");
 }
 
+//
+// AH=09h — Get keyboard functionality.
+//
+// Return supported INT 16h extended functions (RBIL #00585).
+// Outputs:
+//      AL = supported keyboard functions (bit 4: AH=0Ah, bit 5: AH=10h-12h).
+//
 void Machine::int16_get_keyboard_functionality()
 {
-    throw std::runtime_error("Unimplemented: Get keyboard functionality");
+    // AL = supported keyboard functions (RBIL #00585)
+    // Bit 4: AH=0Ah supported, Bit 5: AH=10h-12h supported
+    // Bits 0-3, 6-7: not supported (AX=0300h-0306h, 122-key)
+    cpu.set_al(0x30);
 }
 
 void Machine::int16_get_keyboard_id()
@@ -189,4 +202,13 @@ void Machine::int16_keyboard_capability_check()
 void Machine::int16_keyboard_capability_dos_keyb()
 {
     cpu.set_ah(0x80);
+}
+
+//
+// AH=0A2h — 122-key capability check.
+//
+// Leave AH unchanged (not supported). DOS KEYB uses this to detect INT 16h AH=20h–22h support.
+//
+void Machine::int16_122key_capability_check()
+{
 }

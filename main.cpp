@@ -168,6 +168,7 @@ int main(int argc, char *argv[])
                     } };
     if (verbose)
         machine.set_verbose(true);
+    machine.set_font_buffer(vga.font_buffer(), vga.font_buffer_size());
 
     try {
         // Boot from disk.

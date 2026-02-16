@@ -26,6 +26,7 @@
 
 #include <array>
 #include <chrono>
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <queue>
@@ -73,6 +74,10 @@ private:
 
     bool video_dirty{}; // Video memory was changed
 
+    // Optional font buffer for INT 10h AH=11h (display owns the storage).
+    uint8_t *font_buf_    = nullptr;
+    size_t font_buf_size_ = 0;
+
     // Static stuff.
     static bool verbose;                    // Verbose flag for tracing
     static uint64_t simulated_instructions; // Count of instructions
@@ -105,6 +110,9 @@ public:
 
     // Update BDA kbd_flag0 from host modifier state (called by main() from SDL).
     void set_kbd_modifiers(uint16_t flags);
+
+    // Set font buffer for INT 10h AH=11h; display (e.g. Video_Adapter) owns the storage.
+    void set_font_buffer(uint8_t *ptr, size_t size);
 
     // Keyboard queue. AX = (scancode << 8) | ASCII.
     void push_keystroke(uint16_t ax);
@@ -297,6 +305,7 @@ public:
     void int16_get_extended_keyboard_status();
     void int16_keyboard_capability_check();
     void int16_keyboard_capability_dos_keyb();
+    void int16_122key_capability_check();
 
     // Int 17: printer
     void int17_write_char();

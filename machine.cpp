@@ -95,6 +95,15 @@ Machine::~Machine()
 }
 
 //
+// Set font buffer for INT 10h AH=11h (character generator). Caller owns the storage.
+//
+void Machine::set_font_buffer(uint8_t *ptr, size_t size)
+{
+    font_buf_      = ptr;
+    font_buf_size_ = size;
+}
+
+//
 // Run a batch of CPU steps (main() owns the loop, event pump, and display refresh).
 //
 void Machine::run_batch(unsigned n)
@@ -465,12 +474,8 @@ void Machine::setup_bios_config_table()
         .model    = 0xFC,
         .submodel = 0x00,
         .biosrev  = 0x01,
-        .feature1 = // F1_2NDPIC |
-        F1_RTC | F1_EBDA |
-        // F1_INT154F |
-        0,
-        .feature2 = // F2_INT1609 // INT 16/AH=09h (keyboard functionality) supported
-        0,
+        .feature1 = F1_2NDPIC | F1_RTC | F1_EBDA | F1_INT154F,
+        .feature2 = F2_INT1609, // INT 16/AH=09h (keyboard functionality) supported
         .feature3 = 0,
         .feature4 = 0,
         .feature5 = 0,

@@ -1,5 +1,7 @@
 #include "fixture.h"
 
+#include <array>
+
 //
 // INT 10h AH=00h: Set video mode 3, clear screen, verify BDA and video memory.
 //
@@ -294,4 +296,26 @@ TEST_F(MachineTest, VbeUnsupported)
     cpu.set_al(0x02);
     machine.int10_vbe();
     EXPECT_EQ(cpu.get_ax(), 0x014F);
+}
+
+//
+// INT 10h AH=11h AL=00h: Load user font; copies to font buffer and sets BDA char_height.
+//
+TEST_F(MachineTest, Int10CharGeneratorLoadUserFont)
+{
+    const unsigned font_addr = 0x1000;
+    memory.store8(font_addr, 0xAB); // first byte of first character
+
+    cpu.set_al(0x00);
+    cpu.set_es(0x100);
+    cpu.set_bp(0);
+    cpu.set_cx(1);
+    cpu.set_dl(16);
+
+    std::array<uint8_t, 256 * 16 * 2> font_buf{};
+    machine.set_font_buffer(font_buf.data(), font_buf.size());
+    machine.int10_char_generator();
+
+    EXPECT_EQ(machine.bda.char_height, 16u);
+    EXPECT_EQ(font_buf[0], 0xAB);
 }
