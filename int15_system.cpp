@@ -196,9 +196,18 @@ void Machine::int15_get_system_configuration()
     cpu.set_bx(BIOS_CONFIG_TABLE);
 }
 
+//
+// AH=C1h — Get EBDA segment.
+//
+// Return the segment of the Extended BIOS Data Area (EBDA).
+// Outputs:
+//      CF = 0
+//      ES = EBDA segment (from BDA ebda_seg)
+//
 void Machine::int15_get_ebda_segment()
 {
-    throw std::runtime_error("Unimplemented: Get EBDA segment");
+    cpu.set_cf(0);
+    cpu.set_es(bda.ebda_seg);
 }
 
 void Machine::int15_mouse_interface()

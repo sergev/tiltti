@@ -67,3 +67,15 @@ TEST_F(MachineTest, ByteRegisterHalves)
     cpu.set_ch(0xef);
     EXPECT_EQ(cpu.get_cx(), 0xef12u);
 }
+
+//
+// INT 15h AH=C1h: Get EBDA segment. Returns ES = BDA ebda_seg, CF = 0.
+//
+TEST_F(MachineTest, Int15GetEbdasegment)
+{
+    cpu.set_ah(0xc1);
+    machine.int15_get_ebda_segment();
+
+    EXPECT_EQ(cpu.get_es(), 0x9fc0u);      // EBDA at 0x9fc00 -> segment 0x9fc0
+    EXPECT_EQ(cpu.get_flags() & 1, 0u);    // CF = 0
+}
