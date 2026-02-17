@@ -105,6 +105,7 @@ public:
 
     // Run a batch of CPU steps (main() owns the loop and calls this).
     void run_batch(unsigned n);
+    void invoke_vector(unsigned vector);
 
     // Parameters for main() to refresh the display from memory at 0xb8000 and BDA.
     // Clear video_dirty flag.
@@ -196,6 +197,7 @@ public:
     static void print_exception(const char *message);
     static void print_byte_access(unsigned addr, Byte val, const char *opname);
     static void print_word_access(unsigned addr, Word val, const char *opname);
+    void print_handler(unsigned addr);
 
     // Invoke pump callback (used by INT 16h).
     std::function<void(unsigned)> pump_callback;

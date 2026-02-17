@@ -172,6 +172,9 @@ int main(int argc, char *argv[])
             constexpr unsigned steps_per_frame = 50000;
             machine.run_batch(steps_per_frame);
 
+            // Take timer interrupt.
+            //machine.invoke_vector(8);
+
             vga.pump_events(machine, 10);
         }
 

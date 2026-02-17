@@ -111,7 +111,7 @@ private:
     // Helpers: effective address, register/memory access, stack, ALU, flags.
     unsigned getAddr(Word seg, Word off) const;
     unsigned getEA(unsigned mod_val, unsigned rm_val);
-    int getMem(int width);
+    int fetch(int width);
     int getMem(int width, unsigned addr);
     int getReg(int width, unsigned r) const;
     int getRM(int width, unsigned mod_val, unsigned rm_val);
@@ -125,7 +125,6 @@ private:
     void decode();
     int pop();
     void push(int val);
-    void callInt(int type);
     int add(int width, int dst, int src);
     int adc(int width, int dst, int src);
     int sub(int width, int dst, int src);
@@ -151,6 +150,9 @@ public:
 
     // Finalize the processor.
     void finish();
+
+    // Take interrupt.
+    void call_int(int type);
 
     // Set register value.
     void set_ip(unsigned val) { core.ip = val; }

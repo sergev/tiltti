@@ -195,7 +195,7 @@ void Machine::mem_store_byte(unsigned addr, Byte val)
     }
     memory.store8(addr, val);
     if (debug_all) {
-        print_byte_access(addr, val, "Memory Write");
+        print_byte_access(addr, val, "Byte Write");
     }
 }
 
@@ -209,7 +209,7 @@ Byte Machine::mem_load_byte(unsigned addr)
     }
     Byte val = memory.load8(addr);
     if (debug_all) {
-        print_byte_access(addr, val, "Memory Read");
+        print_byte_access(addr, val, "Byte Read");
     }
     return val;
 }
@@ -230,7 +230,10 @@ void Machine::mem_store_word(unsigned addr, Word val)
         memory.store16(addr, val);
     }
     if (debug_all) {
-        print_word_access(addr, val, "Memory Write");
+        print_word_access(addr, val, "Word Write");
+    }
+    if (addr < 0x400 && (addr & 3) == 2 && trace_enabled()) {
+        print_handler(addr);
     }
 }
 
@@ -251,7 +254,7 @@ Word Machine::mem_load_word(unsigned addr)
         val = memory.load16(addr);
     }
     if (debug_all) {
-        print_word_access(addr, val, "Memory Read");
+        print_word_access(addr, val, "Word Read");
     }
     return val;
 }
@@ -262,8 +265,8 @@ Word Machine::mem_load_word(unsigned addr)
 void Machine::port_out_byte(unsigned port, Byte val)
 {
     // TODO: implement port_out
-    if (debug_all) {
-        print_byte_access(port, val, "Port Out");
+    if (debug_all | debug_ports) {
+        print_byte_access(port, val, "Byte Outport");
     }
 }
 
@@ -274,8 +277,8 @@ Byte Machine::port_in_byte(unsigned port)
 {
     // Unimplemented ports return 0xFF (floating bus / typical PC behavior).
     const Byte val = 0xff;
-    if (debug_all) {
-        print_byte_access(port, val, "Port In");
+    if (debug_all | debug_ports) {
+        print_byte_access(port, val, "Byte Inport");
     }
     return val;
 }
@@ -286,8 +289,8 @@ Byte Machine::port_in_byte(unsigned port)
 void Machine::port_out_word(unsigned port, Word val)
 {
     // TODO: implement port_out
-    if (debug_all) {
-        print_word_access(port, val, "Outport");
+    if (debug_all | debug_ports) {
+        print_word_access(port, val, "Word Outport");
     }
 }
 
@@ -298,8 +301,8 @@ Word Machine::port_in_word(unsigned port)
 {
     // Unimplemented ports return 0xFFFF (floating bus / typical PC behavior).
     const Word val = 0xffff;
-    if (debug_all) {
-        print_word_access(port, val, "Inport");
+    if (debug_all | debug_ports) {
+        print_word_access(port, val, "Word Inport");
     }
     return val;
 }
@@ -466,4 +469,35 @@ void Machine::setup_bios_config_table()
         .feature5 = 0,
     };
     memcpy(&bios[BIOS_CONFIG_TABLE], &config_table, sizeof(config_table));
+}
+
+//
+// Take Int 8 as if a timer interrupt is requested by hardware.
+//
+void Machine::invoke_vector(unsigned vector)
+{
+    // Check interrupt flag.
+    bool interrupts_enabled = cpu.get_flags() >> 9 & 1;
+    if (!interrupts_enabled) {
+        return;
+    }
+
+    // Check interrupt handler.
+    Word offset       = memory.load16(vector * 4);
+    Word seg          = memory.load16(vector * 4 + 2);
+    unsigned addr     = pc86_linear_addr(seg, offset);
+    if (addr < 0x500 || addr >= 0xa0000) {
+        // Handler must be located in user memory.
+        return;
+    }
+#if 0
+    // Debug for msdos3
+    if (memory.load16(0x0be97) == 0) {
+        return;
+    }
+#endif
+    auto &out = Machine::get_trace_stream();
+    out << "------- " << "Vector " << vector << std::endl;
+
+    cpu.call_int(vector);
 }

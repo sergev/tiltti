@@ -151,7 +151,7 @@ unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
 //
 // Fetch 1 or 2 bytes at CS:IP, advance IP.
 //
-int Processor::getMem(int width)
+int Processor::fetch(int width)
 {
     Word val = machine.mem_fetch_byte(pc86_linear_addr(core.cs, core.ip));
     if (width == W) {
@@ -452,7 +452,7 @@ void Processor::push(int val)
 //
 // Software interrupt: push FLAGS, CS, IP; jump to vector.
 //
-void Processor::callInt(int type)
+void Processor::call_int(int type)
 {
     core.flags.w &= ~unpredictable_flags;
     if (machine.is_syscall(type)) {
@@ -688,7 +688,7 @@ void Processor::exe_one()
     case 0xc6:
     case 0xc7:
         decode();
-        src = getMem(w);
+        src = fetch(w);
         setRM(w, mod, rm, src);
         break;
 
@@ -711,7 +711,7 @@ void Processor::exe_one()
     case 0xbf:
         w   = (op >> 3) & 1;
         reg = op & 0b111;
-        src = getMem(w);
+        src = fetch(w);
         setReg(w, reg, src);
         break;
 
@@ -720,7 +720,7 @@ void Processor::exe_one()
     case 0xa1:
     case 0xa2:
     case 0xa3:
-        dst = getMem(W);
+        dst = fetch(W);
         if (d == 0) {
             src = getMemAtSegOff(w, os, dst);
             setReg(w, AX, src);
@@ -833,7 +833,7 @@ void Processor::exe_one()
     // IN accum, port (immed and DX)
     case 0xe4:
     case 0xe5:
-        src = getMem(B);
+        src = fetch(B);
         if (w == B)
             res = machine.port_in_byte(src);
         else
@@ -853,7 +853,7 @@ void Processor::exe_one()
     // OUT port, accum
     case 0xe6:
     case 0xe7:
-        src = getMem(B);
+        src = fetch(B);
         res = getReg(w, AX);
         if (w == B)
             machine.port_out_byte(src, res);
@@ -937,7 +937,7 @@ void Processor::exe_one()
     case 0x04:
     case 0x05:
         dst = getReg(w, AX);
-        src = getMem(w);
+        src = fetch(w);
         setReg(w, AX, add(w, dst, src));
         break;
 
@@ -962,7 +962,7 @@ void Processor::exe_one()
     case 0x14:
     case 0x15:
         dst = getReg(w, AX);
-        src = getMem(w);
+        src = fetch(w);
         setReg(w, AX, adc(w, dst, src));
         break;
 
@@ -1046,7 +1046,7 @@ void Processor::exe_one()
     case 0x2c:
     case 0x2d:
         dst = getReg(w, AX);
-        src = getMem(w);
+        src = fetch(w);
         setReg(w, AX, sub(w, dst, src));
         break;
 
@@ -1071,7 +1071,7 @@ void Processor::exe_one()
     case 0x1c:
     case 0x1d:
         dst = getReg(w, AX);
-        src = getMem(w);
+        src = fetch(w);
         setReg(w, AX, sbb(w, dst, src));
         break;
 
@@ -1106,7 +1106,7 @@ void Processor::exe_one()
     case 0x3c:
     case 0x3d:
         dst = getReg(w, AX);
-        src = getMem(w);
+        src = fetch(w);
         sub(w, dst, src);
         break;
 
@@ -1161,12 +1161,12 @@ void Processor::exe_one()
         // Overflow is unpredictable
         unpredictable_flags = OF_MASK;
 
-        src            = getMem(B);
+        src            = fetch(B);
         core.flags.f.c = 0;
         core.flags.f.a = 0;
         if (src == 0) {
             update_flags_zsp(B, 0);
-            callInt(0);
+            call_int(0);
         } else {
             set_ah(get_al() / src);
             set_al(get_al() % src);
@@ -1179,7 +1179,7 @@ void Processor::exe_one()
         // Overflow is unpredictable
         unpredictable_flags = OF_MASK;
 
-        src          = getMem(B);
+        src          = fetch(B);
         int ah_orig  = get_ah();
         int al_orig  = get_al();
         int sum      = al_orig + (Byte)(ah_orig * src);
@@ -1232,7 +1232,7 @@ void Processor::exe_one()
     case 0x24:
     case 0x25:
         dst = getReg(w, AX);
-        src = getMem(w);
+        src = fetch(w);
         logic(w, dst & src);
         setReg(w, AX, dst & src);
         break;
@@ -1258,7 +1258,7 @@ void Processor::exe_one()
     case 0x0c:
     case 0x0d:
         dst = getReg(w, AX);
-        src = getMem(w);
+        src = fetch(w);
         logic(w, dst | src);
         setReg(w, AX, dst | src);
         break;
@@ -1284,7 +1284,7 @@ void Processor::exe_one()
     case 0x34:
     case 0x35:
         dst = getReg(w, AX);
-        src = getMem(w);
+        src = fetch(w);
         logic(w, dst ^ src);
         setReg(w, AX, dst ^ src);
         break;
@@ -1295,7 +1295,7 @@ void Processor::exe_one()
         break;
     case 0xa8:
     case 0xa9:
-        logic(w, getReg(w, AX) & getMem(w));
+        logic(w, getReg(w, AX) & fetch(w));
         break;
 
     // String ops (one iteration each)
@@ -1335,13 +1335,13 @@ void Processor::exe_one()
 
     // --- CALL, RET, JMP: transfer and conditional jumps ---
     case 0xe8:
-        dst = signconv(W, getMem(W));
+        dst = signconv(W, fetch(W));
         push(static_cast<int>(core.ip));
         core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x9a:
-        dst = getMem(W);
-        src = getMem(W);
+        dst = fetch(W);
+        src = fetch(W);
         push(static_cast<int>(core.cs));
         push(static_cast<int>(core.ip));
         core.ip = static_cast<Word>(dst & 0xffff);
@@ -1349,7 +1349,7 @@ void Processor::exe_one()
         break;
     case 0xc0: // 8086 undocumented: same as C2 (RET imm16)
     case 0xc2:
-        src     = getMem(W);
+        src     = fetch(W);
         core.ip = static_cast<Word>(pop() & 0xffff);
         core.sp = (core.sp + src) & 0xffff;
         break;
@@ -1364,22 +1364,22 @@ void Processor::exe_one()
         break;
     case 0xc8: // 8086: same as CA (RETF imm16); ENTER is 186+
     case 0xca:
-        src     = getMem(W);
+        src     = fetch(W);
         core.ip = static_cast<Word>(pop() & 0xffff);
         core.cs = static_cast<Word>(pop() & 0xffff);
         core.sp = (core.sp + src) & 0xffff;
         break;
     case 0xe9:
-        dst     = signconv(W, getMem(W));
+        dst     = signconv(W, fetch(W));
         core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0xeb:
-        dst     = signconv(B, getMem(B));
+        dst     = signconv(B, fetch(B));
         core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0xea:
-        dst     = getMem(W);
-        src     = getMem(W);
+        dst     = fetch(W);
+        src     = fetch(W);
         core.ip = static_cast<Word>(dst & 0xffff);
         core.cs = static_cast<Word>(src & 0xffff);
         break;
@@ -1387,136 +1387,136 @@ void Processor::exe_one()
     // Conditional jumps (Jcc)
     case 0x70: // JO - Overflow
     case 0x60: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (core.flags.f.o)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x71: // JNO - No overflow
     case 0x61: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (!core.flags.f.o)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x72: // JB, JC, JNAE - Below / Carry
     case 0x62: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (core.flags.f.c)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x73: // JNB, JNC, JAE - Above or equal / No carry
     case 0x63: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (!core.flags.f.c)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x74: // JE, JZ - Equal / Zero
     case 0x64: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (core.flags.f.z)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x75: // JNE, JNZ - Not equal / Not zero
     case 0x65: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (!core.flags.f.z)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x76: // JBE, JNA - Below or equal
     case 0x66: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (core.flags.f.c || core.flags.f.z)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x77: // JA, JNBE - Above
     case 0x67: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (!(core.flags.f.c || core.flags.f.z))
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x78: // JS - Sign
     case 0x68: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (core.flags.f.s)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x79: // JNS - Not sign
     case 0x69: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (!core.flags.f.s)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x7a: // JP, JPE - Parity even
     case 0x6a: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (core.flags.f.p)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x7b: // JNP, JPO - Parity odd
     case 0x6b: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (!core.flags.f.p)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x7c: // JL, JNGE - Less (signed)
     case 0x6c: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (core.flags.f.s != core.flags.f.o)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x7d: // JGE, JNL - Greater or equal (signed)
     case 0x6d: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (core.flags.f.s == core.flags.f.o)
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x7e: // JLE, JNG - Less or equal (signed)
     case 0x6e: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (core.flags.f.z || (core.flags.f.s != core.flags.f.o))
             core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0x7f: // JG, JNLE - Greater (signed)
     case 0x6f: // Undocumented
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (!core.flags.f.z && (core.flags.f.s == core.flags.f.o))
             core.ip = (core.ip + dst) & 0xffff;
         break;
 
     // LOOP, LOOPE, LOOPNE, JCXZ
     case 0xe2:
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         core.cx -= 1;
         if (core.cx != 0)
             core.ip += dst;
         break;
     case 0xe1:
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         core.cx -= 1;
         if (core.cx != 0 && core.flags.f.z)
             core.ip += dst;
         break;
     case 0xe0:
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         core.cx -= 1;
         if (core.cx != 0 && !core.flags.f.z)
             core.ip += dst;
         break;
     case 0xe3:
-        dst = signconv(B, getMem(B));
+        dst = signconv(B, fetch(B));
         if (core.cx == 0)
             core.ip += dst;
         break;
 
     // INT3, INT, INTO: software interrupt
     case 0xcc:
-        callInt(3);
+        call_int(3);
         break;
     case 0xcd:
-        callInt(getMem(B));
+        call_int(fetch(B));
         break;
     case 0xce:
         if (core.flags.f.o) {
-            callInt(4);
+            call_int(4);
         }
         break;
 
@@ -1529,25 +1529,25 @@ void Processor::exe_one()
 
     // Flag ops
     case 0xf8:
-        core.flags.f.c = 0;
+        core.flags.f.c = 0; // CLC
         break;
     case 0xf5:
-        core.flags.f.c = !core.flags.f.c;
+        core.flags.f.c = !core.flags.f.c; // CMC
         break;
     case 0xf9:
-        core.flags.f.c = 1;
+        core.flags.f.c = 1; // STC
         break;
     case 0xfc:
-        core.flags.f.d = 0;
+        core.flags.f.d = 0; // CLD
         break;
     case 0xfd:
-        core.flags.f.d = 1;
+        core.flags.f.d = 1; // STD
         break;
     case 0xfa:
-        core.flags.f.i = 0;
+        core.flags.f.i = 0; // CLI
         break;
     case 0xfb:
-        core.flags.f.i = 1;
+        core.flags.f.i = 1; // STI
         break;
 
     // HLT: Pause until an external interrupt is received
@@ -1586,9 +1586,9 @@ void Processor::exe_one()
     case 0x83: {
         decode();
         dst = getRM(w, mod, rm);
-        src = getMem(B);
+        src = fetch(B);
         if (op == 0x81)
-            src |= getMem(B) << 8;
+            src |= fetch(B) << 8;
         else if (op == 0x83 && (src & static_cast<int>(SIGN[B])) != 0)
             src |= 0xff00;
         switch (reg) {
@@ -1904,13 +1904,13 @@ void Processor::exe_one()
             if (w == B) {
                 Byte divb = src;
                 if (divb == 0) {
-                    callInt(0);
+                    call_int(0);
                     break;
                 }
                 Word quo = core.ax / divb;
                 Byte rem = core.ax % divb;
                 if (quo > 0xFF) {
-                    callInt(0);
+                    call_int(0);
                     break;
                 }
                 set_al(quo);
@@ -1918,14 +1918,14 @@ void Processor::exe_one()
             } else {
                 Word divw = src;
                 if (divw == 0) {
-                    callInt(0);
+                    call_int(0);
                     break;
                 }
                 unsigned ldst = (core.dx << 16) | core.ax;
                 unsigned quo  = ldst / divw;
                 unsigned rem  = ldst % divw;
                 if (quo > 0xFFFF) {
-                    callInt(0);
+                    call_int(0);
                     break;
                 }
                 core.ax = quo;
@@ -1943,7 +1943,7 @@ void Processor::exe_one()
                 src = (int8_t)src;
                 if (src == 0) {
                     // Divide by zero
-                    callInt(0);
+                    call_int(0);
                     break;
                 }
                 dst = (int16_t)core.ax;
@@ -1951,7 +1951,7 @@ void Processor::exe_one()
                 // 8086/8088: min negative quotient is -127, not -128 (Q68599); -128 triggers INT 0.
                 if (res > 0x7f || res < -0x7f) {
                     // Quotient overflow (byte).
-                    callInt(0);
+                    call_int(0);
                     break;
                 }
                 if (rep != 0) {
@@ -1966,7 +1966,7 @@ void Processor::exe_one()
                 src = (int16_t)src;
                 if (src == 0) {
                     // Divide by zero
-                    callInt(0);
+                    call_int(0);
                     break;
                 }
                 dst          = (int32_t)((core.dx << 16) | core.ax);
@@ -1975,7 +1975,7 @@ void Processor::exe_one()
                 // INT 0.
                 if (lres > 0x7fff || lres < -0x7fff) {
                     // Quotient overflow (word).
-                    callInt(0);
+                    call_int(0);
                     break;
                 }
                 if (rep != 0) {

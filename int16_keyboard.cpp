@@ -73,7 +73,7 @@ void Machine::handle_int16_keyboard()
         int16_122key_capability_check();
         break;
     default:
-        if (Machine::trace_enabled()) {
+        if (debug_all | debug_syscalls) {
             auto &out = Machine::get_trace_stream();
             auto save = out.flags();
 

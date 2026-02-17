@@ -62,7 +62,7 @@ void Machine::handle_int1a_rtc_timer()
         int1a_turn_off_alarm();
         break;
     default:
-        if (Machine::trace_enabled()) {
+        if (debug_all | debug_syscalls) {
             auto &out = Machine::get_trace_stream();
             auto save = out.flags();
 

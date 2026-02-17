@@ -47,12 +47,9 @@ static csh disasm;
 
 //
 // Enable trace with given modes.
-//  i - trace instructions
-//  e - trace INT syscalls
-//  f - trace fetch
-//  r - trace registers
-//  m - trace memory read/write
-//  x - trace exceptions
+//  r - trace registers, instructions, memory read/write and everything else
+//  s - trace INT syscalls
+//  p - trace port i/o
 //
 void Machine::enable_trace(const char *trace_mode)
 {
@@ -177,6 +174,21 @@ void Machine::print_word_access(unsigned addr, Word val, const char *opname)
 
     out << "\t" << opname << " [" << std::hex << std::setw(5) << addr << "] = ";
     out << val << std::endl;
+
+    // Restore.
+    out.flags(save_flags);
+}
+
+void Machine::print_handler(unsigned addr)
+{
+    auto &out       = Machine::get_trace_stream();
+    auto save_flags = out.flags();
+
+    addr &= ~3;
+    unsigned off = memory.load16(addr);
+    unsigned seg = memory.load16(addr + 2);
+    out << "------- " << "Handler Int" << std::hex << (addr >> 2) << " = ";
+    out << pc86_linear_addr(seg, off) << std::endl;
 
     // Restore.
     out.flags(save_flags);

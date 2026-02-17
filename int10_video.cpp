@@ -109,7 +109,7 @@ void Machine::handle_int10_video()
         int10_vbe();
         break;
     default:
-        if (Machine::trace_enabled()) {
+        if (debug_all | debug_syscalls) {
             auto &out = Machine::get_trace_stream();
             auto save = out.flags();
 
