@@ -14,7 +14,7 @@
 PROG    = build/tiltti
 
 all $(PROG): build
-	$(MAKE) -Cbuild $@
+	$(MAKE) -Cbuild all
 
 test:   build
 	$(MAKE) -Cbuild unit_tests
@@ -111,7 +111,6 @@ pcdos3a: $(PROG)
 pcdos4: $(PROG)
 	$(PROG) images/pcdos4.01-360k.img
 
-# Loops after Int 10h AH=1bh video request
 pcdos4a: $(PROG)
 	$(PROG) images/pcdos4.01-720k.img
 
@@ -119,7 +118,7 @@ pcdos4a: $(PROG)
 pcdos5: $(PROG)
 	$(PROG) images/pcdos5.02-720k.img
 
-# Cancels installation, then jumps to address a62dc
+# Cancels installation, then loops
 pcdos6: $(PROG)
 	$(PROG) images/pcdos6.30-1.44m.img
 
@@ -127,7 +126,7 @@ pcdos6: $(PROG)
 pcdos7: $(PROG)
 	$(PROG) images/pcdos7.0-1.44m.img
 
-# Jump to address e4fe0
+# Cancels installation, then loops
 pcdos7a: $(PROG)
 	$(PROG) images/pcdos7.00r1-1.44m.img
 
@@ -146,7 +145,6 @@ drdos3: $(PROG)
 drdos3a: $(PROG)
 	$(PROG) images/drdos3.41-720k.img
 
-# Jump to Upper Memory Area ff2d0
 drdos6: $(PROG)
 	$(PROG) images/drdos6.0-720k.img
 

@@ -56,6 +56,18 @@ Machine::Machine(Memory &m, std::function<void(unsigned)> pump_cb)
 
     setup_bios_config_table();
 
+    // Dummy IRET handler
+    bios[BIOS_ENTRY_IRET_OFFICIAL] = 0xCF; // IRET opcode
+
+    // Initialize IVT: all vectors to dummy IRET handler
+    const Seg_Off iret_vec = { .offset = BIOS_ENTRY_IRET_OFFICIAL, .seg = 0xf000 };
+    const Seg_Off null_vec = { .offset = 0, .seg = 0 };
+    for (unsigned i = 0; i < 256; i++)
+        ivt.ivec[i] = iret_vec;
+    for (unsigned i = 0x60; i <= 0x66; i++)
+        ivt.ivec[i] = null_vec;
+    ivt.ivec[0x79] = null_vec;
+
     // Memory size in kilobytes.
     bda.mem_size_kb = 640;
 
@@ -169,6 +181,10 @@ uint16_t Machine::pop_keystroke()
 
 static bool basic_area(unsigned addr)
 {
+    if (addr >= BIOS_ENTRY_IRET_OFFICIAL + 0xf0000 && addr < BIOS_ENTRY_IRET_OFFICIAL + 0xf0010) {
+        // Allow dummy handler.
+        return true;
+    }
     return addr >= BASIC_ROM_ADDR && addr < BASIC_ROM_ADDR + BASIC_ROM_LEN;
 }
 
@@ -490,14 +506,10 @@ void Machine::invoke_vector(unsigned vector)
         // Handler must be located in user memory.
         return;
     }
-#if 0
-    // Debug for msdos3
-    if (memory.load16(0x0be97) == 0) {
-        return;
-    }
-#endif
-    auto &out = Machine::get_trace_stream();
-    out << "------- " << "Vector " << vector << std::endl;
+
+    // Debug.
+    //auto &out = Machine::get_trace_stream();
+    //out << "------- " << "Vector " << vector << std::endl;
 
     cpu.call_int(vector);
 }
