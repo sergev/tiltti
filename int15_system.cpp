@@ -104,9 +104,42 @@ void Machine::handle_int15_system_services()
     }
 }
 
+//
+// AH=24h — A20 gate control.
+//
+// Control or query the A20 address line (real-mode access above 1 MB).
+// Inputs: AL = subfunction (00h disable, 01h enable, 02h get status, 03h query support).
+// Outputs: CF=0 on success; AL=02h returns AL=0/1; AL=03h returns BX=3. Unsupported AL: CF=1, AH=86h.
+//
 void Machine::int15_a20_gate_control()
 {
-    throw std::runtime_error("Unimplemented: A20 gate control");
+    unsigned al = cpu.get_al();
+    switch (al) {
+    case 0x00:
+        a20_enabled = false;
+        cpu.set_ah(0);
+        cpu.set_cf(0);
+        break;
+    case 0x01:
+        a20_enabled = true;
+        cpu.set_ah(0);
+        cpu.set_cf(0);
+        break;
+    case 0x02:
+        cpu.set_al(a20_enabled ? 1 : 0);
+        cpu.set_ah(0);
+        cpu.set_cf(0);
+        break;
+    case 0x03:
+        cpu.set_bx(3);
+        cpu.set_ah(0);
+        cpu.set_cf(0);
+        break;
+    default:
+        cpu.set_ah(0x86);
+        cpu.set_cf(1);
+        break;
+    }
 }
 
 void Machine::int15_keyboard_intercept()

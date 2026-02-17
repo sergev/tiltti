@@ -53,6 +53,10 @@ private:
     // Protect the Upper Memory Area.
     bool mode_640k{};
 
+    // A20 address line state (INT 15h AH=24h). When false, addresses above 1 MB would wrap
+    // (not applied in current 1 MB memory model).
+    bool a20_enabled{true};
+
     // Disks and floppies.
     std::array<std::unique_ptr<Disk>, NDISKS> disks;
 

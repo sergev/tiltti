@@ -113,9 +113,23 @@ void Machine::int1a_read_system_clock_count()
     cpu.set_cf(0);
 }
 
+//
+// AH=01h — Set system clock count.
+//
+// Set the BIOS tick counter and clear the midnight rollover flag.
+// Inputs:
+//      CX:DX = new 32-bit tick count (CX = high word, DX = low word).
+// Outputs:
+//      AH = 0, CF = 0.
+// Writes BDA `timer_counter` and clears `timer_rollover`.
+//
 void Machine::int1a_set_system_clock_count()
 {
-    throw std::runtime_error("Unimplemented: Set system clock count");
+    uint32_t ticks = (static_cast<uint32_t>(cpu.get_cx()) << 16) | cpu.get_dx();
+    bda.timer_counter = ticks;
+    bda.timer_rollover = 0;
+    cpu.set_ah(0);
+    cpu.set_cf(0);
 }
 
 //

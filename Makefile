@@ -134,3 +134,26 @@ pcdos7a: $(PROG)
 # Loops after Int 1Ah AH=00h RTC Timer Request
 pcdos7b: $(PROG)
 	$(PROG) images/pcdos7.1-1.44m.img
+
+#
+# Run DR-DOS
+#
+# Loops after Int 12h Memory Size Request
+drdos3: $(PROG)
+	$(PROG) images/drdos3.41-360k.img
+
+# Loops after Int 12h Memory Size Request
+drdos3a: $(PROG)
+	$(PROG) images/drdos3.41-720k.img
+
+# Jump to Upper Memory Area ff2d0
+drdos6: $(PROG)
+	$(PROG) images/drdos6.0-720k.img
+
+# Loops after Int 1Ah AH=00h RTC Timer Request
+drdos7: $(PROG)
+	$(PROG) images/drdos7.03-1.44m.img
+
+# Loops after Int 1Ah AH=00h RTC Timer Request
+drdos8: $(PROG)
+	$(PROG) images/drdos8.0-1.44m.img
