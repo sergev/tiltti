@@ -11,8 +11,9 @@
 # To reconfigure for Debug build:
 #   make clean; make debug; make
 #
+PROG    = build/tiltti
 
-all:    build
+all $(PROG): build
 	$(MAKE) -Cbuild $@
 
 test:   build
@@ -69,3 +70,67 @@ run-moo88:
 	for moo in $(MOO88)/*.gz; do \
 	    ../build/moo_booth/moo-booth -run $$moo; \
         done
+
+#
+# Run MS-DOS
+#
+msdos1: $(PROG)
+	$(PROG) images/msdos1.25-320k.img
+
+msdos2: $(PROG)
+	$(PROG) images/msdos2.12-360k.img
+
+msdos3: $(PROG)
+	$(PROG) images/msdos3.31-1.44m.img
+
+# Loops after Int 16h AH=a2h keyboard request
+msdos6: $(PROG)
+	$(PROG) images/msdos6.22-1.44m.img
+
+# Requires i386
+msdos7: $(PROG)
+	$(PROG) images/msdos7.1-1.44m.img
+
+#
+# Run PC-DOS
+#
+# Reboot after reading next sector
+pcdos1: $(PROG)
+	$(PROG) images/pcdos1.10-160k.img
+
+# Divide by 0 after resetting disk system
+pcdos2: $(PROG)
+	$(PROG) images/pcdos2.10-180k.img
+
+pcdos3: $(PROG)
+	$(PROG) images/pcdos3.30-360k.img
+
+pcdos3a: $(PROG)
+	$(PROG) images/pcdos3.30-720k.img
+
+pcdos4: $(PROG)
+	$(PROG) images/pcdos4.01-360k.img
+
+# Loops after Int 10h AH=1bh video request
+pcdos4a: $(PROG)
+	$(PROG) images/pcdos4.01-720k.img
+
+# Loops after Int 15h AH=c0h System Services Request
+pcdos5: $(PROG)
+	$(PROG) images/pcdos5.02-720k.img
+
+# Cancels installation, then jumps to address a62dc
+pcdos6: $(PROG)
+	$(PROG) images/pcdos6.30-1.44m.img
+
+# Loops after Int 1Ah AH=00h RTC Timer Request
+pcdos7: $(PROG)
+	$(PROG) images/pcdos7.0-1.44m.img
+
+# Jump to address e4fe0
+pcdos7a: $(PROG)
+	$(PROG) images/pcdos7.00r1-1.44m.img
+
+# Loops after Int 1Ah AH=00h RTC Timer Request
+pcdos7b: $(PROG)
+	$(PROG) images/pcdos7.1-1.44m.img
