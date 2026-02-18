@@ -545,4 +545,8 @@ void Machine::update_timer_counter()
     unsigned sec      = (((info->tm_hour * 60) + info->tm_min) * 60) + info->tm_sec;
     unsigned msec     = (sec * 1000) + (tv.tv_usec / 1000);
     bda.timer_counter = msec / 55;
+
+    // Debug.
+    //auto &out = Machine::get_trace_stream();
+    //out << "------- " << "Timer counter " << bda.timer_counter << std::endl;
 }

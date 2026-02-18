@@ -112,7 +112,7 @@ pcdos5: $(PROG)
 pcdos6: $(PROG)
 	$(PROG) images/pcdos6.30-1.44m.img
 
-# Loops after Int 1Ah AH=00h RTC Timer Request
+# Cancels installation, then loops
 pcdos7: $(PROG)
 	$(PROG) images/pcdos7.0-1.44m.img
 
@@ -136,11 +136,9 @@ drdos5: $(PROG)
 drdos6: $(PROG)
 	$(PROG) images/drdos6.0-720k.img
 
-# Loops after Int 1Ah AH=00h RTC Timer Request
 drdos7: $(PROG)
 	$(PROG) images/drdos7.03-1.44m.img
 
-# Loops after Int 1Ah AH=00h RTC Timer Request
 drdos8: $(PROG)
 	$(PROG) images/drdos8.0-1.44m.img
 
