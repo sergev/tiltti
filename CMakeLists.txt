@@ -59,7 +59,7 @@ target_link_libraries(simulator PUBLIC SDL2::SDL2)
 # Build executable file
 add_executable(${PROJECT_NAME} main.cpp)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CAPSTONE_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} simulator ${CAPSTONE_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} simulator ${CAPSTONE_STATIC_LDFLAGS})
 
 # Build image of Basic ROM.
 add_dependencies(${PROJECT_NAME} generate_basic_rom_h)
@@ -87,6 +87,9 @@ execute_process(
 )
 set_source_files_properties(main.cpp PROPERTIES COMPILE_FLAGS
     -DVERSION_STRING=\\"${CMAKE_PROJECT_VERSION}.${GIT_REVCOUNT}-${GIT_HASH}\\"
+)
+set_source_files_properties(trace.cpp PROPERTIES COMPILE_FLAGS
+    ${CAPSTONE_STATIC_CFLAGS}
 )
 
 install(TARGETS

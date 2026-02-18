@@ -10,4 +10,4 @@ add_executable(moo-booth
     run.cpp
 )
 include_directories(BEFORE ..)
-target_link_libraries(moo-booth PRIVATE simulator ${CAPSTONE_LIBRARIES} ZLIB::ZLIB)
+target_link_libraries(moo-booth PRIVATE simulator ${CAPSTONE_STATIC_LDFLAGS} ZLIB::ZLIB)
