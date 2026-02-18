@@ -145,6 +145,9 @@ drdos3: $(PROG)
 drdos3a: $(PROG)
 	$(PROG) images/drdos3.41-720k.img
 
+drdos5: $(PROG)
+	$(PROG) images/drdos5.0-720k.img
+
 drdos6: $(PROG)
 	$(PROG) images/drdos6.0-720k.img
 
