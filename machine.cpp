@@ -24,6 +24,7 @@
 #include "machine.h"
 
 #include <unistd.h>
+#include <sys/time.h>
 
 #include <algorithm>
 #include <cctype>
@@ -76,11 +77,6 @@ Machine::Machine(Memory &m, std::function<void(unsigned)> pump_cb)
 
     // Video mode 80×25 color.
     bda.equipment_list_flags = 0x0021;
-
-    // Initial empty keystroke, for fast MS-DOS 6.22 boot.
-    // Otherwise it waits for F5/F8 to bypass config.sys/autoexec.bat.
-    set_kbd_modifiers(KF0_LSHIFT);
-    push_keystroke(0x2a00); // Left shift
 
     // Floppy disk installed.
     setup_floppy();
@@ -535,4 +531,18 @@ void Machine::unsupported(uint8_t op, const std::string &required_cpu)
     if (mode_640k) {
         throw std::runtime_error("Unsupported opcode " + to_hex(op) + ": need " + required_cpu + " processor");
     }
+}
+
+void Machine::update_timer_counter()
+{
+    struct timeval tv;
+    gettimeofday(&tv, 0);
+
+    time_t now      = tv.tv_sec;
+    struct tm *info = localtime(&now);
+
+    // Get milliseconds since midnight.
+    unsigned sec      = (((info->tm_hour * 60) + info->tm_min) * 60) + info->tm_sec;
+    unsigned msec     = (sec * 1000) + (tv.tv_usec / 1000);
+    bda.timer_counter = msec / 55;
 }

@@ -325,6 +325,7 @@ public:
     void int1a_set_cmos_date();
     void int1a_set_alarm_time();
     void int1a_turn_off_alarm();
+    void update_timer_counter();
 };
 
 #endif // TILTTI_MACHINE_H

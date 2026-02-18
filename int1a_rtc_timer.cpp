@@ -96,19 +96,10 @@ static unsigned bin2bcd(unsigned val)
 //
 void Machine::int1a_read_system_clock_count()
 {
-    struct timeval tv;
-    gettimeofday(&tv, 0);
+    update_timer_counter();
 
-    time_t now      = tv.tv_sec;
-    struct tm *info = localtime(&now);
-
-    // Get milliseconds since midnight.
-    unsigned sec   = (((info->tm_hour * 60) + info->tm_min) * 60) + info->tm_sec;
-    unsigned msec  = (sec * 1000) + (tv.tv_usec / 1000);
-    unsigned ticks = msec / 55;
-
-    cpu.set_cx(ticks >> 16);
-    cpu.set_dx(ticks);
+    cpu.set_cx(bda.timer_counter >> 16);
+    cpu.set_dx(bda.timer_counter);
     cpu.set_al(0);
     cpu.set_cf(0);
 }

@@ -299,7 +299,6 @@ void Machine::int13_verify_sectors()
     unsigned head     = cpu.get_dh();                                // 8 bits, 0-based
     unsigned nsectors = cpu.get_al();
     unsigned drive    = cpu.get_dl();
-    unsigned addr     = pc86_linear_addr(cpu.get_es(), cpu.get_bx());
 
     if (debug_all | debug_syscalls) {
         auto &out = Machine::get_trace_stream();
@@ -308,7 +307,7 @@ void Machine::int13_verify_sectors()
         out << "\tAH=04h Verify sectors (CHS)" << std::endl;
         out << "\tdrive=0x" << std::hex << std::setw(2) << drive << " nsectors=" << std::dec
             << std::setw(2) << nsectors << " CHS=" << cylinder << "/" << head << "/" << sector
-            << " addr=0x" << std::hex << std::setw(5) << addr << std::dec << std::endl;
+            << std::endl;
         out.flags(save);
     }
 
@@ -317,13 +316,8 @@ void Machine::int13_verify_sectors()
         return;
     }
 
-    auto status = disk_io_chs('r', drive, cylinder, head, sector, addr, nsectors * SECTOR_NBYTES);
-    if (status == DISK_RET_SUCCESS) {
-        cpu.set_al(nsectors);
-    } else {
-        cpu.set_al(0);
-    }
-    disk_ret(drive, status);
+    cpu.set_al(nsectors);
+    disk_ret(drive, DISK_RET_SUCCESS);
 }
 
 void Machine::int13_format_track()
