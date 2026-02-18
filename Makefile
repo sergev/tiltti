@@ -101,15 +101,9 @@ pcdos2: $(PROG)
 	$(PROG) images/pcdos2.10-180k.img
 
 pcdos3: $(PROG)
-	$(PROG) images/pcdos3.30-360k.img
-
-pcdos3a: $(PROG)
 	$(PROG) images/pcdos3.30-720k.img
 
 pcdos4: $(PROG)
-	$(PROG) images/pcdos4.01-360k.img
-
-pcdos4a: $(PROG)
 	$(PROG) images/pcdos4.01-720k.img
 
 # Loops after Int 15h AH=c0h System Services Request
@@ -136,9 +130,6 @@ pcdos7b: $(PROG)
 # Run DR-DOS
 #
 drdos3: $(PROG)
-	$(PROG) images/drdos3.41-360k.img
-
-drdos3a: $(PROG)
 	$(PROG) images/drdos3.41-720k.img
 
 drdos5: $(PROG)
