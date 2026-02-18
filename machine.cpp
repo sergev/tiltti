@@ -77,6 +77,11 @@ Machine::Machine(Memory &m, std::function<void(unsigned)> pump_cb)
     // Video mode 80×25 color.
     bda.equipment_list_flags = 0x0021;
 
+    // Initial empty keystroke, for fast MS-DOS 6.22 boot.
+    // Otherwise it waits for F5/F8 to bypass config.sys/autoexec.bat.
+    set_kbd_modifiers(KF0_LSHIFT);
+    push_keystroke(0x2a00); // Left shift
+
     // Floppy disk installed.
     setup_floppy();
 

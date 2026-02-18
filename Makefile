@@ -83,7 +83,6 @@ msdos2: $(PROG)
 msdos3: $(PROG)
 	$(PROG) images/msdos3.31-1.44m.img
 
-# Loops after Int 16h AH=a2h keyboard request
 msdos6: $(PROG)
 	$(PROG) images/msdos6.22-1.44m.img
 

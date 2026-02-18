@@ -287,10 +287,12 @@ void Video_Adapter::pump_events(Machine &machine, unsigned timeout)
                 uint8_t bios_sc  = sdl_to_bios_scancode(sdl_sc);
                 uint8_t bios_ext = sdl_to_bios_scancode_extended(sdl_sc);
                 uint8_t ascii    = 0;
-                if (mod & KMOD_SHIFT)
+                if (mod & KMOD_SHIFT) {
                     ascii = sdl_scancode_to_ascii_shifted(sdl_sc);
-                if (ascii == 0)
+                }
+                if (ascii == 0) {
                     ascii = sdl_scancode_to_ascii_unshifted(sdl_sc);
+                }
                 if (bios_ext) {
                     machine.push_keystroke((static_cast<uint16_t>(bios_ext) << 8) | 0x00);
                 } else if (bios_sc) {
