@@ -178,6 +178,10 @@ int main(int argc, char *argv[])
             // Take keyboard interrupt.
             //machine.invoke_vector(9);
 
+            // Take timer tick interrupt.
+            machine.invoke_vector(0x1c);
+            //machine.invoke_vector(0x15);
+
             vga.pump_events(machine, 10);
         }
 

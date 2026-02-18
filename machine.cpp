@@ -184,6 +184,11 @@ uint16_t Machine::pop_keystroke()
     return ax;
 }
 
+static bool user_area(unsigned addr)
+{
+    return addr >= 0x500 && addr < 0xa0000;
+}
+
 static bool basic_area(unsigned addr)
 {
     if (addr >= BIOS_ENTRY_IRET_OFFICIAL + 0xf0000 && addr < BIOS_ENTRY_IRET_OFFICIAL + 0xf0010) {
@@ -199,7 +204,7 @@ static bool basic_area(unsigned addr)
 //
 Byte Machine::mem_fetch_byte(unsigned addr)
 {
-    if (mode_640k && addr >= 0xa0000 && !basic_area(addr)) {
+    if (mode_640k && !user_area(addr) && !basic_area(addr)) {
         throw std::runtime_error("Jump to Upper Memory Area " + to_hex(addr));
     }
     Byte val = memory.load8(addr);
@@ -508,12 +513,13 @@ void Machine::setup_bios_config_table()
 //
 void Machine::invoke_vector(unsigned vector)
 {
+#if 0
     // Check interrupt flag.
     bool interrupts_enabled = cpu.get_flags() >> 9 & 1;
     if (!interrupts_enabled) {
         return;
     }
-
+#endif
     // Check interrupt handler.
     Word offset       = memory.load16(vector * 4);
     Word seg          = memory.load16(vector * 4 + 2);
@@ -524,8 +530,8 @@ void Machine::invoke_vector(unsigned vector)
     }
 
     // Debug.
-    //auto &out = Machine::get_trace_stream();
-    //out << "------- " << "Vector " << vector << std::endl;
+    auto &out = Machine::get_trace_stream();
+    out << "------- " << "Vector " << vector << std::endl;
 
     cpu.call_int(vector);
 }
