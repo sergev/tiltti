@@ -106,7 +106,6 @@ pcdos3: $(PROG)
 pcdos4: $(PROG)
 	$(PROG) images/pcdos4.01-720k.img
 
-# Loops after Int 15h AH=c0h System Services Request
 pcdos5: $(PROG)
 	$(PROG) images/pcdos5.02-720k.img
 

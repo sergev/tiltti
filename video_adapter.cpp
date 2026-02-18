@@ -145,9 +145,8 @@ void Video_Adapter::draw_cell(const uint8_t *text_buf, unsigned col, unsigned ro
     unsigned px       = col * GLYPH_WIDTH;
     unsigned py       = row * GLYPH_HEIGHT;
 
-    if (is_cursor_cell && fg == bg) {
-        fg = 15;
-        bg = 0;
+    if (fg == bg) {
+        bg = 15 - fg;
     }
 
     for (unsigned dy = 0; dy < GLYPH_HEIGHT; dy++) {
