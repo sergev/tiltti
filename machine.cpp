@@ -398,10 +398,10 @@ void Machine::boot_disk(const std::string &filename)
 
     // TODO: Alternatively, attach image as disk C.
 
-    // Start at address 07c0:0000.
+    // Start at address 0000:7c00.
     unsigned addr = 0x7c00;
-    cpu.set_cs(addr >> 4);
-    cpu.set_ip(0);
+    cpu.set_cs(0);
+    cpu.set_ip(addr);
 
     // Load boot sector from disk.
     if (disk_io_chs('r', FLOPPY_A, 0, 0, 1, addr, SECTOR_NBYTES) != DISK_RET_SUCCESS) {

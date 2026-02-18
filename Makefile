@@ -94,11 +94,9 @@ msdos7: $(PROG)
 #
 # Run PC-DOS
 #
-# Reboot after reading next sector
 pcdos1: $(PROG)
 	$(PROG) images/pcdos1.10-160k.img
 
-# Divide by 0 after resetting disk system
 pcdos2: $(PROG)
 	$(PROG) images/pcdos2.10-180k.img
 
@@ -137,11 +135,9 @@ pcdos7b: $(PROG)
 #
 # Run DR-DOS
 #
-# Loops after Int 12h Memory Size Request
 drdos3: $(PROG)
 	$(PROG) images/drdos3.41-360k.img
 
-# Loops after Int 12h Memory Size Request
 drdos3a: $(PROG)
 	$(PROG) images/drdos3.41-720k.img
 
