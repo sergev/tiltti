@@ -16,7 +16,7 @@ enable_testing()
 # Common includes and libraries for all tests.
 #
 include_directories(BEFORE ..)
-link_libraries(simulator gtest_main ${CAPSTONE_LIBRARIES})
+link_libraries(simulator gtest_main ${CAPSTONE_STATIC_LDFLAGS})
 add_definitions(-DTEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 add_definitions(-DBUILD_DIR="${CMAKE_BINARY_DIR}")
 

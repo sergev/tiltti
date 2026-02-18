@@ -199,6 +199,8 @@ public:
     static void print_word_access(unsigned addr, Word val, const char *opname);
     void print_handler(unsigned addr);
 
+    void unsupported(uint8_t op, const std::string &required_cpu);
+
     // Invoke pump callback (used by INT 16h).
     std::function<void(unsigned)> pump_callback;
 

@@ -1384,99 +1384,148 @@ void Processor::exe_one()
         core.cs = static_cast<Word>(src & 0xffff);
         break;
 
+    //
     // Conditional jumps (Jcc)
-    case 0x70: // JO - Overflow
+    //
     case 0x60: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x70: // JO - Overflow
         dst = signconv(B, fetch(B));
         if (core.flags.f.o)
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x71: // JNO - No overflow
+
     case 0x61: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x71: // JNO - No overflow
         dst = signconv(B, fetch(B));
         if (!core.flags.f.o)
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x72: // JB, JC, JNAE - Below / Carry
+
     case 0x62: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x72: // JB, JC, JNAE - Below / Carry
         dst = signconv(B, fetch(B));
         if (core.flags.f.c)
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x73: // JNB, JNC, JAE - Above or equal / No carry
+
     case 0x63: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x73: // JNB, JNC, JAE - Above or equal / No carry
         dst = signconv(B, fetch(B));
         if (!core.flags.f.c)
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x74: // JE, JZ - Equal / Zero
+
     case 0x64: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x74: // JE, JZ - Equal / Zero
         dst = signconv(B, fetch(B));
         if (core.flags.f.z)
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x75: // JNE, JNZ - Not equal / Not zero
+
     case 0x65: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x75: // JNE, JNZ - Not equal / Not zero
         dst = signconv(B, fetch(B));
         if (!core.flags.f.z)
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x76: // JBE, JNA - Below or equal
+
     case 0x66: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x76: // JBE, JNA - Below or equal
         dst = signconv(B, fetch(B));
         if (core.flags.f.c || core.flags.f.z)
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x77: // JA, JNBE - Above
+
     case 0x67: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x77: // JA, JNBE - Above
         dst = signconv(B, fetch(B));
         if (!(core.flags.f.c || core.flags.f.z))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x78: // JS - Sign
+
     case 0x68: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x78: // JS - Sign
         dst = signconv(B, fetch(B));
         if (core.flags.f.s)
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x79: // JNS - Not sign
+
     case 0x69: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x79: // JNS - Not sign
         dst = signconv(B, fetch(B));
         if (!core.flags.f.s)
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x7a: // JP, JPE - Parity even
+
     case 0x6a: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x7a: // JP, JPE - Parity even
         dst = signconv(B, fetch(B));
         if (core.flags.f.p)
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x7b: // JNP, JPO - Parity odd
+
     case 0x6b: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x7b: // JNP, JPO - Parity odd
         dst = signconv(B, fetch(B));
         if (!core.flags.f.p)
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x7c: // JL, JNGE - Less (signed)
+
     case 0x6c: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x7c: // JL, JNGE - Less (signed)
         dst = signconv(B, fetch(B));
         if (core.flags.f.s != core.flags.f.o)
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x7d: // JGE, JNL - Greater or equal (signed)
+
     case 0x6d: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x7d: // JGE, JNL - Greater or equal (signed)
         dst = signconv(B, fetch(B));
         if (core.flags.f.s == core.flags.f.o)
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x7e: // JLE, JNG - Less or equal (signed)
+
     case 0x6e: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x7e: // JLE, JNG - Less or equal (signed)
         dst = signconv(B, fetch(B));
         if (core.flags.f.z || (core.flags.f.s != core.flags.f.o))
             core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0x7f: // JG, JNLE - Greater (signed)
+
     case 0x6f: // Undocumented
+        machine.unsupported(op, "80186");
+        [[fallthrough]];
+    case 0x7f: // JG, JNLE - Greater (signed)
         dst = signconv(B, fetch(B));
         if (!core.flags.f.z && (core.flags.f.s == core.flags.f.o))
             core.ip = (core.ip + dst) & 0xffff;

@@ -513,3 +513,10 @@ void Machine::invoke_vector(unsigned vector)
 
     cpu.call_int(vector);
 }
+
+void Machine::unsupported(uint8_t op, const std::string &required_cpu)
+{
+    if (mode_640k) {
+        throw std::runtime_error("Unsupported opcode " + to_hex(op) + ": need " + required_cpu + " processor");
+    }
+}
