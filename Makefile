@@ -145,3 +145,13 @@ drdos7: $(PROG)
 # Loops after Int 1Ah AH=00h RTC Timer Request
 drdos8: $(PROG)
 	$(PROG) images/drdos8.0-1.44m.img
+
+#
+# Run CPM
+#
+cpm1:   $(PROG)
+	$(PROG) images/cpm1.1-320k.img
+
+# Loops after installing handler for Int e6
+cpm3:   $(PROG)
+	$(PROG) images/cpm3.1-320k.img
