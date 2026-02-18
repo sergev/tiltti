@@ -81,6 +81,9 @@ private:
     uint8_t *font_buf_    = nullptr;
     size_t font_buf_size_ = 0;
 
+    // State of i/o ports.
+    uint8_t port_61_val{};
+
     // Static stuff.
     static uint64_t simulated_instructions; // Count of instructions
 

@@ -292,7 +292,18 @@ void Machine::port_out_byte(unsigned port, Byte val)
 Byte Machine::port_in_byte(unsigned port)
 {
     // Unimplemented ports return 0xFF (floating bus / typical PC behavior).
-    const Byte val = 0xff;
+    Byte val = 0xff;
+
+    switch (port) {
+    case 0x61:
+        // Bit 4 flips state (0/1) with each DRAM refresh cycle, approximately every 15 μs.
+        // Commonly used in old software for precise short delays by polling for changes.
+        val = port_61_val | (simulated_instructions & 0x10);
+        break;
+    default:
+        break;
+    }
+
     if (debug_all | debug_ports) {
         print_byte_access(port, val, "Byte Inport");
     }
