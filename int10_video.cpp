@@ -349,7 +349,7 @@ void Machine::scroll_window(int dir)
     int wincols = lrx - ulx + 1;
     int winrows = lry - uly + 1;
 
-    int lines   = cpu.get_al();
+    int lines = cpu.get_al();
     if (lines >= winrows)
         lines = 0;
     lines *= dir;

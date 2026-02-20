@@ -23,8 +23,8 @@
 //
 #include "machine.h"
 
-#include <unistd.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #include <algorithm>
 #include <cctype>
@@ -44,12 +44,11 @@ uint64_t Machine::simulated_instructions = 0;
 // Initialize the machine (SDL-free; main() owns display and input).
 //
 Machine::Machine(Memory &m)
-    : memory(m), cpu(*this),
-      ivt(*reinterpret_cast<Interrupt_Vector_Table*>(memory.get_ptr(0x0))),
-      bda(*reinterpret_cast<Bios_Data_Area*>(memory.get_ptr(0x400))),
-      ebda(*reinterpret_cast<Extended_Bios_Data_Area*>(memory.get_ptr(0x9fc00))),
+    : memory(m), cpu(*this), ivt(*reinterpret_cast<Interrupt_Vector_Table *>(memory.get_ptr(0x0))),
+      bda(*reinterpret_cast<Bios_Data_Area *>(memory.get_ptr(0x400))),
+      ebda(*reinterpret_cast<Extended_Bios_Data_Area *>(memory.get_ptr(0x9fc00))),
       bios(memory.get_ptr(0xf0000)),
-      diskette_param_table2(*reinterpret_cast<Floppy_Extended_Disk_Base_Table*>(bios))
+      diskette_param_table2(*reinterpret_cast<Floppy_Extended_Disk_Base_Table *>(bios))
 {
     // Set pointer to EBDA.
     bda.ebda_seg = 0x9fc00 >> 4;
@@ -511,17 +510,17 @@ void Machine::invoke_vector(unsigned vector)
     }
 
     // Check interrupt handler.
-    Word offset       = memory.load16(vector * 4);
-    Word seg          = memory.load16(vector * 4 + 2);
-    unsigned addr     = pc86_linear_addr(seg, offset);
+    Word offset   = memory.load16(vector * 4);
+    Word seg      = memory.load16(vector * 4 + 2);
+    unsigned addr = pc86_linear_addr(seg, offset);
     if (addr < 0x500 || addr >= 0xa0000) {
         // Handler must be located in user memory.
         return;
     }
 
     // Debug.
-    //auto &out = Machine::get_trace_stream();
-    //out << "------- " << "Vector " << vector << std::endl;
+    // auto &out = Machine::get_trace_stream();
+    // out << "------- " << "Vector " << vector << std::endl;
 
     cpu.call_int(vector);
 }
@@ -529,7 +528,8 @@ void Machine::invoke_vector(unsigned vector)
 void Machine::unsupported(uint8_t op, const std::string &required_cpu)
 {
     if (mode_640k) {
-        throw std::runtime_error("Unsupported opcode " + to_hex(op) + ": need " + required_cpu + " processor");
+        throw std::runtime_error("Unsupported opcode " + to_hex(op) + ": need " + required_cpu +
+                                 " processor");
     }
 }
 
@@ -547,6 +547,6 @@ void Machine::update_timer_counter()
     bda.timer_counter = msec / 55;
 
     // Debug.
-    //auto &out = Machine::get_trace_stream();
-    //out << "------- " << "Timer counter " << bda.timer_counter << std::endl;
+    // auto &out = Machine::get_trace_stream();
+    // out << "------- " << "Timer counter " << bda.timer_counter << std::endl;
 }

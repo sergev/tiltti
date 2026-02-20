@@ -55,7 +55,7 @@ private:
 
     // A20 address line state (INT 15h AH=24h). When false, addresses above 1 MB would wrap
     // (not applied in current 1 MB memory model).
-    bool a20_enabled{true};
+    bool a20_enabled{ true };
 
     // Disks and floppies.
     std::array<std::unique_ptr<Disk>, NDISKS> disks;
@@ -76,7 +76,7 @@ private:
     std::queue<uint16_t> keyboard_queue_;
 
     // Callback for input events (used by INT 16h).
-    std::function<void(unsigned)> event_callback = [](unsigned){};
+    std::function<void(unsigned)> event_callback = [](unsigned) {};
 
     bool video_dirty{}; // Video memory was changed
 

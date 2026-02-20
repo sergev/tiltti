@@ -109,7 +109,8 @@ void Machine::handle_int15_system_services()
 //
 // Control or query the A20 address line (real-mode access above 1 MB).
 // Inputs: AL = subfunction (00h disable, 01h enable, 02h get status, 03h query support).
-// Outputs: CF=0 on success; AL=02h returns AL=0/1; AL=03h returns BX=3. Unsupported AL: CF=1, AH=86h.
+// Outputs: CF=0 on success; AL=02h returns AL=0/1; AL=03h returns BX=3. Unsupported AL: CF=1,
+// AH=86h.
 //
 void Machine::int15_a20_gate_control()
 {

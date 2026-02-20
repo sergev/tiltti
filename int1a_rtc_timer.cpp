@@ -117,8 +117,8 @@ void Machine::int1a_read_system_clock_count()
 //
 void Machine::int1a_set_system_clock_count()
 {
-    uint32_t ticks = (cpu.get_cx() << 16) | cpu.get_dx();
-    bda.timer_counter = ticks;
+    uint32_t ticks     = (cpu.get_cx() << 16) | cpu.get_dx();
+    bda.timer_counter  = ticks;
     bda.timer_rollover = 0;
     cpu.set_ah(0);
     cpu.set_cf(0);
