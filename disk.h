@@ -52,7 +52,8 @@ public:
 
     // Constructor throws exception if the file cannot be opened.
     Disk(const std::string &path, Memory &memory, bool write_permit, unsigned offset = 0);
-    Disk(const unsigned char data[], Memory &memory, unsigned size_sectors);
+    Disk(const unsigned char data[], Memory &memory, unsigned size_sectors,
+         unsigned ncyl, unsigned nhead, unsigned nsect);
 
     // Clone the disk.
     Disk(const Disk &other);

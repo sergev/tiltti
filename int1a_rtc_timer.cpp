@@ -62,7 +62,7 @@ void Machine::handle_int1a_rtc_timer()
         int1a_turn_off_alarm();
         break;
     default:
-        if (debug_all | debug_syscalls) {
+        if (debug_all || debug_syscalls) {
             auto &out = Machine::get_trace_stream();
             auto save = out.flags();
 
@@ -143,8 +143,8 @@ void Machine::int1a_read_cmos_time()
     struct timeval tv;
     gettimeofday(&tv, 0);
 
-    time_t now      = tv.tv_sec;
-    struct tm *info = localtime(&now);
+    const time_t now      = tv.tv_sec;
+    const struct tm *info = localtime(&now);
 
     cpu.set_ch(bin2bcd(info->tm_hour));
     cpu.set_cl(bin2bcd(info->tm_min));
@@ -178,9 +178,9 @@ void Machine::int1a_read_cmos_date()
     struct timeval tv;
     gettimeofday(&tv, 0);
 
-    time_t now      = tv.tv_sec;
-    struct tm *info = localtime(&now);
-    int century     = 0x20;
+    const time_t now      = tv.tv_sec;
+    const struct tm *info = localtime(&now);
+    int century           = 0x20;
 
     cpu.set_ch(century);
     cpu.set_cl(bin2bcd(info->tm_year % 100));

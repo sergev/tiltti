@@ -140,7 +140,7 @@ void Machine::handle_int13_disk()
         int13_set_hardware_configuration();
         break;
     default:
-        if (debug_all | debug_syscalls) {
+        if (debug_all || debug_syscalls) {
             auto &out = Machine::get_trace_stream();
             auto save = out.flags();
 
@@ -171,7 +171,7 @@ void Machine::handle_int13_disk()
 //
 void Machine::int13_reset_disk_system()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -204,7 +204,7 @@ void Machine::int13_read_disk_status()
 {
     unsigned drive = cpu.get_dl();
 
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -248,7 +248,7 @@ void Machine::int13_read_sectors()
     unsigned drive    = cpu.get_dl();
     unsigned addr     = pc86_linear_addr(cpu.get_es(), cpu.get_bx());
 
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
 
         out << "\tAH=02h Read sectors (CHS)" << std::endl;
@@ -278,7 +278,7 @@ void Machine::int13_write_sectors()
     unsigned sector   = cpu.get_cl() & 0x3f;                         // 6 bits, 1-based
     unsigned head     = cpu.get_dh();                                // 8 bits, 0-based
 
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -300,7 +300,7 @@ void Machine::int13_verify_sectors()
     unsigned nsectors = cpu.get_al();
     unsigned drive    = cpu.get_dl();
 
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -322,7 +322,7 @@ void Machine::int13_verify_sectors()
 
 void Machine::int13_format_track()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -362,7 +362,7 @@ void Machine::int13_get_drive_parameters()
 {
     unsigned drive = cpu.get_dl();
 
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -377,7 +377,7 @@ void Machine::int13_get_drive_parameters()
 
 void Machine::int13_initialize_drive_parameters()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -392,7 +392,7 @@ void Machine::int13_seek_to_cylinder()
 {
     unsigned cylinder = cpu.get_ch() | ((cpu.get_cl() & 0xC0) << 2); // 10 bits, 0-based
 
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -406,7 +406,7 @@ void Machine::int13_seek_to_cylinder()
 
 void Machine::int13_alternate_disk_reset()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -419,7 +419,7 @@ void Machine::int13_alternate_disk_reset()
 
 void Machine::int13_check_drive_ready()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -432,7 +432,7 @@ void Machine::int13_check_drive_ready()
 
 void Machine::int13_recalibrate_drive()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -445,7 +445,7 @@ void Machine::int13_recalibrate_drive()
 
 void Machine::int13_controller_diagnostic()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -479,7 +479,7 @@ void Machine::int13_read_disk_drive_size()
 {
     unsigned drive = cpu.get_dl();
 
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -498,7 +498,7 @@ void Machine::int13_read_disk_drive_size()
 
 void Machine::int13_detect_disk_change()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -511,7 +511,7 @@ void Machine::int13_detect_disk_change()
 
 void Machine::int13_edd_installation_check()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -524,7 +524,7 @@ void Machine::int13_edd_installation_check()
 
 void Machine::int13_extended_read()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out     = Machine::get_trace_stream();
         auto save     = out.flags();
         unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
@@ -545,7 +545,7 @@ void Machine::int13_extended_read()
 
 void Machine::int13_extended_write()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out     = Machine::get_trace_stream();
         auto save     = out.flags();
         unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
@@ -566,7 +566,7 @@ void Machine::int13_extended_write()
 
 void Machine::int13_extended_verify()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out     = Machine::get_trace_stream();
         auto save     = out.flags();
         unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
@@ -586,7 +586,7 @@ void Machine::int13_extended_verify()
 
 void Machine::int13_lock_unlock_drive()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -600,7 +600,7 @@ void Machine::int13_lock_unlock_drive()
 
 void Machine::int13_eject_media()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -613,7 +613,7 @@ void Machine::int13_eject_media()
 
 void Machine::int13_extended_seek()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out     = Machine::get_trace_stream();
         auto save     = out.flags();
         unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
@@ -633,7 +633,7 @@ void Machine::int13_extended_seek()
 
 void Machine::int13_get_edd_parameters()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -647,7 +647,7 @@ void Machine::int13_get_edd_parameters()
 
 void Machine::int13_extended_media_change()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -660,7 +660,7 @@ void Machine::int13_extended_media_change()
 
 void Machine::int13_el_torito_cd_emulation()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
@@ -674,7 +674,7 @@ void Machine::int13_el_torito_cd_emulation()
 
 void Machine::int13_set_hardware_configuration()
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 

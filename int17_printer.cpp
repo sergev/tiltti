@@ -45,7 +45,7 @@ void Machine::handle_int17_printer()
         int17_get_status();
         break;
     default:
-        if (debug_all | debug_syscalls) {
+        if (debug_all || debug_syscalls) {
             auto &out = Machine::get_trace_stream();
             auto save = out.flags();
 

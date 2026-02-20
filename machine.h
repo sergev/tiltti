@@ -81,9 +81,6 @@ private:
     uint8_t *font_buf_    = nullptr;
     size_t font_buf_size_ = 0;
 
-    // State of i/o ports.
-    uint8_t port_61_val{};
-
     // Static stuff.
     static uint64_t simulated_instructions; // Count of instructions
 
@@ -136,7 +133,7 @@ public:
     static void enable_trace(unsigned bitmask);
     static void redirect_trace(const char *file_name, const char *default_mode);
     static void close_trace();
-    static bool trace_enabled() { return debug_all | debug_syscalls | debug_ports; }
+    static bool trace_enabled() { return debug_all || debug_syscalls || debug_ports; }
 
     // Emit trace to this stream.
     static std::ostream &get_trace_stream();
@@ -150,10 +147,10 @@ public:
     void mem_store_word(unsigned addr, Word val);
 
     // Port I/O.
-    Byte port_in_byte(unsigned port);
-    void port_out_byte(unsigned port, Byte val);
-    Word port_in_word(unsigned port);
-    void port_out_word(unsigned port, Word val);
+    static Byte port_in_byte(unsigned port);
+    static void port_out_byte(unsigned port, Byte val);
+    static Word port_in_word(unsigned port);
+    static void port_out_word(unsigned port, Word val);
 
     // Disk i/o.
     unsigned disk_io_chs(char op, unsigned disk_unit, unsigned cylinder, unsigned head,
@@ -228,8 +225,8 @@ public:
     void int10_write_char();
     void int10_write_char_only();
     void int10_set_cga_palette();
-    void int10_write_pixel();
-    void int10_read_pixel();
+    static void int10_write_pixel();
+    static void int10_read_pixel();
     void int10_teletype_output();
     void int10_get_current_video_mode();
     void int10_palette_control();
@@ -274,57 +271,57 @@ public:
 
     // Int 14: serial
     void int14_initialize_serial_port();
-    void int14_write_char();
-    void int14_read_char();
-    void int14_get_port_status();
+    static void int14_write_char();
+    static void int14_read_char();
+    static void int14_get_port_status();
 
     // Int 15: system services
     void int15_a20_gate_control();
-    void int15_keyboard_intercept();
-    void int15_removable_media_eject();
-    void int15_apm_bios();
-    void int15_vga_option_rom_intel();
-    void int15_vga_option_rom_smi();
-    void int15_user_wait_interval();
-    void int15_wait_for_time();
-    void int15_copy_memory_block();
+    static void int15_keyboard_intercept();
+    static void int15_removable_media_eject();
+    static void int15_apm_bios();
+    static void int15_vga_option_rom_intel();
+    static void int15_vga_option_rom_smi();
+    static void int15_user_wait_interval();
+    static void int15_wait_for_time();
+    static void int15_copy_memory_block();
     void int15_get_extended_memory_size();
-    void int15_switch_to_protected_mode();
-    void int15_device_busy();
-    void int15_interrupt_complete();
+    static void int15_switch_to_protected_mode();
+    static void int15_device_busy();
+    static void int15_interrupt_complete();
     void int15_get_system_configuration();
     void int15_get_ebda_segment();
-    void int15_mouse_interface();
-    void int15_extended_memory();
+    static void int15_mouse_interface();
+    static void int15_extended_memory();
 
     // Int 16: keyboard
     void int16_read_keyboard_input();
     void int16_check_keyboard_status();
     void int16_get_shift_flag_status();
-    void int16_store_keystroke_in_buffer();
+    static void int16_store_keystroke_in_buffer();
     void int16_get_keyboard_functionality();
-    void int16_get_keyboard_id();
-    void int16_read_mf2_keyboard_input();
-    void int16_check_mf2_keyboard_status();
-    void int16_get_extended_keyboard_status();
-    void int16_keyboard_capability_check();
+    static void int16_get_keyboard_id();
+    static void int16_read_mf2_keyboard_input();
+    static void int16_check_mf2_keyboard_status();
+    static void int16_get_extended_keyboard_status();
+    static void int16_keyboard_capability_check();
     void int16_keyboard_capability_dos_keyb();
-    void int16_122key_capability_check();
+    static void int16_122key_capability_check();
 
     // Int 17: printer
-    void int17_write_char();
+    static void int17_write_char();
     void int17_initialize_port();
-    void int17_get_status();
+    static void int17_get_status();
 
     // Int 1a: RTC and timer
     void int1a_read_system_clock_count();
     void int1a_set_system_clock_count();
     void int1a_read_cmos_time();
-    void int1a_set_cmos_time();
+    static void int1a_set_cmos_time();
     void int1a_read_cmos_date();
-    void int1a_set_cmos_date();
-    void int1a_set_alarm_time();
-    void int1a_turn_off_alarm();
+    static void int1a_set_cmos_date();
+    static void int1a_set_alarm_time();
+    static void int1a_turn_off_alarm();
     void update_timer_counter();
 };
 

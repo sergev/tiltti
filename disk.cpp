@@ -103,7 +103,9 @@ Disk::Disk(const std::string &p, Memory &m, bool wp, unsigned offset)
 //
 // Open embedded image as disk.
 //
-Disk::Disk(const unsigned char data[], Memory &m, unsigned ns) : memory(m), size_sectors(ns)
+Disk::Disk(const unsigned char data[], Memory &m, unsigned sz, unsigned ncyl, unsigned nhead, unsigned nsect)
+    : memory(m), size_sectors(sz), num_cylinders(ncyl), num_heads(nhead), num_sectors(nsect)
+
 {
     embedded_data = data;
 }

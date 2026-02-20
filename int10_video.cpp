@@ -109,7 +109,7 @@ void Machine::handle_int10_video()
         int10_vbe();
         break;
     default:
-        if (debug_all | debug_syscalls) {
+        if (debug_all || debug_syscalls) {
             auto &out = Machine::get_trace_stream();
             auto save = out.flags();
 
@@ -344,12 +344,12 @@ void Machine::scroll_window(int dir)
     if (lrx >= nbcols)
         lrx = nbcols - 1;
 
-    int wincols = static_cast<int>(lrx - ulx + 1);
-    int winrows = static_cast<int>(lry - uly + 1);
-    if (wincols <= 0 || winrows <= 0)
+    if (lrx < ulx || lry < uly)
         return;
+    int wincols = lrx - ulx + 1;
+    int winrows = lry - uly + 1;
 
-    int lines = cpu.get_al();
+    int lines   = cpu.get_al();
     if (lines >= winrows)
         lines = 0;
     lines *= dir;
@@ -381,10 +381,10 @@ void Machine::scroll_window(int dir)
 
     if (lines > 0) {
         // Scroll up: move block from (ulx, uly+lines) to (ulx, uly).
-        int nlines     = winrows - lines;
-        Byte *dest     = cell_addr(ulx, uly);
-        Byte *src      = cell_addr(ulx, uly + lines);
-        int line_bytes = wincols * 2;
+        int nlines      = winrows - lines;
+        Byte *dest      = cell_addr(ulx, uly);
+        const Byte *src = cell_addr(ulx, uly + lines);
+        int line_bytes  = wincols * 2;
 
         for (int i = 0; i < nlines; i++) {
             std::memcpy(dest + i * stride, src + i * stride, static_cast<size_t>(line_bytes));
@@ -398,11 +398,11 @@ void Machine::scroll_window(int dir)
         }
     } else {
         // Scroll down: move block from (ulx, uly) to (ulx, uly + abs(lines)).
-        int abs_lines  = -lines;
-        int nlines     = winrows - abs_lines;
-        Byte *dest     = cell_addr(ulx, uly + abs_lines);
-        Byte *src      = cell_addr(ulx, uly);
-        int line_bytes = wincols * 2;
+        int abs_lines   = -lines;
+        int nlines      = winrows - abs_lines;
+        Byte *dest      = cell_addr(ulx, uly + abs_lines);
+        const Byte *src = cell_addr(ulx, uly);
+        int line_bytes  = wincols * 2;
 
         for (int i = nlines - 1; i >= 0; i--) {
             std::memcpy(dest + i * stride, src + i * stride, static_cast<size_t>(line_bytes));
@@ -607,9 +607,9 @@ void Machine::int10_teletype_output()
         int wincols = bda.video_cols;
         int winrows = nbrows + 1;
 
-        Byte *dest     = base;
-        Byte *src      = base + stride;
-        int line_bytes = wincols * 2;
+        Byte *dest      = base;
+        const Byte *src = base + stride;
+        int line_bytes  = wincols * 2;
         for (int i = 0; i < winrows - 1; i++) {
             std::memcpy(dest + i * stride, src + i * stride, static_cast<size_t>(line_bytes));
         }

@@ -15,23 +15,23 @@ pkg_check_modules(CAPSTONE REQUIRED capstone)
 find_package(SDL2 REQUIRED)
 
 #
-# TODO: Enable cppcheck by default
+# Enable cppcheck by default
 #
-#find_program(Cppcheck NAMES cppcheck)
-#if(NOT (Cppcheck MATCHES "NOTFOUND"))
-#    message(STATUS "Found Cppcheck: ${Cppcheck}")
-#    set(CMAKE_CXX_CPPCHECK "${Cppcheck}"
-#        "--std=c++17"
-#        "--enable=style"
-#        "--check-level=exhaustive"
-#        "--error-exitcode=1" # Fail on any issues
-#        "--inline-suppr" # Enable inline control like // cppcheck-suppress "id"
-#        "--quiet" # No progress report messages
-#        "--suppress=badBitmaskCheck" # Allow redundant zero operands
-#        "--suppress=*:*/_deps/*" # Ignore issues in Googletest
-#        "--library=${CMAKE_SOURCE_DIR}/tests/googletest.xml" # Parse TEST() macro properly
-#    )
-#endif()
+find_program(Cppcheck NAMES cppcheck)
+if(NOT (Cppcheck MATCHES "NOTFOUND"))
+    message(STATUS "Found Cppcheck: ${Cppcheck}")
+    set(CMAKE_CXX_CPPCHECK "${Cppcheck}"
+        "--std=c++17"
+        "--enable=style"
+        "--check-level=exhaustive"
+        "--error-exitcode=1" # Fail on any issues
+        "--inline-suppr" # Enable inline control like // cppcheck-suppress "id"
+        "--quiet" # No progress report messages
+        "--suppress=badBitmaskCheck" # Allow redundant zero operands
+        "--suppress=*:*/_deps/*" # Ignore issues in Googletest
+        "--library=${CMAKE_SOURCE_DIR}/tests/googletest.xml" # Parse TEST() macro properly
+    )
+endif()
 
 # Build library
 add_library(simulator STATIC
@@ -58,7 +58,7 @@ target_link_libraries(simulator PUBLIC SDL2::SDL2)
 
 # Build executable file
 add_executable(${PROJECT_NAME} main.cpp)
-target_include_directories(${PROJECT_NAME} PRIVATE ${CAPSTONE_INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CAPSTONE_STATIC_CFLAGS})
 target_link_libraries(${PROJECT_NAME} simulator ${CAPSTONE_STATIC_LDFLAGS})
 
 # Build image of Basic ROM.

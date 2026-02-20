@@ -165,7 +165,7 @@ void Video_Adapter::draw_cell(const uint8_t *text_buf, unsigned col, unsigned ro
 
             unsigned x = px + dx;
             unsigned y = py + dy;
-            if (x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT) {
+            if (x < SCREEN_WIDTH && y < SCREEN_HEIGHT) {
                 unsigned fb_off          = (y * SCREEN_WIDTH + x) * 4;
                 framebuffer_[fb_off]     = b;
                 framebuffer_[fb_off + 1] = g;
@@ -261,11 +261,10 @@ void Video_Adapter::pump_events(Machine &machine, unsigned timeout)
             continue;
         }
         if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
-            uint32_t sdl_sc = event.key.keysym.scancode;
-            bool down       = (event.type == SDL_KEYDOWN);
-            uint16_t mod    = SDL_GetModState();
-            uint16_t f0     = 0;
+            const uint16_t mod = SDL_GetModState();
+            const Uint8 *state = SDL_GetKeyboardState(nullptr);
 
+            uint16_t f0 = 0;
             if (mod & KMOD_RSHIFT)
                 f0 |= KF0_RSHIFT;
             if (mod & KMOD_LSHIFT)
@@ -274,7 +273,6 @@ void Video_Adapter::pump_events(Machine &machine, unsigned timeout)
                 f0 |= KF0_CTRL;
             if (mod & KMOD_ALT)
                 f0 |= KF0_ALT;
-            const Uint8 *state = SDL_GetKeyboardState(nullptr);
             if (state[SDL_SCANCODE_SCROLLLOCK])
                 f0 |= KF0_SCROLL;
             if (state[SDL_SCANCODE_NUMLOCKCLEAR])
@@ -283,10 +281,12 @@ void Video_Adapter::pump_events(Machine &machine, unsigned timeout)
                 f0 |= KF0_CAPSLOCK;
             machine.set_kbd_modifiers(f0);
 
-            if (down) {
+            if (event.type == SDL_KEYDOWN) {
+                uint32_t sdl_sc  = event.key.keysym.scancode;
                 uint8_t bios_sc  = sdl_to_bios_scancode(sdl_sc);
                 uint8_t bios_ext = sdl_to_bios_scancode_extended(sdl_sc);
                 uint8_t ascii    = 0;
+
                 if (mod & KMOD_SHIFT) {
                     ascii = sdl_scancode_to_ascii_shifted(sdl_sc);
                 }
@@ -294,9 +294,9 @@ void Video_Adapter::pump_events(Machine &machine, unsigned timeout)
                     ascii = sdl_scancode_to_ascii_unshifted(sdl_sc);
                 }
                 if (bios_ext) {
-                    machine.push_keystroke((static_cast<uint16_t>(bios_ext) << 8) | 0x00);
+                    machine.push_keystroke((bios_ext << 8) | 0x00);
                 } else if (bios_sc) {
-                    machine.push_keystroke((static_cast<uint16_t>(bios_sc) << 8) | ascii);
+                    machine.push_keystroke((bios_sc << 8) | ascii);
                 }
             }
         }

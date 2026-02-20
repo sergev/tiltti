@@ -106,7 +106,7 @@ private:
     Word os{}; // segment override (default DS)
 
     // Bitmask of unpredictable flags for the last instruction.
-    Word unpredictable_flags;
+    Word unpredictable_flags{};
 
     // Helpers: effective address, register/memory access, stack, ALU, flags.
     unsigned getAddr(Word seg, Word off) const;
@@ -140,7 +140,7 @@ private:
 
 public:
     // Constructor.
-    Processor(Machine &machine);
+    explicit Processor(Machine &machine);
 
     // Reset to initial state.
     void reset();

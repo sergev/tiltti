@@ -93,7 +93,7 @@ void Machine::handle_int15_system_services()
         int15_extended_memory();
         break;
     default:
-        if (debug_all | debug_syscalls) {
+        if (debug_all || debug_syscalls) {
             auto &out = Machine::get_trace_stream();
             auto save = out.flags();
 

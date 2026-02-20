@@ -79,7 +79,6 @@ int main(int argc, char *argv[])
         prog_name++;
     }
 
-    Memory memory;
     std::string disk_file;
 
     // Parse command line options.
@@ -145,7 +144,8 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    Video_Adapter vga("Tiltti v" VERSION_STRING, memory.get_ptr(0xb8000));
+    Memory memory;
+    Video_Adapter vga{ "Tiltti v" VERSION_STRING, memory.get_ptr(0xb8000) };
     if (!vga.has_window()) {
         std::cerr << "Cannot create VGA window\n";
         exit(EXIT_FAILURE);
@@ -171,15 +171,7 @@ int main(int argc, char *argv[])
         while (vga.active()) {
             constexpr unsigned steps_per_frame = 50000;
             machine.run_batch(steps_per_frame);
-
-            // Take timer interrupt.
-            //machine.invoke_vector(8);
-
-            // Take keyboard interrupt.
-            //machine.invoke_vector(9);
-
             machine.update_timer_counter();
-
             vga.pump_events(machine, 10);
         }
 

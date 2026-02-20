@@ -50,7 +50,7 @@ public:
 
     uint8_t *text_buffer() { return text_buf_ptr_; }
     const uint8_t *text_buffer() const { return text_buf_ptr_; }
-    size_t text_buffer_size() const { return TEXT_BUFFER_SIZE; }
+    static size_t text_buffer_size() { return TEXT_BUFFER_SIZE; }
 
     uint8_t *font_buffer() { return font_buf_.data(); }
     const uint8_t *font_buffer() const { return font_buf_.data(); }

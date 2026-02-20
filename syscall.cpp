@@ -156,7 +156,7 @@ void Processor::print_syscall(int type)
 //
 void Machine::process_syscall(int type)
 {
-    if (debug_all | debug_syscalls) {
+    if (debug_all || debug_syscalls) {
         cpu.print_syscall(type);
     }
     switch (type) {

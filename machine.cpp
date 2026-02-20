@@ -45,10 +45,11 @@ uint64_t Machine::simulated_instructions = 0;
 //
 Machine::Machine(Memory &m, std::function<void(unsigned)> pump_cb)
     : memory(m), cpu(*this),
-      ivt(*(Interrupt_Vector_Table *)memory.get_ptr(0x0)),
-      bda(*(Bios_Data_Area *)memory.get_ptr(0x400)),
-      ebda(*(Extended_Bios_Data_Area *)memory.get_ptr(0x9fc00)), bios(memory.get_ptr(0xf0000)),
-      diskette_param_table2(*(Floppy_Extended_Disk_Base_Table *)bios),
+      ivt(*reinterpret_cast<Interrupt_Vector_Table*>(memory.get_ptr(0x0))),
+      bda(*reinterpret_cast<Bios_Data_Area*>(memory.get_ptr(0x400))),
+      ebda(*reinterpret_cast<Extended_Bios_Data_Area*>(memory.get_ptr(0x9fc00))),
+      bios(memory.get_ptr(0xf0000)),
+      diskette_param_table2(*reinterpret_cast<Floppy_Extended_Disk_Base_Table*>(bios)),
       pump_callback(std::move(pump_cb))
 {
     // Set pointer to EBDA.
@@ -282,7 +283,7 @@ Word Machine::mem_load_word(unsigned addr)
 void Machine::port_out_byte(unsigned port, Byte val)
 {
     // TODO: implement port_out
-    if (debug_all | debug_ports) {
+    if (debug_all || debug_ports) {
         print_byte_access(port, val, "Byte Outport");
     }
 }
@@ -299,13 +300,13 @@ Byte Machine::port_in_byte(unsigned port)
     case 0x61:
         // Bit 4 flips state (0/1) with each DRAM refresh cycle, approximately every 15 μs.
         // Commonly used in old software for precise short delays by polling for changes.
-        val = port_61_val | (simulated_instructions & 0x10);
+        val = simulated_instructions & 0x10;
         break;
     default:
         break;
     }
 
-    if (debug_all | debug_ports) {
+    if (debug_all || debug_ports) {
         print_byte_access(port, val, "Byte Inport");
     }
     return val;
@@ -317,7 +318,7 @@ Byte Machine::port_in_byte(unsigned port)
 void Machine::port_out_word(unsigned port, Word val)
 {
     // TODO: implement port_out
-    if (debug_all | debug_ports) {
+    if (debug_all || debug_ports) {
         print_word_access(port, val, "Word Outport");
     }
 }
@@ -329,7 +330,7 @@ Word Machine::port_in_word(unsigned port)
 {
     // Unimplemented ports return 0xFFFF (floating bus / typical PC behavior).
     const Word val = 0xffff;
-    if (debug_all | debug_ports) {
+    if (debug_all || debug_ports) {
         print_word_access(port, val, "Word Inport");
     }
     return val;
@@ -390,7 +391,7 @@ void Machine::disk_mount(unsigned disk_unit, const std::string &path, bool write
     disks[disk_unit] = std::make_unique<Disk>(path, memory, write_permit);
 
     if (trace_enabled()) {
-        auto &disk = *disks[disk_unit].get();
+        auto const &disk = *disks[disk_unit].get();
         std::cout << "Mount image '" << path << "' as disk " << disk_unit
                   << ", CHS = " << disk.num_cylinders << "/" << disk.num_heads << "/"
                   << disk.num_sectors << std::endl;
@@ -538,8 +539,8 @@ void Machine::update_timer_counter()
     struct timeval tv;
     gettimeofday(&tv, 0);
 
-    time_t now      = tv.tv_sec;
-    struct tm *info = localtime(&now);
+    const time_t now      = tv.tv_sec;
+    const struct tm *info = localtime(&now);
 
     // Get milliseconds since midnight.
     unsigned sec      = (((info->tm_hour * 60) + info->tm_min) * 60) + info->tm_sec;

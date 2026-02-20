@@ -48,7 +48,7 @@ void Machine::handle_int14_serial()
         int14_get_port_status();
         break;
     default:
-        if (debug_all | debug_syscalls) {
+        if (debug_all || debug_syscalls) {
             auto &out = Machine::get_trace_stream();
             auto save = out.flags();
 
