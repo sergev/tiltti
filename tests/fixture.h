@@ -46,11 +46,32 @@ protected:
 
     void SetUp() override
     {
+        // Push keystrokes into the keyboard queue.
+        // Throw exception when no more input.
+        auto event_callback = [](unsigned timeout) {
+            if (timeout == 0)
+                return;
+            throw std::runtime_error("Complete");
+        };
+        machine.set_event_callback(event_callback);
+
         // Show trace.
-        Machine::enable_trace("r");
+        //Machine::enable_trace("r");
     }
 
+    // Run until all input is processed.
+    void run();
+
+    // Compare FLAGS register to expected value and
+    // return a list of names of changed flags.
     std::string show_flags(unsigned expect);
+
+    // Get contents of one line from the screen.
+    std::string get_line(unsigned row);
+
+    // Get cursor row/column.
+    unsigned cursor_row() { return machine.bda.cursor_pos[machine.bda.video_page & 7] >> 8; }
+    unsigned cursor_col() { return machine.bda.cursor_pos[machine.bda.video_page & 7] & 0xff; }
 };
 
 //

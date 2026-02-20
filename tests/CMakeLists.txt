@@ -54,6 +54,7 @@ set(TEST_SOURCES
     daa_das.cpp
     batch17.cpp
     am88.cpp
+    msdos_test.cpp
 )
 
 #

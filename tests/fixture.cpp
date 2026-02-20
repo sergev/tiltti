@@ -27,6 +27,18 @@
 #include <fstream>
 
 //
+// Run until all input is processed.
+//
+void MachineTest::run()
+{
+    try {
+        machine.run_batch(50000);
+    } catch (const std::exception &ex) {
+        ASSERT_STREQ(ex.what(), "Complete");
+    }
+}
+
+//
 // Compare FLAGS register to expected value and
 // return a list of names of changed flags.
 //
@@ -72,4 +84,32 @@ std::string get_test_name()
         name.erase(pos);
 
     return name;
+}
+
+//
+// Get contents of one line from the screen.
+//
+std::string MachineTest::get_line(unsigned row)
+{
+    std::string result;
+    auto p = machine.get_video_refresh_params();
+    auto *line = &p.text_buf[row * 160];
+
+    for (int i = 0; i < 160; i += 2) {
+        char ch = line[i];
+        if (ch == 0) {
+            // Stop on NUL.
+            return result;
+        }
+        result += ch;
+    }
+
+    // Trim spaces.
+    const auto pos = result.find_last_not_of(' ');
+    if (pos == std::string::npos) {
+        // All spaces.
+        return "";
+    }
+    result.erase(pos + 1);
+    return result;
 }
