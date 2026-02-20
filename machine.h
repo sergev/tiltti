@@ -84,6 +84,15 @@ private:
     uint8_t *font_buf_    = nullptr;
     size_t font_buf_size_ = 0;
 
+    // Current date and time.
+    unsigned local_year{ 1980 };  // 1980...
+    unsigned local_month{ 1 };    // 1...12
+    unsigned local_mday{ 1 };     // 1...31
+    unsigned local_hour{ 0 };     // 0...23
+    unsigned local_min{ 0 };      // 0...59
+    unsigned local_sec{ 0 };      // 0...59
+    unsigned local_isdst{ 0 };    // 0...1
+
     // Static stuff.
     static uint64_t simulated_instructions; // Count of instructions
 

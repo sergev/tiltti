@@ -21,8 +21,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include <sys/time.h>
-
 #include <cstdint>
 #include <iomanip>
 #include <sstream>
@@ -140,16 +138,10 @@ void Machine::int1a_set_system_clock_count()
 //
 void Machine::int1a_read_cmos_time()
 {
-    struct timeval tv;
-    gettimeofday(&tv, 0);
-
-    const time_t now      = tv.tv_sec;
-    const struct tm *info = localtime(&now);
-
-    cpu.set_ch(bin2bcd(info->tm_hour));
-    cpu.set_cl(bin2bcd(info->tm_min));
-    cpu.set_dh(bin2bcd(info->tm_sec));
-    cpu.set_dl(info->tm_isdst);
+    cpu.set_ch(bin2bcd(local_hour));
+    cpu.set_cl(bin2bcd(local_min));
+    cpu.set_dh(bin2bcd(local_sec));
+    cpu.set_dl(local_isdst);
     cpu.set_ah(0);
     cpu.set_al(cpu.get_ch());
     cpu.set_cf(0);
@@ -175,20 +167,19 @@ void Machine::int1a_set_cmos_time()
 //
 void Machine::int1a_read_cmos_date()
 {
-    struct timeval tv;
-    gettimeofday(&tv, 0);
-
-    const time_t now      = tv.tv_sec;
-    const struct tm *info = localtime(&now);
-    int century           = 0x20;
-
-    cpu.set_ch(century);
-    cpu.set_cl(bin2bcd(info->tm_year % 100));
-    cpu.set_dh(bin2bcd(info->tm_mon + 1));
-    cpu.set_dl(bin2bcd(info->tm_mday));
+    cpu.set_ch(bin2bcd(local_year / 100));
+    cpu.set_cl(bin2bcd(local_year % 100));
+    cpu.set_dh(bin2bcd(local_month));
+    cpu.set_dl(bin2bcd(local_mday));
     cpu.set_ah(0);
     cpu.set_al(cpu.get_ch());
     cpu.set_cf(0);
+
+    // Debug.
+    //auto &out = Machine::get_trace_stream();
+    //out << "--- Year: CH=" << std::hex << (unsigned)cpu.get_ch() << ", CL=" << (unsigned)cpu.get_cl() << std::dec << std::endl;
+    //out << "--- Month: DH=" << std::hex << (unsigned)cpu.get_dh() << std::dec << std::endl;
+    //out << "--- Day: DL=" << std::hex << (unsigned)cpu.get_dl() << std::dec << std::endl;
 }
 
 void Machine::int1a_set_cmos_date()

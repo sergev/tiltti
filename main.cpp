@@ -179,8 +179,9 @@ int main(int argc, char *argv[])
 
         while (gui.active()) {
             constexpr unsigned steps_per_frame = 50000;
-            machine.run_batch(steps_per_frame);
+
             machine.update_timer_counter();
+            machine.run_batch(steps_per_frame);
             gui.pump_events(machine, 10);
         }
 

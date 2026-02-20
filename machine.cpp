@@ -541,6 +541,15 @@ void Machine::update_timer_counter()
     const time_t now      = tv.tv_sec;
     const struct tm *info = localtime(&now);
 
+    // Get date and time.
+    local_year  = info->tm_year + 1900;
+    local_month = info->tm_mon + 1;
+    local_mday  = info->tm_mday;
+    local_hour  = info->tm_hour;
+    local_min   = info->tm_min;
+    local_sec   = info->tm_sec;
+    local_isdst = info->tm_isdst;
+
     // Get milliseconds since midnight.
     unsigned sec      = (((info->tm_hour * 60) + info->tm_min) * 60) + info->tm_sec;
     unsigned msec     = (sec * 1000) + (tv.tv_usec / 1000);
