@@ -78,7 +78,8 @@ private:
     // Callback for input events (used by INT 16h).
     std::function<void(unsigned)> event_callback = [](unsigned) {};
 
-    bool video_dirty{}; // Video memory was changed
+    // Video memory has changed
+    bool video_dirty{};
 
     // Optional font buffer for INT 10h AH=11h (display owns the storage).
     uint8_t *font_buf_    = nullptr;
@@ -108,6 +109,10 @@ public:
     Extended_Bios_Data_Area &ebda; // Extended Bios Data Area at 0x9fc00
     Byte *bios;                    // Bios ROM at 0xf0000
     Floppy_Extended_Disk_Base_Table &diskette_param_table2;
+
+    // Type and AH of the last syscall, for tests.
+    unsigned last_syscall{};
+    unsigned kbd_poll_count{};
 
     explicit Machine(Memory &memory);
 

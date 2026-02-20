@@ -159,6 +159,15 @@ void Machine::process_syscall(int type)
     if (debug_all || debug_syscalls) {
         cpu.print_syscall(type);
     }
+
+    // Remember last syscall for tests.
+    last_syscall = type | (cpu.get_ah() << 8);
+    if (last_syscall == 0x0116) {
+        kbd_poll_count++;
+    } else {
+        kbd_poll_count = 0;
+    }
+
     switch (type) {
     case 0x00:
         throw std::runtime_error("Divide Error");

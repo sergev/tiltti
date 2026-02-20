@@ -22,3 +22,27 @@ TEST_F(MachineTest, msdos_v1_12)
 
     EXPECT_EQ(get_line(13), "A>");
 }
+
+//
+// Start MS-DOS version 2.12
+//
+TEST_F(MachineTest, msdos_v2_12)
+{
+    machine.boot_disk(TEST_DIR "/../images/msdos2.12-360k.img");
+    //Machine::enable_trace("s");
+    run("\r\r");
+    EXPECT_EQ(cursor_row(), 12);
+    EXPECT_EQ(cursor_col(), 2);
+    EXPECT_EQ(get_line(0), "Current date is Tue  1-01-1980");
+    EXPECT_EQ(get_line(1), "Enter new date:");
+    EXPECT_EQ(get_line(2), "Current time is  0:00:00.00");
+    EXPECT_EQ(get_line(3), "Enter new time:");
+
+    EXPECT_EQ(get_line(6), "The COMPAQ Personal Computer MS-DOS");
+    EXPECT_EQ(get_line(7), "Version 2.12");
+
+    EXPECT_EQ(get_line(9), "(C) Copyright COMPAQ Computer Corp. 1982, 83, 84");
+    EXPECT_EQ(get_line(10), "(C) Copyright Microsoft 1981, 82, 83");
+
+    EXPECT_EQ(get_line(12), "A>");
+}

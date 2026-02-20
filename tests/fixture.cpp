@@ -26,6 +26,34 @@
 #include <cstring>
 #include <fstream>
 
+void MachineTest::SetUp()
+{
+    // Push keystrokes into the keyboard queue.
+    // Throw exception when no more input.
+    auto event_callback = [this](unsigned timeout) {
+        if (machine.has_keystroke()) {
+            return;
+        }
+        if (timeout == 0) {
+            // Keyboard poll.
+            if (machine.kbd_poll_count < 10) {
+                return;
+            }
+            // Too many polls - send keystroke.
+            machine.kbd_poll_count = 0;
+        }
+        if (input_index < input_buf.size()) {
+            machine.push_keystroke(input_buf[input_index++]);
+            return;
+        }
+        throw std::runtime_error("Complete");
+    };
+    machine.set_event_callback(event_callback);
+
+    // Show trace.
+    //Machine::enable_trace("s");
+}
+
 //
 // Run until all input is processed.
 //
