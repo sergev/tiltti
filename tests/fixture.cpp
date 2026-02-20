@@ -29,10 +29,15 @@
 //
 // Run until all input is processed.
 //
-void MachineTest::run()
+void MachineTest::run(const std::string &input)
 {
+    input_buf = input;
+    input_index = 0;
+
     try {
-        machine.run_batch(50000);
+        for (;;) {
+            machine.run_batch(50000);
+        }
     } catch (const std::exception &ex) {
         ASSERT_STREQ(ex.what(), "Complete");
     }

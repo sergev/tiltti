@@ -41,6 +41,10 @@ protected:
     Machine machine{ memory };
     Processor &cpu{ machine.cpu };
 
+    // To be typed on keyboard.
+    std::string input_buf;
+    unsigned input_index{};
+
     // Boot sector load address.
     static const unsigned BOOT_ADDR = 0x7c00;
 
@@ -48,9 +52,13 @@ protected:
     {
         // Push keystrokes into the keyboard queue.
         // Throw exception when no more input.
-        auto event_callback = [](unsigned timeout) {
+        auto event_callback = [this](unsigned timeout) {
             if (timeout == 0)
                 return;
+            if (input_index < input_buf.size()) {
+                machine.push_keystroke(input_buf[input_index++]);
+                return;
+            }
             throw std::runtime_error("Complete");
         };
         machine.set_event_callback(event_callback);
@@ -60,7 +68,7 @@ protected:
     }
 
     // Run until all input is processed.
-    void run();
+    void run(const std::string &input);
 
     // Compare FLAGS register to expected value and
     // return a list of names of changed flags.

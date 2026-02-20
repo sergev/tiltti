@@ -94,8 +94,6 @@ static unsigned bin2bcd(unsigned val)
 //
 void Machine::int1a_read_system_clock_count()
 {
-    update_timer_counter();
-
     cpu.set_cx(bda.timer_counter >> 16);
     cpu.set_dx(bda.timer_counter);
     cpu.set_al(bda.timer_rollover);

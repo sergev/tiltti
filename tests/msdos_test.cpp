@@ -1,14 +1,24 @@
 #include "fixture.h"
 
 //
-// Start MS-DOS version 1.25
+// Start MS-DOS version 1.12
 //
-TEST_F(MachineTest, msdos_v1_25)
+TEST_F(MachineTest, msdos_v1_12)
 {
     machine.boot_disk(TEST_DIR "/../images/msdos1.25-320k.img");
-    run();
-    EXPECT_EQ(cursor_row(), 1);
-    EXPECT_EQ(cursor_col(), 16);
+    run("\r\r");
+    EXPECT_EQ(cursor_row(), 13);
+    EXPECT_EQ(cursor_col(), 2);
     EXPECT_EQ(get_line(0), "Current date is Tue  1-01-1980");
     EXPECT_EQ(get_line(1), "Enter new date:");
+    EXPECT_EQ(get_line(2), "Current time is  0:00:00.00");
+    EXPECT_EQ(get_line(3), "Enter new time:");
+
+    EXPECT_EQ(get_line(5), "The COMPAQ Personal Computer DOS");
+    EXPECT_EQ(get_line(6), "Version 1.12");
+
+    EXPECT_EQ(get_line(9), "(C) Copyright COMPAQ Computer Corp. 1982, 83");
+    EXPECT_EQ(get_line(10), "(C) Copyright Microsoft 1981, 82");
+
+    EXPECT_EQ(get_line(13), "A>");
 }
