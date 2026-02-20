@@ -148,8 +148,8 @@ int main(int argc, char *argv[])
     Memory memory;
 
     // Create video adapter, using SDL.
-    Video_Adapter vga{ "Tiltti v" VERSION_STRING, memory.get_ptr(0xb8000) };
-    if (!vga.has_window()) {
+    Video_Adapter gui{ "Tiltti v" VERSION_STRING, memory.get_ptr(0xb8000) };
+    if (!gui.has_window()) {
         std::cerr << "Cannot create VGA window\n";
         exit(EXIT_FAILURE);
     }
@@ -158,15 +158,15 @@ int main(int argc, char *argv[])
     Machine machine{ memory };
 
     // Connect machine to video adapter.
-    auto event_callback = [&vga, &machine](unsigned timeout) {
-        vga.pump_events(machine, timeout);
-        if (!vga.active()) {
+    auto event_callback = [&gui, &machine](unsigned timeout) {
+        gui.pump_events(machine, timeout);
+        if (!gui.active()) {
             // Window closed.
             std::exit(0);
         }
     };
     machine.set_event_callback(event_callback);
-    machine.set_font_buffer(vga.font_buffer(), vga.font_buffer_size());
+    machine.set_font_buffer(gui.font_buffer(), gui.font_buffer_size());
 
     try {
         if (disk_file == "-") {
@@ -177,15 +177,12 @@ int main(int argc, char *argv[])
             machine.boot_disk(disk_file);
         }
 
-        while (vga.active()) {
+        while (gui.active()) {
             constexpr unsigned steps_per_frame = 50000;
             machine.run_batch(steps_per_frame);
             machine.update_timer_counter();
-            vga.pump_events(machine, 10);
+            gui.pump_events(machine, 10);
         }
-
-        // Finish the trace output.
-        Machine::close_trace();
 
     } catch (const std::exception &ex) {
         // Print exception message.
