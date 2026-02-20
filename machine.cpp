@@ -43,14 +43,13 @@ uint64_t Machine::simulated_instructions = 0;
 //
 // Initialize the machine (SDL-free; main() owns display and input).
 //
-Machine::Machine(Memory &m, std::function<void(unsigned)> pump_cb)
+Machine::Machine(Memory &m)
     : memory(m), cpu(*this),
       ivt(*reinterpret_cast<Interrupt_Vector_Table*>(memory.get_ptr(0x0))),
       bda(*reinterpret_cast<Bios_Data_Area*>(memory.get_ptr(0x400))),
       ebda(*reinterpret_cast<Extended_Bios_Data_Area*>(memory.get_ptr(0x9fc00))),
       bios(memory.get_ptr(0xf0000)),
-      diskette_param_table2(*reinterpret_cast<Floppy_Extended_Disk_Base_Table*>(bios)),
-      pump_callback(std::move(pump_cb))
+      diskette_param_table2(*reinterpret_cast<Floppy_Extended_Disk_Base_Table*>(bios))
 {
     // Set pointer to EBDA.
     bda.ebda_seg = 0x9fc00 >> 4;
@@ -118,7 +117,7 @@ void Machine::set_font_buffer(uint8_t *ptr, size_t size)
 }
 
 //
-// Run a batch of CPU steps (main() owns the loop, event pump, and display refresh).
+// Run a batch of CPU steps.
 //
 void Machine::run_batch(unsigned n)
 {

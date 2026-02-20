@@ -99,7 +99,7 @@ void Machine::handle_int16_keyboard()
 void Machine::int16_read_keyboard_input()
 {
     while (!has_keystroke()) {
-        pump_callback(10);
+        event_callback(10);
     }
     uint16_t ax = pop_keystroke();
     cpu.set_ax(ax);
@@ -120,7 +120,7 @@ void Machine::int16_read_keyboard_input()
 //
 void Machine::int16_check_keyboard_status()
 {
-    pump_callback(0);
+    event_callback(0);
     if (has_keystroke()) {
         cpu.set_zf(0);
         cpu.set_ax(peek_keystroke());

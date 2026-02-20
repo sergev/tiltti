@@ -75,6 +75,9 @@ private:
     // Keyboard queue (fed by main() from SDL).
     std::queue<uint16_t> keyboard_queue_;
 
+    // Callback for input events (used by INT 16h).
+    std::function<void(unsigned)> event_callback = [](unsigned){};
+
     bool video_dirty{}; // Video memory was changed
 
     // Optional font buffer for INT 10h AH=11h (display owns the storage).
@@ -97,11 +100,13 @@ public:
     Byte *bios;                    // Bios ROM at 0xf0000
     Floppy_Extended_Disk_Base_Table &diskette_param_table2;
 
-    explicit Machine(
-        Memory &memory, std::function<void(unsigned)> pump_cb = [](unsigned){});
+    explicit Machine(Memory &memory);
 
     // Destructor.
     ~Machine();
+
+    // Set event callback (used by INT 16h).
+    void set_event_callback(std::function<void(unsigned)> func) { event_callback = func; }
 
     // Run a batch of CPU steps (main() owns the loop and calls this).
     void run_batch(unsigned n);
@@ -200,9 +205,6 @@ public:
     void print_handler(unsigned addr);
 
     void unsupported(uint8_t op, const std::string &required_cpu);
-
-    // Invoke pump callback (used by INT 16h).
-    std::function<void(unsigned)> pump_callback;
 
     void setup_bios_config_table();
     void setup_floppy();

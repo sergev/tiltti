@@ -144,27 +144,36 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
+    // Create RAM.
     Memory memory;
+
+    // Create video adapter, using SDL.
     Video_Adapter vga{ "Tiltti v" VERSION_STRING, memory.get_ptr(0xb8000) };
     if (!vga.has_window()) {
         std::cerr << "Cannot create VGA window\n";
         exit(EXIT_FAILURE);
     }
 
-    Machine machine{ memory, [&vga, &machine](unsigned timeout) {
+    // Create PC i86 machine.
+    Machine machine{ memory };
+
+    // Connect machine to video adapter.
+    auto event_callback = [&vga, &machine](unsigned timeout) {
                         vga.pump_events(machine, timeout);
                         if (!vga.active()) {
                             // Window closed.
                             std::exit(0);
                         }
-                    } };
+                    };
+    machine.set_event_callback(event_callback);
     machine.set_font_buffer(vga.font_buffer(), vga.font_buffer_size());
 
     try {
-        // Boot from disk.
         if (disk_file == "-") {
+            // Load Basic from ROM.
             machine.start_basic();
         } else {
+            // Boot from disk.
             machine.boot_disk(disk_file);
         }
 
