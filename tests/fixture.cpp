@@ -22,6 +22,7 @@
 // SOFTWARE.
 //
 #include "fixture.h"
+#include "encoding.h"
 
 #include <cstring>
 #include <fstream>
@@ -124,20 +125,22 @@ std::string get_test_name()
 //
 std::string MachineTest::get_line(unsigned row)
 {
-    std::string result;
+    std::stringstream buf;
     auto p = machine.get_video_refresh_params();
     auto *line = &p.text_buf[row * 160];
 
+    // Convert characters to UTF8 encoding.
     for (int i = 0; i < 160; i += 2) {
-        char ch = line[i];
+        uint8_t ch = line[i];
         if (ch == 0) {
             // Stop on NUL.
-            return result;
+            break;
         }
-        result += ch;
+        utf8_putc(cp437_to_unicode_table[ch], buf);
     }
 
     // Trim spaces.
+    auto result = buf.str();
     const auto pos = result.find_last_not_of(' ');
     if (pos == std::string::npos) {
         // All spaces.
