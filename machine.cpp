@@ -214,6 +214,9 @@ void Machine::mem_store_byte(unsigned addr, Byte val)
     if (debug_all) {
         print_byte_access(addr, val, "Byte Write");
     }
+    if (addr >= 0xb0000 && addr <= 0xbffff) {
+        video_dirty = true;
+    }
 }
 
 //
@@ -251,6 +254,9 @@ void Machine::mem_store_word(unsigned addr, Word val)
     }
     if (addr < 0x400 && (addr & 3) == 2 && trace_enabled()) {
         print_handler(addr);
+    }
+    if (addr >= 0xb0000 && addr <= 0xbffff) {
+        video_dirty = true;
     }
 }
 

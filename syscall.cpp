@@ -130,7 +130,12 @@ void Processor::print_syscall(int type)
         machine.print_exception_ah("Int 15h System Services Request");
         return;
     case 0x16:
-        machine.print_exception_ah("Int 16h Keyboard Request");
+        if (get_ah() == 0x01) {
+            // Check keyboard status.
+            Machine::get_trace_stream() << '.' << std::flush;
+        } else {
+            machine.print_exception_ah("Int 16h Keyboard Request");
+        }
         return;
     case 0x17:
         machine.print_exception_ah("Int 17h Printer Request");
