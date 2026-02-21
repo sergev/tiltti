@@ -371,8 +371,41 @@ void Machine::int13_get_drive_parameters()
         out.flags(save);
     }
 
-    // No hard disk for now.
-    disk_ret(drive, DISK_RET_EPARAM);
+    if (drive >= EXTSTART_HD) {
+        // No hard disk for now.
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+
+    if (drive > 1) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+
+    // Floppy: drive count from equipment word (bits 7-6 = nfloppy - 1).
+    const unsigned nfloppy = ((bda.equipment_list_flags >> 6) & 3) + 1;
+    unsigned max_cyl, max_head, sectors_per_track;
+    if (disks[drive]) {
+        const auto &d = *disks[drive].get();
+        max_cyl          = d.num_cylinders - 1;  // 0-based max cylinder
+        max_head         = d.num_heads - 1;
+        sectors_per_track = d.num_sectors;
+    } else {
+        // Default 1.44 MB: 80 cylinders, 2 heads, 18 sectors.
+        max_cyl          = 79;
+        max_head         = 1;
+        sectors_per_track = 18;
+    }
+
+    // CH = max cylinder low 8 bits; CL = cylinder high 2 bits in 6-7, sectors in 0-5.
+    cpu.set_ch(max_cyl & 0xff);
+    cpu.set_cl((((max_cyl >> 8) & 3) << 6) | (sectors_per_track & 0x3f));
+    cpu.set_dh(max_head);
+    cpu.set_dl(static_cast<uint8_t>(nfloppy));
+    cpu.set_es(0xf000);
+    cpu.set_di(BIOS_DISKETTE_PARAM_TABLE);
+    cpu.set_bx(4);  // 1.44 MB floppy type
+    disk_ret(drive, DISK_RET_SUCCESS);
 }
 
 void Machine::int13_initialize_drive_parameters()
@@ -488,8 +521,15 @@ void Machine::int13_read_disk_drive_size()
         out.flags(save);
     }
     if (drive < EXTSTART_HD) {
-        // Floppy.
-        cpu.set_ah(1);
+        // Floppy: drive 1 exists only when equipment word reports 2 floppies.
+        const unsigned nfloppy = ((bda.equipment_list_flags >> 6) & 3) + 1;
+        if (drive == 1 && nfloppy < 2) {
+            cpu.set_ah(0);  // No drive
+            cpu.set_cf(1);
+            bda.floppy_last_status = DISK_RET_EPARAM;
+            return;
+        }
+        cpu.set_ah(1);  // Drive present, type 1 (floppy)
         disk_ret(drive, DISK_RET_SUCCESS);
         return;
     }

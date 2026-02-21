@@ -52,9 +52,10 @@ static void print_usage(std::ostream &out, const char *prog_name)
 {
     out << "PC i86 Simulator, Version " << VERSION_STRING << "\n";
     out << "Usage:" << std::endl;
-    out << "    " << prog_name << " [options...] disk.img" << std::endl;
+    out << "    " << prog_name << " [options...] disk.img [disk_b.img]" << std::endl;
     out << "Input files:" << std::endl;
-    out << "    disk.img                Image of bootable PC floppy or disk" << std::endl;
+    out << "    disk.img                Image of bootable PC floppy or disk (drive A:)" << std::endl;
+    out << "    disk_b.img              Optional second floppy image (drive B:)" << std::endl;
     out << "Options:" << std::endl;
     out << "    -V, --version           Print the version number and exit" << std::endl;
     out << "    -h, --help              Display available options" << std::endl;
@@ -80,6 +81,7 @@ int main(int argc, char *argv[])
     }
 
     std::string disk_file;
+    std::string disk_file_b;
 
     // Parse command line options.
     for (;;) {
@@ -91,13 +93,16 @@ int main(int argc, char *argv[])
             continue;
 
         case 1:
-            // Regular argument.
-            if (!disk_file.empty()) {
+            // Regular argument (disk.img [disk_b.img]).
+            if (disk_file.empty()) {
+                disk_file = optarg;
+            } else if (disk_file_b.empty()) {
+                disk_file_b = optarg;
+            } else {
                 std::cerr << "Too many arguments: " << optarg << std::endl;
                 print_usage(std::cerr, prog_name);
                 ::exit(EXIT_FAILURE);
             }
-            disk_file = optarg;
             continue;
 
         case 'h':
@@ -173,8 +178,8 @@ int main(int argc, char *argv[])
             // Load Basic from ROM.
             machine.start_basic();
         } else {
-            // Boot from disk.
-            machine.boot_disk(disk_file);
+            // Boot from disk (A: required; B: optional).
+            machine.boot_disk(disk_file, disk_file_b);
         }
 
         while (gui.active()) {

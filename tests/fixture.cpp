@@ -178,8 +178,41 @@ unsigned MachineTest::bios_keycode()
     case 'd': return 0x5000; // down arrow
     case 'l': return 0x4B00; // left arrow
     case 'r': return 0x4D00; // right arrow
+    case 'e': return 0x011B; // Esc
 
     default:
         return ch;
     }
+}
+
+//
+// Print contents of the screen.
+//
+void MachineTest::show_screen()
+{
+    std::cout << get_line(0) << '\n';
+    std::cout << get_line(1) << '\n';
+    std::cout << get_line(2) << '\n';
+    std::cout << get_line(3) << '\n';
+    std::cout << get_line(4) << '\n';
+    std::cout << get_line(5) << '\n';
+    std::cout << get_line(6) << '\n';
+    std::cout << get_line(7) << '\n';
+    std::cout << get_line(8) << '\n';
+    std::cout << get_line(9) << '\n';
+    std::cout << get_line(10) << '\n';
+    std::cout << get_line(11) << '\n';
+    std::cout << get_line(12) << '\n';
+    std::cout << get_line(13) << '\n';
+    std::cout << get_line(14) << '\n';
+    std::cout << get_line(15) << '\n';
+    std::cout << get_line(16) << '\n';
+    std::cout << get_line(17) << '\n';
+    std::cout << get_line(18) << '\n';
+    std::cout << get_line(19) << '\n';
+    std::cout << get_line(20) << '\n';
+    std::cout << get_line(21) << '\n';
+    std::cout << get_line(22) << '\n';
+    std::cout << get_line(23) << '\n';
+    std::cout << get_line(24) << '\n';
 }

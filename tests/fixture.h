@@ -66,6 +66,9 @@ protected:
 
     // Return next keycode from symbol buffer.
     unsigned bios_keycode();
+
+    // Print contents of the screen.
+    void show_screen();
 };
 
 //

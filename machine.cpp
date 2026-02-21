@@ -347,7 +347,10 @@ unsigned Machine::disk_io_chs(char op, unsigned disk_unit, unsigned cylinder, un
         return DISK_RET_EPARAM;
     }
     if (!disks[disk_unit]) {
-        // Disk must be previously configured using disk_mount().
+        // Floppy present but no media -> not ready; other units invalid.
+        if (disk_unit < EXTSTART_HD) {
+            return DISK_RET_ENOTREADY;
+        }
         return DISK_RET_EPARAM;
     }
     auto &disk = *disks[disk_unit].get();
@@ -398,9 +401,9 @@ void Machine::disk_mount(unsigned disk_unit, const std::string &path, bool write
 }
 
 //
-// Boot from floppy image.
+// Boot from floppy image. Optional second image is drive B:.
 //
-void Machine::boot_disk(const std::string &filename)
+void Machine::boot_disk(const std::string &filename, const std::string &filename_b)
 {
     // Enable Upper Memory Area.
     mode_640k = true;
@@ -408,7 +411,14 @@ void Machine::boot_disk(const std::string &filename)
     // Attach image as floppy A.
     disk_mount(FLOPPY_A, filename, true);
 
-    // TODO: Alternatively, attach image as disk C.
+    if (!filename_b.empty()) {
+        disk_mount(FLOPPY_B, filename_b, true);
+    }
+
+    // Set floppy count in equipment word: bits 7-6 = (number of floppies) - 1.
+    const unsigned nfloppy = disks[FLOPPY_B] ? 2 : 1;
+    bda.equipment_list_flags =
+        (bda.equipment_list_flags & ~0x41) | 0x01 | ((nfloppy - 1) << 6);
 
     // Start at address 0000:7c00.
     unsigned addr = 0x7c00;

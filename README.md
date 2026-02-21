@@ -2,6 +2,14 @@
 
 Emulator of the i86 computer with PC BIOS.
 
+## Running
+
+```text
+tiltti [options...] disk.img [disk_b.img]
+```
+
+The first image is the boot floppy (drive A:). An optional second image is mounted as drive B:. With one image, INT 11h reports one floppy; with two images, it reports two floppies.
+
 Verified using MOO test suites:
  * 646000 tests from [SingleStepTests/8086](https://github.com/SingleStepTests/8086/tree/main/v1_binary)
  * 3007000 tests from [SingleStepTests/8088](https://github.com/SingleStepTests/8088/tree/main/v2_binary)

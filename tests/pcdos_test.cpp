@@ -67,13 +67,13 @@ TEST_F(MachineTest, pcdos_v3_30)
 TEST_F(MachineTest, pcdos_v4_00)
 {
     machine.boot_disk(TEST_DIR "/../images/pcdos4.01-720k.img");
-    run("\r\r");
+    run("\r");
     EXPECT_EQ(cursor_row(), 0);
     EXPECT_EQ(cursor_col(), 0);
-    EXPECT_EQ(get_line(0), "                            Continuing Installation");
-    EXPECT_EQ(get_line(7), "       Insert INSTALL diskette in drive A");
+    EXPECT_EQ(get_line(18), "                       (C) Copyright IBM Corp. 1988.");
+    EXPECT_EQ(get_line(19), "                            All rights reserved.");
 
-    run("\r@3@3");
+    run("@e@3");
     EXPECT_EQ(cursor_row(), 0);
     EXPECT_EQ(cursor_col(), 2);
     EXPECT_EQ(get_line(0), "A>");

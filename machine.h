@@ -176,8 +176,8 @@ public:
                          unsigned sector, unsigned addr, unsigned nbytes);
     void disk_mount(unsigned disk_unit, const std::string &path, bool write_permit);
 
-    // Boot from disk or floppy image.
-    void boot_disk(const std::string &filename);
+    // Boot from disk or floppy image. Second path optional (drive B:).
+    void boot_disk(const std::string &filename, const std::string &filename_b = "");
     void start_basic();
 
     // Syscalls.
