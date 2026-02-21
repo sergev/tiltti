@@ -342,8 +342,8 @@ void Machine::int13_verify_sectors()
 //
 // AH=05h — Format track.
 //
-// Format a track at the given cylinder and head. This implementation validates
-// parameters and returns success without writing (many BIOS drivers no-op format).
+// Format a track at the given cylinder and head. Writes sectors to the image
+// file, each sector filled with 0xf6 (IBM format fill).
 //
 void Machine::int13_format_track()
 {
@@ -387,8 +387,18 @@ void Machine::int13_format_track()
         disk_ret(drive, DISK_RET_EWRITEPROTECT);
         return;
     }
+    if (nsect > disk.num_sectors) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
 
-    // No-op: accept format request and report success (driver may no-op per Int13 spec).
+    try {
+        unsigned lba = (cylinder * disk.num_heads + head) * disk.num_sectors;
+        disks[drive]->write_sector_fill(lba, nsect, 0xf6);
+    } catch (const std::exception &) {
+        disk_ret(drive, DISK_RET_ECONTROLLER);
+        return;
+    }
     disk_ret(drive, DISK_RET_SUCCESS);
 }
 

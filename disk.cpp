@@ -192,6 +192,36 @@ void Disk::memory_to_file(unsigned lba, unsigned addr, unsigned nbytes)
 }
 
 //
+// Write sectors filled with a single byte (e.g. for format track).
+//
+void Disk::write_sector_fill(unsigned lba, unsigned n_sectors, uint8_t fill_byte)
+{
+    if (embedded_data) {
+        throw std::runtime_error("Cannot write embedded image");
+    }
+    if (!write_permit) {
+        throw std::runtime_error("Cannot write to read-only file");
+    }
+    if (lba + n_sectors > size_sectors) {
+        throw std::runtime_error("Sector range exceeds disk");
+    }
+
+    uint8_t buf[SECTOR_NBYTES];
+    memset(buf, fill_byte, sizeof(buf));
+
+    for (unsigned i = 0; i < n_sectors; ++i) {
+        unsigned offset_bytes = (lba + i) * SECTOR_NBYTES + file_offset;
+        if (lseek(file_descriptor, offset_bytes, SEEK_SET) < 0) {
+            throw std::runtime_error("File seek error");
+        }
+        int nwrite = write(file_descriptor, buf, SECTOR_NBYTES);
+        if (nwrite != (int)SECTOR_NBYTES) {
+            throw std::runtime_error("File write error");
+        }
+    }
+}
+
+//
 // Read embedded data: transfer data to memory.
 //
 void Disk::embedded_to_memory(unsigned lba, unsigned addr, unsigned nbytes)

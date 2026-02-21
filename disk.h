@@ -24,6 +24,8 @@
 #ifndef TILTTI_DISK_H
 #define TILTTI_DISK_H
 
+#include <cstdint>
+
 #include "memory.h"
 
 class Disk {
@@ -64,6 +66,7 @@ public:
     // Data transfer.
     void disk_to_memory(unsigned sector, unsigned addr, unsigned nwords);
     void memory_to_disk(unsigned sector, unsigned addr, unsigned nwords);
+    void write_sector_fill(unsigned lba, unsigned n_sectors, uint8_t fill_byte);
 
     const std::string &get_path() { return path; }
 
