@@ -272,24 +272,43 @@ void Machine::int13_read_sectors()
     disk_ret(drive, status);
 }
 
+//
+// Write disk sectors (CHS)
+//
+// Same CHS and buffer rules as AH=02h. Write-protected disk returns EWRITEPROTECT from disk_io_chs.
+//
 void Machine::int13_write_sectors()
 {
     unsigned cylinder = cpu.get_ch() | ((cpu.get_cl() & 0xC0) << 2); // 10 bits, 0-based
     unsigned sector   = cpu.get_cl() & 0x3f;                         // 6 bits, 1-based
     unsigned head     = cpu.get_dh();                                // 8 bits, 0-based
+    unsigned nsectors = cpu.get_al();
+    unsigned drive    = cpu.get_dl();
+    unsigned addr     = pc86_linear_addr(cpu.get_es(), cpu.get_bx());
 
     if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
         out << "\tAH=03h Write sectors (CHS)" << std::endl;
-        out << "\tDL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
-            << (unsigned)cpu.get_al() << " (count) CHS=" << cylinder << "/" << head << "/" << sector
-            << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx()
-            << std::endl;
+        out << "\tdrive=0x" << std::hex << std::setw(2) << drive << " nsectors=" << std::dec
+            << std::setw(2) << nsectors << " CHS=" << cylinder << "/" << head << "/" << sector
+            << " addr=0x" << std::hex << std::setw(5) << addr << std::dec << std::endl;
         out.flags(save);
     }
-    throw std::runtime_error("Unimplemented: Write sectors (CHS)");
+
+    if (nsectors > 128 || nsectors == 0 || sector == 0) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+
+    auto status = disk_io_chs('w', drive, cylinder, head, sector, addr, nsectors * SECTOR_NBYTES);
+    if (status == DISK_RET_SUCCESS) {
+        cpu.set_al(nsectors);
+    } else {
+        cpu.set_al(0);
+    }
+    disk_ret(drive, status);
 }
 
 void Machine::int13_verify_sectors()

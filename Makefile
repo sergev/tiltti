@@ -71,6 +71,9 @@ run-moo88:
 	    ../build/moo_booth/moo-booth -run $$moo; \
         done
 
+images/b.img:
+	qemu-img create -f raw $@ 1440k
+
 #
 # Run MS-DOS
 #
@@ -81,10 +84,10 @@ msdos2: $(PROG)
 	$(PROG) images/msdos2.12-360k.img
 
 msdos3: $(PROG)
-	$(PROG) images/msdos3.31-1.44m.img
+	$(PROG) images/msdos3.31-1.44m.img images/b.img
 
 msdos6: $(PROG)
-	$(PROG) images/msdos6.22-1.44m.img
+	$(PROG) images/msdos6.22-1.44m.img images/b.img
 
 # Requires i386
 msdos7: $(PROG)
