@@ -336,6 +336,25 @@ Word Machine::port_in_word(unsigned port)
 }
 
 //
+// Map BIOS drive number (DL) to internal disk unit index.
+// DL 0,1 = floppy A,B; DL 0x80,0x81 = hard disk C,D.
+// Returns true and sets disk_unit to 0..3 if valid; false if invalid.
+//
+bool Machine::dl_to_disk_unit(unsigned dl, unsigned &disk_unit)
+{
+    if (dl < EXTSTART_HD) {
+        if (dl > 1)
+            return false;
+        disk_unit = dl;
+        return true;
+    }
+    if (dl >= EXTSTART_HD + 2) // only 0x80 and 0x81
+        return false;
+    disk_unit = DISK_C + (dl - EXTSTART_HD);
+    return true;
+}
+
+//
 // Disk read/write.
 // Return disk status.
 //
@@ -405,9 +424,10 @@ void Machine::disk_mount(unsigned disk_unit, const std::string &path, bool write
 }
 
 //
-// Boot from floppy image. Optional second image is drive B:.
+// Boot from floppy image. Optional: B:, then C: and D: (hard disks).
 //
-void Machine::boot_disk(const std::string &filename, const std::string &filename_b)
+void Machine::boot_disk(const std::string &filename, const std::string &filename_b,
+                        const std::string &filename_c, const std::string &filename_d)
 {
     // Enable Upper Memory Area.
     mode_640k = true;
@@ -419,10 +439,20 @@ void Machine::boot_disk(const std::string &filename, const std::string &filename
         disk_mount(FLOPPY_B, filename_b, true);
     }
 
+    if (!filename_c.empty()) {
+        disk_mount(DISK_C, filename_c, true);
+    }
+    if (!filename_d.empty()) {
+        disk_mount(DISK_D, filename_d, true);
+    }
+
     // Set floppy count in equipment word: bits 7-6 = (number of floppies) - 1.
     const unsigned nfloppy = disks[FLOPPY_B] ? 2 : 1;
     bda.equipment_list_flags =
         (bda.equipment_list_flags & ~0x41) | 0x01 | ((nfloppy - 1) << 6);
+
+    // Set hard disk count for INT 13h AH=08h and similar.
+    bda.hdcount = (disks[DISK_D] ? 2 : 0) + (disks[DISK_C] ? 1 : 0);
 
     // Start at address 0000:7c00.
     unsigned addr = 0x7c00;

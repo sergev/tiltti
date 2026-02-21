@@ -263,7 +263,16 @@ void Machine::int13_read_sectors()
         return;
     }
 
-    auto status = disk_io_chs('r', drive, cylinder, head, sector, addr, nsectors * SECTOR_NBYTES);
+    unsigned disk_unit;
+    if (!dl_to_disk_unit(drive, disk_unit)) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    if (!disks[disk_unit]) {
+        disk_ret(drive, DISK_RET_ENOTREADY);
+        return;
+    }
+    auto status = disk_io_chs('r', disk_unit, cylinder, head, sector, addr, nsectors * SECTOR_NBYTES);
     if (status == DISK_RET_SUCCESS) {
         cpu.set_al(nsectors);
     } else {
@@ -302,7 +311,16 @@ void Machine::int13_write_sectors()
         return;
     }
 
-    auto status = disk_io_chs('w', drive, cylinder, head, sector, addr, nsectors * SECTOR_NBYTES);
+    unsigned disk_unit;
+    if (!dl_to_disk_unit(drive, disk_unit)) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    if (!disks[disk_unit]) {
+        disk_ret(drive, DISK_RET_ENOTREADY);
+        return;
+    }
+    auto status = disk_io_chs('w', disk_unit, cylinder, head, sector, addr, nsectors * SECTOR_NBYTES);
     if (status == DISK_RET_SUCCESS) {
         cpu.set_al(nsectors);
     } else {
@@ -335,8 +353,21 @@ void Machine::int13_verify_sectors()
         return;
     }
 
-    cpu.set_al(nsectors);
-    disk_ret(drive, DISK_RET_SUCCESS);
+    unsigned disk_unit;
+    if (!dl_to_disk_unit(drive, disk_unit)) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    if (!disks[disk_unit]) {
+        disk_ret(drive, DISK_RET_ENOTREADY);
+        return;
+    }
+    // Verify: read sectors (CHS validated by disk_io_chs).
+    unsigned addr = pc86_linear_addr(cpu.get_es(), cpu.get_bx());
+    auto status   = disk_io_chs('r', disk_unit, cylinder, head, sector, addr,
+                                nsectors * SECTOR_NBYTES);
+    cpu.set_al(status == DISK_RET_SUCCESS ? nsectors : 0);
+    disk_ret(drive, status);
 }
 
 //
@@ -364,20 +395,17 @@ void Machine::int13_format_track()
         out.flags(save);
     }
 
-    if (drive >= EXTSTART_HD) {
+    unsigned disk_unit;
+    if (!dl_to_disk_unit(drive, disk_unit)) {
         disk_ret(drive, DISK_RET_EPARAM);
         return;
     }
-    if (drive > 1) {
-        disk_ret(drive, DISK_RET_EPARAM);
-        return;
-    }
-    if (!disks[drive]) {
+    if (!disks[disk_unit]) {
         disk_ret(drive, DISK_RET_ENOTREADY);
         return;
     }
 
-    const auto &disk = *disks[drive].get();
+    const auto &disk = *disks[disk_unit].get();
     if (nsect == 0 || cylinder >= disk.num_cylinders || head >= disk.num_heads) {
         disk_ret(drive, DISK_RET_EPARAM);
         return;
@@ -394,7 +422,7 @@ void Machine::int13_format_track()
 
     try {
         unsigned lba = (cylinder * disk.num_heads + head) * disk.num_sectors;
-        disks[drive]->write_sector_fill(lba, nsect, 0xf6);
+        disks[disk_unit]->write_sector_fill(lba, nsect, 0xf6);
     } catch (const std::exception &) {
         disk_ret(drive, DISK_RET_ECONTROLLER);
         return;
@@ -437,8 +465,24 @@ void Machine::int13_get_drive_parameters()
     }
 
     if (drive >= EXTSTART_HD) {
-        // No hard disk for now.
-        disk_ret(drive, DISK_RET_EPARAM);
+        // Hard disk: return geometry and drive count.
+        unsigned disk_unit;
+        if (!dl_to_disk_unit(drive, disk_unit) || !disks[disk_unit]) {
+            disk_ret(drive, DISK_RET_EPARAM);
+            return;
+        }
+        const auto &d = *disks[disk_unit].get();
+        // INT 13h reserves last cylinder for HD; report max = num_cylinders - 1.
+        unsigned max_cyl          = d.num_cylinders > 1 ? d.num_cylinders - 1 : 0;
+        unsigned max_head         = d.num_heads - 1;
+        unsigned sectors_per_track = d.num_sectors;
+        cpu.set_ch(max_cyl & 0xff);
+        cpu.set_cl((((max_cyl >> 8) & 3) << 6) | (sectors_per_track & 0x3f));
+        cpu.set_dh(static_cast<uint8_t>(max_head));
+        cpu.set_dl(static_cast<uint8_t>(bda.hdcount));
+        cpu.set_al(0);
+        cpu.set_ah(0);
+        disk_ret(drive, DISK_RET_SUCCESS);
         return;
     }
 
@@ -598,169 +642,373 @@ void Machine::int13_read_disk_drive_size()
         disk_ret(drive, DISK_RET_SUCCESS);
         return;
     }
-    throw std::runtime_error("Unimplemented: Read disk drive size");
+    // Hard disk: AH=3 and CX:DX = sector count (reserved cylinder not included).
+    unsigned disk_unit;
+    if (!dl_to_disk_unit(drive, disk_unit)) {
+        cpu.set_ah(0);
+        cpu.set_cf(1);
+        bda.disk_last_status = DISK_RET_EPARAM;
+        return;
+    }
+    if (!disks[disk_unit]) {
+        cpu.set_ah(0);  // No drive
+        cpu.set_cf(1);
+        bda.disk_last_status = DISK_RET_EPARAM;
+        return;
+    }
+    const auto &d = *disks[disk_unit].get();
+    uint32_t sector_count =
+        (d.num_cylinders > 1 ? d.num_cylinders - 1 : 0) * d.num_heads * d.num_sectors;
+    cpu.set_ah(3);  // Type 3 = hard disk
+    cpu.set_cx(static_cast<uint16_t>(sector_count >> 16));
+    cpu.set_dx(static_cast<uint16_t>(sector_count & 0xffff));
+    disk_ret(drive, DISK_RET_SUCCESS);
 }
 
 void Machine::int13_detect_disk_change()
 {
+    unsigned drive = cpu.get_dl();
+
     if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
         out << "\tAH=16h Detect disk change" << std::endl;
-        out << "\tDL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out << "\tDL=0x" << std::setw(2) << (unsigned)drive << " (drive)" << std::endl;
         out.flags(save);
     }
-    throw std::runtime_error("Unimplemented: Detect disk change");
+    // Hard disk: not applicable (fixed disk).
+    if (drive >= EXTSTART_HD) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    // Floppy: report changed (simple stub).
+    disk_ret(drive, DISK_RET_ECHANGED);
 }
 
 void Machine::int13_edd_installation_check()
 {
+    unsigned drive = cpu.get_dl();
+
     if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
         out << "\tAH=41h EDD installation check" << std::endl;
-        out << "\tDL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out << "\tDL=0x" << std::setw(2) << (unsigned)drive << " (drive)" << std::endl;
         out.flags(save);
     }
-    throw std::runtime_error("Unimplemented: EDD installation check");
+    // EDD only for hard disk.
+    if (drive < EXTSTART_HD) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    unsigned disk_unit;
+    if (!dl_to_disk_unit(drive, disk_unit) || !disks[disk_unit]) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    cpu.set_bx(0xAA55);
+    cpu.set_cx(0x0007);  // extended disk access + EDD + removable supported
+    cpu.set_ah(0x30);    // EDD version 3.0
+    disk_ret(drive, DISK_RET_SUCCESS);
 }
 
 void Machine::int13_extended_read()
 {
-    if (debug_all || debug_syscalls) {
-        auto &out     = Machine::get_trace_stream();
-        auto save     = out.flags();
-        unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
-        unsigned count;
-        Word buf_seg, buf_off;
-        uint64_t lba;
+    unsigned drive = cpu.get_dl();
+    unsigned dap_addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
+    unsigned count;
+    Word buf_seg, buf_off;
+    uint64_t lba;
+    read_dap(dap_addr, count, buf_seg, buf_off, lba);
 
-        read_dap(addr, count, buf_seg, buf_off, lba);
+    if (debug_all || debug_syscalls) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
         out << "\tAH=42h Extended read (LBA)" << std::endl;
-        out << "\tDL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x" << std::setw(4)
+        out << "\tDL=0x" << std::setw(2) << (unsigned)drive << " DS:SI=0x" << std::setw(4)
             << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si() << " count=" << count
             << " buffer=0x" << std::setw(4) << buf_seg << ":0x" << std::setw(4) << buf_off
             << " LBA=0x" << std::setw(16) << lba << std::endl;
         out.flags(save);
     }
-    throw std::runtime_error("Unimplemented: Extended read (LBA)");
+
+    if (drive < EXTSTART_HD) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    unsigned disk_unit;
+    if (!dl_to_disk_unit(drive, disk_unit) || !disks[disk_unit]) {
+        disk_ret(drive, DISK_RET_ENOTREADY);
+        return;
+    }
+    const auto &disk = *disks[disk_unit].get();
+    unsigned size_sectors = disk.get_size_sectors();
+    if (count == 0 || lba >= size_sectors) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    // 64 KiB limit per transfer (128 sectors).
+    if (count > 128)
+        count = 128;
+    if (lba + count > size_sectors)
+        count = static_cast<unsigned>(size_sectors - lba);
+    unsigned buf_linear = pc86_linear_addr(buf_seg, buf_off);
+    if ((buf_linear + count * SECTOR_NBYTES - 1) >> 16 != buf_linear >> 16) {
+        disk_ret(drive, DISK_RET_EBOUNDARY);
+        return;
+    }
+    try {
+        disks[disk_unit]->disk_to_memory(static_cast<unsigned>(lba), buf_linear,
+                                         count * SECTOR_NBYTES);
+    } catch (const std::exception &) {
+        disk_ret(drive, DISK_RET_ECONTROLLER);
+        return;
+    }
+    memory.store16(dap_addr + 2, static_cast<uint16_t>(count));
+    disk_ret(drive, DISK_RET_SUCCESS);
 }
 
 void Machine::int13_extended_write()
 {
-    if (debug_all || debug_syscalls) {
-        auto &out     = Machine::get_trace_stream();
-        auto save     = out.flags();
-        unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
-        unsigned count;
-        Word buf_seg, buf_off;
-        uint64_t lba;
+    unsigned drive = cpu.get_dl();
+    unsigned dap_addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
+    unsigned count;
+    Word buf_seg, buf_off;
+    uint64_t lba;
+    read_dap(dap_addr, count, buf_seg, buf_off, lba);
 
-        read_dap(addr, count, buf_seg, buf_off, lba);
+    if (debug_all || debug_syscalls) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
         out << "\tAH=43h Extended write (LBA)" << std::endl;
-        out << "\tDL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x" << std::setw(4)
+        out << "\tDL=0x" << std::setw(2) << (unsigned)drive << " DS:SI=0x" << std::setw(4)
             << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si() << " count=" << count
             << " buffer=0x" << std::setw(4) << buf_seg << ":0x" << std::setw(4) << buf_off
             << " LBA=0x" << std::setw(16) << lba << std::endl;
         out.flags(save);
     }
-    throw std::runtime_error("Unimplemented: Extended write (LBA)");
+
+    if (drive < EXTSTART_HD) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    unsigned disk_unit;
+    if (!dl_to_disk_unit(drive, disk_unit) || !disks[disk_unit]) {
+        disk_ret(drive, DISK_RET_ENOTREADY);
+        return;
+    }
+    const auto &disk = *disks[disk_unit].get();
+    if (!disk.is_writable()) {
+        disk_ret(drive, DISK_RET_EWRITEPROTECT);
+        return;
+    }
+    unsigned size_sectors = disk.get_size_sectors();
+    if (count == 0 || lba >= size_sectors) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    if (count > 128)
+        count = 128;
+    if (lba + count > size_sectors)
+        count = static_cast<unsigned>(size_sectors - lba);
+    unsigned buf_linear = pc86_linear_addr(buf_seg, buf_off);
+    if ((buf_linear + count * SECTOR_NBYTES - 1) >> 16 != buf_linear >> 16) {
+        disk_ret(drive, DISK_RET_EBOUNDARY);
+        return;
+    }
+    try {
+        disks[disk_unit]->memory_to_disk(static_cast<unsigned>(lba), buf_linear,
+                                         count * SECTOR_NBYTES);
+    } catch (const std::exception &) {
+        disk_ret(drive, DISK_RET_ECONTROLLER);
+        return;
+    }
+    memory.store16(dap_addr + 2, static_cast<uint16_t>(count));
+    disk_ret(drive, DISK_RET_SUCCESS);
 }
 
 void Machine::int13_extended_verify()
 {
-    if (debug_all || debug_syscalls) {
-        auto &out     = Machine::get_trace_stream();
-        auto save     = out.flags();
-        unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
-        unsigned count;
-        Word buf_seg, buf_off;
-        uint64_t lba;
+    unsigned drive = cpu.get_dl();
+    unsigned dap_addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
+    unsigned count;
+    Word buf_seg, buf_off;
+    uint64_t lba;
+    read_dap(dap_addr, count, buf_seg, buf_off, lba);
 
-        read_dap(addr, count, buf_seg, buf_off, lba);
+    if (debug_all || debug_syscalls) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
         out << "\tAH=44h Extended verify (LBA)" << std::endl;
-        out << "\tDL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x" << std::setw(4)
-            << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si() << " count=" << count
+        out << "\tDL=0x" << std::setw(2) << (unsigned)drive << " count=" << count
             << " LBA=0x" << std::setw(16) << lba << std::endl;
         out.flags(save);
     }
-    throw std::runtime_error("Unimplemented: Extended verify (LBA)");
+
+    if (drive < EXTSTART_HD) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    unsigned disk_unit;
+    if (!dl_to_disk_unit(drive, disk_unit) || !disks[disk_unit]) {
+        disk_ret(drive, DISK_RET_ENOTREADY);
+        return;
+    }
+    const auto &disk = *disks[disk_unit].get();
+    unsigned size_sectors = disk.get_size_sectors();
+    if (count == 0 || lba >= size_sectors) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    if (lba + count > size_sectors)
+        count = static_cast<unsigned>(size_sectors - lba);
+    memory.store16(dap_addr + 2, static_cast<uint16_t>(count));
+    disk_ret(drive, DISK_RET_SUCCESS);
 }
 
 void Machine::int13_lock_unlock_drive()
 {
+    unsigned drive = cpu.get_dl();
+
     if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
         out << "\tAH=45h Lock/unlock drive" << std::endl;
-        out << "\tDL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
+        out << "\tDL=0x" << std::setw(2) << (unsigned)drive << " AL=0x" << std::setw(2)
             << (unsigned)cpu.get_al() << " (subfunction)" << std::endl;
         out.flags(save);
     }
-    throw std::runtime_error("Unimplemented: Lock/unlock drive");
+    if (drive < EXTSTART_HD) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    unsigned disk_unit;
+    if (!dl_to_disk_unit(drive, disk_unit) || !disks[disk_unit]) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    // Hard disk: always success (stub).
+    disk_ret(drive, DISK_RET_SUCCESS);
 }
 
 void Machine::int13_eject_media()
 {
+    unsigned drive = cpu.get_dl();
+
     if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
         out << "\tAH=46h Eject media" << std::endl;
-        out << "\tDL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out << "\tDL=0x" << std::setw(2) << (unsigned)drive << " (drive)" << std::endl;
         out.flags(save);
     }
-    throw std::runtime_error("Unimplemented: Eject media");
+    // Hard disk is not removable.
+    if (drive >= EXTSTART_HD) {
+        disk_ret(drive, DISK_RET_ENOTREMOVABLE);
+        return;
+    }
+    disk_ret(drive, DISK_RET_EPARAM);
 }
 
 void Machine::int13_extended_seek()
 {
-    if (debug_all || debug_syscalls) {
-        auto &out     = Machine::get_trace_stream();
-        auto save     = out.flags();
-        unsigned addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
-        unsigned count;
-        Word buf_seg, buf_off;
-        uint64_t lba;
+    unsigned drive = cpu.get_dl();
+    unsigned dap_addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
+    unsigned count;
+    Word buf_seg, buf_off;
+    uint64_t lba;
+    read_dap(dap_addr, count, buf_seg, buf_off, lba);
 
-        read_dap(addr, count, buf_seg, buf_off, lba);
+    if (debug_all || debug_syscalls) {
+        auto &out = Machine::get_trace_stream();
+        auto save = out.flags();
         out << "\tAH=47h Extended seek (LBA)" << std::endl;
-        out << "\tDL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x" << std::setw(4)
-            << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si() << " LBA=0x" << std::setw(16)
-            << lba << std::endl;
+        out << "\tDL=0x" << std::setw(2) << (unsigned)drive << " LBA=0x" << std::setw(16) << lba
+            << std::endl;
         out.flags(save);
     }
-    throw std::runtime_error("Unimplemented: Extended seek (LBA)");
+
+    if (drive < EXTSTART_HD) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    unsigned disk_unit;
+    if (!dl_to_disk_unit(drive, disk_unit) || !disks[disk_unit]) {
+        disk_ret(drive, DISK_RET_ENOTREADY);
+        return;
+    }
+    const auto &disk = *disks[disk_unit].get();
+    if (lba >= disk.get_size_sectors()) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    disk_ret(drive, DISK_RET_SUCCESS);
 }
 
 void Machine::int13_get_edd_parameters()
 {
+    unsigned drive = cpu.get_dl();
+
     if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
         out << "\tAH=48h Get drive parameters (EDD)" << std::endl;
-        out << "\tDL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " DS:SI=0x" << std::setw(4)
+        out << "\tDL=0x" << std::setw(2) << (unsigned)drive << " DS:SI=0x" << std::setw(4)
             << cpu.get_ds() << ":0x" << std::setw(4) << cpu.get_si() << " (buffer)" << std::endl;
         out.flags(save);
     }
-    throw std::runtime_error("Unimplemented: Get drive parameters (EDD)");
+    if (drive < EXTSTART_HD) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    unsigned disk_unit;
+    if (!dl_to_disk_unit(drive, disk_unit) || !disks[disk_unit]) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    const auto &d = *disks[disk_unit].get();
+    unsigned buf = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
+    // EDD 1.1 / 3.0 minimal parameter block (30 bytes).
+    memory.store16(buf + 0, 0x1E);  // size
+    memory.store16(buf + 2, 0x40);  // info: DMA boundary alignment
+    memory.store32(buf + 4, d.num_cylinders);
+    memory.store32(buf + 8, d.num_heads);
+    memory.store32(buf + 12, d.num_sectors);
+    uint64_t total = d.get_size_sectors();
+    memory.store32(buf + 16, static_cast<uint32_t>(total & 0xffffffffu));
+    memory.store32(buf + 20, static_cast<uint32_t>(total >> 32));
+    memory.store32(buf + 24, SECTOR_NBYTES);
+    disk_ret(drive, DISK_RET_SUCCESS);
 }
 
 void Machine::int13_extended_media_change()
 {
+    unsigned drive = cpu.get_dl();
+
     if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
         out << "\tAH=49h Extended media change" << std::endl;
-        out << "\tDL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " (drive)" << std::endl;
+        out << "\tDL=0x" << std::setw(2) << (unsigned)drive << " (drive)" << std::endl;
         out.flags(save);
     }
-    throw std::runtime_error("Unimplemented: Extended media change");
+    if (drive < EXTSTART_HD) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    unsigned disk_unit;
+    if (!dl_to_disk_unit(drive, disk_unit) || !disks[disk_unit]) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    // Hard disk: no media change.
+    disk_ret(drive, DISK_RET_SUCCESS);
 }
 
 void Machine::int13_el_torito_cd_emulation()

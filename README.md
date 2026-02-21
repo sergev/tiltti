@@ -5,10 +5,10 @@ Emulator of the i86 computer with PC BIOS.
 ## Running
 
 ```text
-tiltti [options...] disk.img [disk_b.img]
+tiltti [options...] disk.img [disk_b.img] [hd_c.img] [hd_d.img]
 ```
 
-The first image is the boot floppy (drive A:). An optional second image is mounted as drive B:. With one image, INT 11h reports one floppy; with two images, it reports two floppies.
+The first image is the boot floppy (drive A:). An optional second image is mounted as drive B:. Optional third and fourth images are mounted as hard disks C: and D: (INT 13h drive numbers 0x80 and 0x81). With one image, INT 11h reports one floppy; with two images, it reports two floppies. Hard disk count is reported in BDA and via INT 13h AH=08h.
 
 Verified using MOO test suites:
  * 646000 tests from [SingleStepTests/8086](https://github.com/SingleStepTests/8086/tree/main/v1_binary)

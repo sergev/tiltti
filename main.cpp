@@ -52,10 +52,13 @@ static void print_usage(std::ostream &out, const char *prog_name)
 {
     out << "PC i86 Simulator, Version " << VERSION_STRING << "\n";
     out << "Usage:" << std::endl;
-    out << "    " << prog_name << " [options...] disk.img [disk_b.img]" << std::endl;
+    out << "    " << prog_name << " [options...] disk.img [disk_b.img] [hd_c.img] [hd_d.img]"
+        << std::endl;
     out << "Input files:" << std::endl;
     out << "    disk.img                Image of bootable PC floppy or disk (drive A:)" << std::endl;
     out << "    disk_b.img              Optional second floppy image (drive B:)" << std::endl;
+    out << "    hd_c.img                Optional first hard disk image (drive C:)" << std::endl;
+    out << "    hd_d.img                Optional second hard disk image (drive D:)" << std::endl;
     out << "Options:" << std::endl;
     out << "    -V, --version           Print the version number and exit" << std::endl;
     out << "    -h, --help              Display available options" << std::endl;
@@ -82,6 +85,8 @@ int main(int argc, char *argv[])
 
     std::string disk_file;
     std::string disk_file_b;
+    std::string disk_file_c;
+    std::string disk_file_d;
 
     // Parse command line options.
     for (;;) {
@@ -93,11 +98,15 @@ int main(int argc, char *argv[])
             continue;
 
         case 1:
-            // Regular argument (disk.img [disk_b.img]).
+            // Regular argument (disk.img [disk_b.img] [hd_c.img] [hd_d.img]).
             if (disk_file.empty()) {
                 disk_file = optarg;
             } else if (disk_file_b.empty()) {
                 disk_file_b = optarg;
+            } else if (disk_file_c.empty()) {
+                disk_file_c = optarg;
+            } else if (disk_file_d.empty()) {
+                disk_file_d = optarg;
             } else {
                 std::cerr << "Too many arguments: " << optarg << std::endl;
                 print_usage(std::cerr, prog_name);
@@ -178,8 +187,8 @@ int main(int argc, char *argv[])
             // Load Basic from ROM.
             machine.start_basic();
         } else {
-            // Boot from disk (A: required; B: optional).
-            machine.boot_disk(disk_file, disk_file_b);
+            // Boot from disk (A: required; B:, C:, D: optional).
+            machine.boot_disk(disk_file, disk_file_b, disk_file_c, disk_file_d);
         }
 
         while (gui.active()) {

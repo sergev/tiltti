@@ -72,6 +72,9 @@ public:
 
     bool is_writable() const { return write_permit; }
 
+    // Total sectors (for LBA range check in extended INT 13h).
+    unsigned get_size_sectors() const { return size_sectors; }
+
     // Remove this file.bin image when simulation is done.
     void remove_when_finished() { remove_on_close = true; }
 

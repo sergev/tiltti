@@ -74,6 +74,9 @@ run-moo88:
 images/b.img:
 	qemu-img create -f raw $@ 1440k
 
+images/c.img:
+	qemu-img create -f raw $@ 40M
+
 #
 # Run MS-DOS
 #
@@ -84,10 +87,10 @@ msdos2: $(PROG)
 	$(PROG) images/msdos2.12-360k.img
 
 msdos3: $(PROG)
-	$(PROG) images/msdos3.31-1.44m.img images/b.img
+	$(PROG) images/msdos3.31-1.44m.img images/b.img images/c.img
 
 msdos6: $(PROG)
-	$(PROG) images/msdos6.22-1.44m.img images/b.img
+	$(PROG) images/msdos6.22-1.44m.img images/b.img images/c.img
 
 # Requires i386
 msdos7: $(PROG)

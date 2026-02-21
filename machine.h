@@ -172,12 +172,14 @@ public:
     static void port_out_word(unsigned port, Word val);
 
     // Disk i/o.
+    static bool dl_to_disk_unit(unsigned dl, unsigned &disk_unit);
     unsigned disk_io_chs(char op, unsigned disk_unit, unsigned cylinder, unsigned head,
                          unsigned sector, unsigned addr, unsigned nbytes);
     void disk_mount(unsigned disk_unit, const std::string &path, bool write_permit);
 
-    // Boot from disk or floppy image. Second path optional (drive B:).
-    void boot_disk(const std::string &filename, const std::string &filename_b = "");
+    // Boot from disk or floppy image. Optional: B:, then C: and D: (hard disks).
+    void boot_disk(const std::string &filename, const std::string &filename_b = "",
+                  const std::string &filename_c = "", const std::string &filename_d = "");
     void start_basic();
 
     // Syscalls.
