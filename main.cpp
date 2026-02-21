@@ -41,6 +41,7 @@ static const struct option long_options[] = {
     { "regs",           required_argument,  nullptr,    'r' },
     { "ports",          required_argument,  nullptr,    'p' },
     { "syscalls",       required_argument,  nullptr,    's' },
+    { "boot",           required_argument,  nullptr,    'B' },
     {},
     // clang-format on
 };
@@ -52,14 +53,17 @@ static void print_usage(std::ostream &out, const char *prog_name)
 {
     out << "PC i86 Simulator, Version " << VERSION_STRING << "\n";
     out << "Usage:" << std::endl;
-    out << "    " << prog_name << " [options...] disk.img [disk_b.img] [hd_c.img] [hd_d.img]"
+    out << "    " << prog_name << " [options...] [disk_a.img]" << std::endl;
+    out << "Disks (any may be omitted; at least one disk or positional required):" << std::endl;
+    out << "    -a FILE                 Floppy drive A: image" << std::endl;
+    out << "    -b FILE                 Floppy drive B: image" << std::endl;
+    out << "    -c FILE                 Hard disk C: image" << std::endl;
+    out << "    -d FILE                 Hard disk D: image" << std::endl;
+    out << "    disk_a.img              Optional positional argument = drive A: (same as -a)"
         << std::endl;
-    out << "Input files:" << std::endl;
-    out << "    disk.img                Image of bootable PC floppy or disk (drive A:)" << std::endl;
-    out << "    disk_b.img              Optional second floppy image (drive B:)" << std::endl;
-    out << "    hd_c.img                Optional first hard disk image (drive C:)" << std::endl;
-    out << "    hd_d.img                Optional second hard disk image (drive D:)" << std::endl;
     out << "Options:" << std::endl;
+    out << "    --boot=a|b|c|d          Boot from specified drive (default: C if present, else A, else B)"
+        << std::endl;
     out << "    -V, --version           Print the version number and exit" << std::endl;
     out << "    -h, --help              Display available options" << std::endl;
     out << "Trace modes:" << std::endl;
@@ -87,10 +91,11 @@ int main(int argc, char *argv[])
     std::string disk_file_b;
     std::string disk_file_c;
     std::string disk_file_d;
+    std::string boot_drive;
 
     // Parse command line options.
     for (;;) {
-        switch (getopt_long(argc, argv, "-hVrspo:", long_options, nullptr)) {
+        switch (getopt_long(argc, argv, "-hVrspo:a:b:c:d:B:", long_options, nullptr)) {
         case EOF:
             break;
 
@@ -98,21 +103,42 @@ int main(int argc, char *argv[])
             continue;
 
         case 1:
-            // Regular argument (disk.img [disk_b.img] [hd_c.img] [hd_d.img]).
-            if (disk_file.empty()) {
-                disk_file = optarg;
-            } else if (disk_file_b.empty()) {
-                disk_file_b = optarg;
-            } else if (disk_file_c.empty()) {
-                disk_file_c = optarg;
-            } else if (disk_file_d.empty()) {
-                disk_file_d = optarg;
-            } else {
-                std::cerr << "Too many arguments: " << optarg << std::endl;
+            // Single optional positional argument = drive A: (same as -a).
+            if (!disk_file.empty()) {
+                std::cerr << "Only one positional argument allowed: " << optarg << std::endl;
                 print_usage(std::cerr, prog_name);
                 ::exit(EXIT_FAILURE);
             }
+            disk_file = optarg;
             continue;
+
+        case 'a':
+            disk_file = optarg;
+            continue;
+
+        case 'b':
+            disk_file_b = optarg;
+            continue;
+
+        case 'c':
+            disk_file_c = optarg;
+            continue;
+
+        case 'd':
+            disk_file_d = optarg;
+            continue;
+
+        case 'B': {
+            std::string v = optarg;
+            if (v.size() != 1 || (v[0] != 'a' && v[0] != 'b' && v[0] != 'c' && v[0] != 'd')) {
+                std::cerr << "Invalid --boot drive: " << optarg << " (use a, b, c, or d)"
+                          << std::endl;
+                print_usage(std::cerr, prog_name);
+                ::exit(EXIT_FAILURE);
+            }
+            boot_drive = v;
+            continue;
+        }
 
         case 'h':
             // Show usage message and exit.
@@ -152,8 +178,10 @@ int main(int argc, char *argv[])
         break;
     }
 
-    // Must specify a file to run.
-    if (disk_file.empty()) {
+    // When no disks given at all (no positional, no -a/-b/-c/-d), show usage.
+    const bool has_any_disk =
+        !disk_file.empty() || !disk_file_b.empty() || !disk_file_c.empty() || !disk_file_d.empty();
+    if (!has_any_disk) {
         print_usage(std::cerr, prog_name);
         exit(EXIT_FAILURE);
     }
@@ -183,13 +211,7 @@ int main(int argc, char *argv[])
     machine.set_font_buffer(gui.font_buffer(), gui.font_buffer_size());
 
     try {
-        if (disk_file == "-") {
-            // Load Basic from ROM.
-            machine.start_basic();
-        } else {
-            // Boot from disk (A: required; B:, C:, D: optional).
-            machine.boot_disk(disk_file, disk_file_b, disk_file_c, disk_file_d);
-        }
+        machine.boot_disk(disk_file, disk_file_b, disk_file_c, disk_file_d, boot_drive);
 
         while (gui.active()) {
             constexpr unsigned steps_per_frame = 50000;

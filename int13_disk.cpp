@@ -362,12 +362,19 @@ void Machine::int13_verify_sectors()
         disk_ret(drive, DISK_RET_ENOTREADY);
         return;
     }
-    // Verify: read sectors (CHS validated by disk_io_chs).
-    unsigned addr = pc86_linear_addr(cpu.get_es(), cpu.get_bx());
-    auto status   = disk_io_chs('r', disk_unit, cylinder, head, sector, addr,
-                                nsectors * SECTOR_NBYTES);
-    cpu.set_al(status == DISK_RET_SUCCESS ? nsectors : 0);
-    disk_ret(drive, status);
+    // Verify: validate CHS range only; do not use caller's buffer (ES:BX may be invalid).
+    const auto &disk = *disks[disk_unit].get();
+    if (cylinder >= disk.num_cylinders || head >= disk.num_heads || sector > disk.num_sectors) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    unsigned lba = (((cylinder * disk.num_heads) + head) * disk.num_sectors) + sector - 1;
+    if (lba + nsectors > disk.get_size_sectors()) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    cpu.set_al(nsectors);
+    disk_ret(drive, DISK_RET_SUCCESS);
 }
 
 //

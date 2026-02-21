@@ -177,9 +177,11 @@ public:
                          unsigned sector, unsigned addr, unsigned nbytes);
     void disk_mount(unsigned disk_unit, const std::string &path, bool write_permit);
 
-    // Boot from disk or floppy image. Optional: B:, then C: and D: (hard disks).
+    // Boot from disk or floppy image. Mount only non-empty paths. Optional boot_drive
+    // ("a","b","c","d") overrides default order (C then A then B). Empty = auto.
     void boot_disk(const std::string &filename, const std::string &filename_b = "",
-                  const std::string &filename_c = "", const std::string &filename_d = "");
+                   const std::string &filename_c = "", const std::string &filename_d = "",
+                   const std::string &boot_drive = "");
     void start_basic();
 
     // Syscalls.

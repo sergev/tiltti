@@ -86,11 +86,11 @@ msdos1: $(PROG)
 msdos2: $(PROG)
 	$(PROG) images/msdos2.12-360k.img
 
-msdos3: $(PROG)
-	$(PROG) images/msdos3.31-1.44m.img images/b.img images/c.img
+msdos3: $(PROG) images/b.img images/c.img
+	$(PROG) images/msdos3.31-1.44m.img -b images/b.img -c images/c.img
 
-msdos6: $(PROG)
-	$(PROG) images/msdos6.22-1.44m.img images/b.img images/c.img
+msdos6: $(PROG) images/b.img images/c.img
+	$(PROG) images/msdos6.22-1.44m.img -b images/b.img -c images/c.img
 
 # Requires i386
 msdos7: $(PROG)

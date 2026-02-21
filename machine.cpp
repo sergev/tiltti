@@ -424,21 +424,22 @@ void Machine::disk_mount(unsigned disk_unit, const std::string &path, bool write
 }
 
 //
-// Boot from floppy image. Optional: B:, then C: and D: (hard disks).
+// Boot from floppy or hard disk image. Mount only non-empty paths.
+// Default boot order: C then A then B. Override with boot_drive "a","b","c","d".
 //
 void Machine::boot_disk(const std::string &filename, const std::string &filename_b,
-                        const std::string &filename_c, const std::string &filename_d)
+                        const std::string &filename_c, const std::string &filename_d,
+                        const std::string &boot_drive)
 {
     // Enable Upper Memory Area.
     mode_640k = true;
 
-    // Attach image as floppy A.
-    disk_mount(FLOPPY_A, filename, true);
-
+    if (!filename.empty()) {
+        disk_mount(FLOPPY_A, filename, true);
+    }
     if (!filename_b.empty()) {
         disk_mount(FLOPPY_B, filename_b, true);
     }
-
     if (!filename_c.empty()) {
         disk_mount(DISK_C, filename_c, true);
     }
@@ -447,20 +448,45 @@ void Machine::boot_disk(const std::string &filename, const std::string &filename
     }
 
     // Set floppy count in equipment word: bits 7-6 = (number of floppies) - 1.
-    const unsigned nfloppy = disks[FLOPPY_B] ? 2 : 1;
-    bda.equipment_list_flags =
-        (bda.equipment_list_flags & ~0x41) | 0x01 | ((nfloppy - 1) << 6);
+    const unsigned nfloppy = disks[FLOPPY_B] ? 2 : (disks[FLOPPY_A] ? 1 : 0);
+    bda.equipment_list_flags = (bda.equipment_list_flags & ~0x41) | 0x01 |
+                              (nfloppy ? ((nfloppy - 1) << 6) : 0);
 
     // Set hard disk count for INT 13h AH=08h and similar.
     bda.hdcount = (disks[DISK_D] ? 2 : 0) + (disks[DISK_C] ? 1 : 0);
+
+    // Choose boot unit: override or default order C then A then B.
+    unsigned boot_unit;
+    if (!boot_drive.empty()) {
+        switch (boot_drive[0]) {
+        case 'a': boot_unit = FLOPPY_A; break;
+        case 'b': boot_unit = FLOPPY_B; break;
+        case 'c': boot_unit = DISK_C; break;
+        case 'd': boot_unit = DISK_D; break;
+        default: boot_unit = NDISKS; break;
+        }
+        if (boot_unit >= NDISKS || !disks[boot_unit]) {
+            throw std::runtime_error("Boot drive " + boot_drive +
+                                     " not present or not mounted");
+        }
+    } else {
+        if (disks[DISK_C])
+            boot_unit = DISK_C;
+        else if (disks[FLOPPY_A])
+            boot_unit = FLOPPY_A;
+        else if (disks[FLOPPY_B])
+            boot_unit = FLOPPY_B;
+        else
+            throw std::runtime_error("No bootable disk present");
+    }
 
     // Start at address 0000:7c00.
     unsigned addr = 0x7c00;
     cpu.set_cs(0);
     cpu.set_ip(addr);
 
-    // Load boot sector from disk.
-    if (disk_io_chs('r', FLOPPY_A, 0, 0, 1, addr, SECTOR_NBYTES) != DISK_RET_SUCCESS) {
+    // Load boot sector from chosen drive.
+    if (disk_io_chs('r', boot_unit, 0, 0, 1, addr, SECTOR_NBYTES) != DISK_RET_SUCCESS) {
         throw std::runtime_error("Cannot read boot sector");
     }
 }
