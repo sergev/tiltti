@@ -43,9 +43,7 @@ void MachineTest::SetUp()
             machine.kbd_poll_count = 0;
         }
         if (input_index < input_buf.size()) {
-            // Map ASCII to BIOS keystroke.
-            auto keycode = to_bios(input_buf[input_index++]);
-            machine.push_keystroke(keycode);
+            machine.push_keystroke(bios_keycode());
             return;
         }
         throw std::runtime_error("Complete");
@@ -150,23 +148,37 @@ std::string MachineTest::get_line(unsigned row)
 }
 
 //
-// Map ASCII byte to BIOS keystroke.
+// Return next keycode from symbol buffer.
 //
-unsigned MachineTest::to_bios(uint8_t ch)
+unsigned MachineTest::bios_keycode()
 {
+    uint8_t ch = input_buf[input_index++];
+
+    if (ch != '@') {
+        return ch;
+    }
+
+    // Map ASCII character to BIOS keystroke.
+    ch = input_buf[input_index++];
     switch (ch) {
-    case 0201: return 0x3B00; // F1
-    case 0202: return 0x3C00; // F2
-    case 0203: return 0x3D00; // F3
-    case 0204: return 0x3E00; // F4
-    case 0205: return 0x3F00; // F5
-    case 0206: return 0x4000; // F6
-    case 0207: return 0x4100; // F7
-    case 0210: return 0x4200; // F8
-    case 0211: return 0x4300; // F9
-    case 0212: return 0x4400; // F10
-    case 0213: return 0x4500; // F11
-    case 0214: return 0x4600; // F12
+    case '1': return 0x3B00; // F1
+    case '2': return 0x3C00; // F2
+    case '3': return 0x3D00; // F3
+    case '4': return 0x3E00; // F4
+    case '5': return 0x3F00; // F5
+    case '6': return 0x4000; // F6
+    case '7': return 0x4100; // F7
+    case '8': return 0x4200; // F8
+    case '9': return 0x4300; // F9
+    case 'A': return 0x4400; // F10
+    case 'B': return 0x4500; // F11
+    case 'C': return 0x4600; // F12
+
+    case 'u': return 0x4800; // up arrow
+    case 'd': return 0x5000; // down arrow
+    case 'l': return 0x4B00; // left arrow
+    case 'r': return 0x4D00; // right arrow
+
     default:
         return ch;
     }

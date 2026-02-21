@@ -64,8 +64,8 @@ protected:
     unsigned cursor_row() { return machine.bda.cursor_pos[machine.bda.video_page & 7] >> 8; }
     unsigned cursor_col() { return machine.bda.cursor_pos[machine.bda.video_page & 7] & 0xff; }
 
-    // Map ASCII byte to BIOS keystroke.
-    static unsigned to_bios(uint8_t ch);
+    // Return next keycode from symbol buffer.
+    unsigned bios_keycode();
 };
 
 //

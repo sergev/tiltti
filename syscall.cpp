@@ -161,11 +161,13 @@ void Machine::process_syscall(int type)
     }
 
     // Remember last syscall for tests.
-    last_syscall = type | (cpu.get_ah() << 8);
-    if (last_syscall == 0x0116) {
-        kbd_poll_count++;
-    } else {
-        kbd_poll_count = 0;
+    if (type != 0x1A) {
+        last_syscall = type | (cpu.get_ah() << 8);
+        if (last_syscall == 0x0116) {
+            kbd_poll_count++;
+        } else {
+            kbd_poll_count = 0;
+        }
     }
 
     switch (type) {

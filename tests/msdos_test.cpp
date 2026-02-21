@@ -74,7 +74,7 @@ TEST_F(MachineTest, msdos_v6_22)
     machine.boot_disk(TEST_DIR "/../images/msdos6.22-1.44m.img");
 
     // Press F5 to boot into command line.
-    run("\205");
+    run("@5");
 
     EXPECT_EQ(cursor_row(), 8);
     EXPECT_EQ(cursor_col(), 4);

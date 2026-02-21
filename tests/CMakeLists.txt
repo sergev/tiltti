@@ -55,6 +55,7 @@ set(TEST_SOURCES
     batch17.cpp
     am88.cpp
     msdos_test.cpp
+    drdos_test.cpp
 )
 
 #
