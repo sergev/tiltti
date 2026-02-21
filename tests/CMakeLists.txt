@@ -56,6 +56,7 @@ set(TEST_SOURCES
     am88.cpp
     msdos_test.cpp
     drdos_test.cpp
+    pcdos_test.cpp
 )
 
 #
