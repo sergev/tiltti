@@ -21,6 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
+#include <cerrno>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -37,9 +38,15 @@
 Disk::Disk(const std::string &p, Memory &m, bool wp, unsigned offset)
     : memory(m), path(p), write_permit(wp), file_offset(offset)
 {
-    // Open file.
-    int open_flag   = write_permit ? O_RDWR : O_RDONLY;
+    int open_flag = write_permit ? O_RDWR : O_RDONLY;
     file_descriptor = open(path.c_str(), open_flag);
+    if (file_descriptor < 0 && write_permit) {
+        // Read-only file or permissions: open read-only and treat as write-protected.
+        if (errno == EACCES || errno == EROFS || errno == EPERM) {
+            write_permit = false;
+            file_descriptor = open(path.c_str(), O_RDONLY);
+        }
+    }
     if (file_descriptor < 0)
         throw std::runtime_error("Cannot open " + path +
                                  (write_permit ? " for write" : " for read"));

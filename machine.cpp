@@ -371,6 +371,9 @@ unsigned Machine::disk_io_chs(char op, unsigned disk_unit, unsigned cylinder, un
             memory.dump(++dump_serial_num, disk_unit, lba, addr, nbytes);
         }
     } else {
+        if (!disk.is_writable()) {
+            return DISK_RET_EWRITEPROTECT;
+        }
         disk.memory_to_disk(lba, addr, nbytes);
     }
     return DISK_RET_SUCCESS;
@@ -396,7 +399,8 @@ void Machine::disk_mount(unsigned disk_unit, const std::string &path, bool write
         auto const &disk = *disks[disk_unit].get();
         std::cout << "Mount image '" << path << "' as disk " << disk_unit
                   << ", CHS = " << disk.num_cylinders << "/" << disk.num_heads << "/"
-                  << disk.num_sectors << std::endl;
+                  << disk.num_sectors
+                  << (disk.is_writable() ? "" : " (write-protected)") << std::endl;
     }
 }
 

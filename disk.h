@@ -67,6 +67,8 @@ public:
 
     const std::string &get_path() { return path; }
 
+    bool is_writable() const { return write_permit; }
+
     // Remove this file.bin image when simulation is done.
     void remove_when_finished() { remove_on_close = true; }
 

@@ -320,21 +320,57 @@ void Machine::int13_verify_sectors()
     disk_ret(drive, DISK_RET_SUCCESS);
 }
 
+//
+// AH=05h — Format track.
+//
+// Format a track at the given cylinder and head. This implementation validates
+// parameters and returns success without writing (many BIOS drivers no-op format).
+//
 void Machine::int13_format_track()
 {
+    unsigned cylinder = cpu.get_ch() | ((cpu.get_cl() & 0xC0) << 2); // 10 bits, 0-based
+    unsigned head     = cpu.get_dh();
+    unsigned nsect    = cpu.get_al();
+    unsigned drive    = cpu.get_dl();
+
     if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
 
         out << "\tAH=05h Format track" << std::endl;
-        out << "\tDL=0x" << std::setw(2) << (unsigned)cpu.get_dl() << " AL=0x" << std::setw(2)
-            << (unsigned)cpu.get_al() << " (sectors/track) CH=0x" << std::setw(2)
-            << (unsigned)cpu.get_ch() << " DH=0x" << std::setw(2) << (unsigned)cpu.get_dh()
+        out << "\tDL=0x" << std::setw(2) << (unsigned)drive << " AL=0x" << std::setw(2)
+            << (unsigned)nsect << " (sectors/track) CHS=" << cylinder << "/" << head
             << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx()
             << std::endl;
         out.flags(save);
     }
-    throw std::runtime_error("Unimplemented: Format track");
+
+    if (drive >= EXTSTART_HD) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    if (drive > 1) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+    if (!disks[drive]) {
+        disk_ret(drive, DISK_RET_ENOTREADY);
+        return;
+    }
+
+    const auto &disk = *disks[drive].get();
+    if (nsect == 0 || cylinder >= disk.num_cylinders || head >= disk.num_heads) {
+        disk_ret(drive, DISK_RET_EPARAM);
+        return;
+    }
+
+    if (!disk.is_writable()) {
+        disk_ret(drive, DISK_RET_EWRITEPROTECT);
+        return;
+    }
+
+    // No-op: accept format request and report success (driver may no-op per Int13 spec).
+    disk_ret(drive, DISK_RET_SUCCESS);
 }
 
 //
