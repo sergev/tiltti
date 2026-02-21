@@ -43,7 +43,9 @@ void MachineTest::SetUp()
             machine.kbd_poll_count = 0;
         }
         if (input_index < input_buf.size()) {
-            machine.push_keystroke(input_buf[input_index++]);
+            // Map ASCII to BIOS keystroke.
+            auto keycode = to_bios(input_buf[input_index++]);
+            machine.push_keystroke(keycode);
             return;
         }
         throw std::runtime_error("Complete");
@@ -145,4 +147,27 @@ std::string MachineTest::get_line(unsigned row)
     }
     result.erase(pos + 1);
     return result;
+}
+
+//
+// Map ASCII byte to BIOS keystroke.
+//
+unsigned MachineTest::to_bios(uint8_t ch)
+{
+    switch (ch) {
+    case 0201: return 0x3B00; // F1
+    case 0202: return 0x3C00; // F2
+    case 0203: return 0x3D00; // F3
+    case 0204: return 0x3E00; // F4
+    case 0205: return 0x3F00; // F5
+    case 0206: return 0x4000; // F6
+    case 0207: return 0x4100; // F7
+    case 0210: return 0x4200; // F8
+    case 0211: return 0x4300; // F9
+    case 0212: return 0x4400; // F10
+    case 0213: return 0x4500; // F11
+    case 0214: return 0x4600; // F12
+    default:
+        return ch;
+    }
 }

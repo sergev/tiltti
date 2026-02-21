@@ -65,3 +65,25 @@ TEST_F(MachineTest, msdos_v3_31)
 
     EXPECT_EQ(get_line(10), "A>");
 }
+
+//
+// Start MS-DOS version 6.22
+//
+TEST_F(MachineTest, msdos_v6_22)
+{
+    machine.boot_disk(TEST_DIR "/../images/msdos6.22-1.44m.img");
+
+    // Press F5 to boot into command line.
+    run("\205");
+
+    EXPECT_EQ(cursor_row(), 8);
+    EXPECT_EQ(cursor_col(), 4);
+    EXPECT_EQ(get_line(0), "Starting MS-DOS...");
+
+    EXPECT_EQ(get_line(2), "MS-DOS is bypassing your CONFIG.SYS and AUTOEXEC.BAT files.");
+
+    EXPECT_EQ(get_line(5), "Microsoft(R) MS-DOS(R) Version 6.22");
+    EXPECT_EQ(get_line(6), "             (C)Copyright Microsoft Corp 1981-1994.");
+
+    EXPECT_EQ(get_line(8), "A:\\>");
+}

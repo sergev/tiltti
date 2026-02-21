@@ -159,6 +159,7 @@ void Machine::set_kbd_modifiers(uint16_t flags)
 
 void Machine::push_keystroke(uint16_t ax)
 {
+    // std::cout << "--- keystroke 0x" << std::hex << ax << std::dec << '\n';
     keyboard_queue_.push(ax);
 }
 
