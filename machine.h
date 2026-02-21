@@ -333,7 +333,7 @@ public:
     void int1a_read_system_clock_count();
     void int1a_set_system_clock_count();
     void int1a_read_cmos_time();
-    static void int1a_set_cmos_time();
+    void int1a_set_cmos_time();
     void int1a_read_cmos_date();
     static void int1a_set_cmos_date();
     static void int1a_set_alarm_time();

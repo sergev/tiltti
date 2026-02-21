@@ -71,10 +71,10 @@ void Machine::handle_int1a_rtc_timer()
     }
 }
 
-// static unsigned bcd2bin(unsigned val)
-//{
-//     return (val & 0xf) + ((val >> 4) * 10);
-// }
+static unsigned bcd2bin(unsigned val)
+{
+    return (val & 0x0f) + ((val >> 4) * 10);
+}
 
 static unsigned bin2bcd(unsigned val)
 {
@@ -145,9 +145,50 @@ void Machine::int1a_read_cmos_time()
     cpu.set_cf(0);
 }
 
+//
+// AH=03h — Set CMOS time
+//
+// Set the RTC time in BCD. Also updates Status B for 24-hour mode and daylight saving.
+// Inputs:
+//      CH = hours (BCD)
+//      CL = minutes (BCD)
+//      DH = seconds (BCD)
+//      DL bit 0 = DSE (daylight saving enable)
+// Outputs:
+//      AH = 0
+//      AL = value last written to CMOS Status B (24h + DSE)
+//      CF = 0
+//
 void Machine::int1a_set_cmos_time()
 {
-    throw std::runtime_error("Unimplemented: Set CMOS time");
+    unsigned ch = cpu.get_ch();
+    unsigned cl = cpu.get_cl();
+    unsigned dh = cpu.get_dh();
+    unsigned dl = cpu.get_dl();
+
+    unsigned hour = bcd2bin(ch);
+    unsigned min  = bcd2bin(cl);
+    unsigned sec  = bcd2bin(dh);
+
+    if (hour > 23)
+        hour = 23;
+    if (min > 59)
+        min = 59;
+    if (sec > 59)
+        sec = 59;
+
+    local_hour  = hour;
+    local_min   = min;
+    local_sec   = sec;
+    local_isdst = dl & 1;
+
+    // Sync BIOS tick counter so AH=00h (read tick count) stays consistent.
+    unsigned sec_since_midnight = ((local_hour * 60) + local_min) * 60 + local_sec;
+    bda.timer_counter = (sec_since_midnight * 1000u) / 55;
+
+    cpu.set_ah(0);
+    cpu.set_al(0x02 | (dl & 1)); // Status B: 24-hour mode + DSE
+    cpu.set_cf(0);
 }
 
 //
