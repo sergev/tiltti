@@ -113,15 +113,3 @@ TEST_F(MachineTest, pcdos_v5_02)
 
     EXPECT_EQ(get_line(6), "A>");
 }
-
-// Cancels installation, then loops
-// pcdos6.30-1.44m.img
-
-// Cancels installation, then loops
-// pcdos7.0-1.44m.img
-
-// Cancels installation, then loops
-// pcdos7.00r1-1.44m.img
-
-// Loops after Int 1Ah AH=00h RTC Timer Request
-// pcdos7.1-1.44m.img

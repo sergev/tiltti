@@ -57,6 +57,7 @@ set(TEST_SOURCES
     msdos_test.cpp
     drdos_test.cpp
     pcdos_test.cpp
+    cpm_test.cpp
 )
 
 #
