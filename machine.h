@@ -335,7 +335,7 @@ public:
     void int1a_read_cmos_time();
     void int1a_set_cmos_time();
     void int1a_read_cmos_date();
-    static void int1a_set_cmos_date();
+    void int1a_set_cmos_date();
     static void int1a_set_alarm_time();
     static void int1a_turn_off_alarm();
     void update_timer_counter();

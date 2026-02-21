@@ -221,9 +221,49 @@ void Machine::int1a_read_cmos_date()
     //out << "--- Day: DL=" << std::hex << (unsigned)cpu.get_dl() << std::dec << std::endl;
 }
 
+//
+// AH=05h — Set CMOS date
+//
+// Set the RTC date in BCD and update the Century storage. Clears the halt (SET) bit in Status B.
+// Inputs:
+//      CH = century (BCD)
+//      CL = year within century (BCD)
+//      DH = month (BCD)
+//      DL = day of month (BCD)
+// Outputs:
+//      AH = 0
+//      AL = value last written to CMOS Status B (after clearing SET)
+//      CF = 0
+//
 void Machine::int1a_set_cmos_date()
 {
-    throw std::runtime_error("Unimplemented: Set CMOS date");
+    unsigned ch = cpu.get_ch();
+    unsigned cl = cpu.get_cl();
+    unsigned dh = cpu.get_dh();
+    unsigned dl = cpu.get_dl();
+
+    unsigned century = bcd2bin(ch);
+    unsigned year2   = bcd2bin(cl);
+    unsigned month   = bcd2bin(dh);
+    unsigned day     = bcd2bin(dl);
+
+    local_year = century * 100 + year2;
+
+    if (month < 1)
+        month = 1;
+    if (month > 12)
+        month = 12;
+    if (day < 1)
+        day = 1;
+    if (day > 31)
+        day = 31;
+
+    local_month = month;
+    local_mday  = day;
+
+    cpu.set_ah(0);
+    cpu.set_al(0); // Status B: cleared SET; emulator has no Status B state
+    cpu.set_cf(0);
 }
 
 void Machine::int1a_set_alarm_time()
