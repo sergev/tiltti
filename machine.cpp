@@ -47,7 +47,7 @@ Machine::Machine(Memory &m)
     : memory(m), cpu(*this), ivt(*reinterpret_cast<Interrupt_Vector_Table *>(memory.get_ptr(0x0))),
       bda(*reinterpret_cast<Bios_Data_Area *>(memory.get_ptr(0x400))),
       ebda(*reinterpret_cast<Extended_Bios_Data_Area *>(memory.get_ptr(0x9fc00))),
-      bios(memory.get_ptr(0xf0000)),
+      bios(memory.get_ptr(BIOS_ROM_ADDR)),
       diskette_param_table2(*reinterpret_cast<Floppy_Extended_Disk_Base_Table *>(bios))
 {
     // Set pointer to EBDA.
@@ -57,7 +57,7 @@ Machine::Machine(Memory &m)
     setup_bios_config_table();
 
     // Dummy IRET handlers (one byte each: 0xCF)
-    for (unsigned o = BIOS_ENTRY_IRET_OFFICIAL; o < BIOS_ENTRY_05; o++)
+    for (unsigned o = BIOS_ENTRY_IRET_OFFICIAL; o <= BIOS_ENTRY_INT_1A; o++)
         bios[o] = 0xCF;
 
     // Initialize IVT: vectors 00h-07h and 10h-1Ah to named dummies, rest to generic dummy
@@ -194,10 +194,13 @@ uint16_t Machine::pop_keystroke()
 
 static bool basic_area(unsigned addr)
 {
-    if (addr >= BIOS_ENTRY_IRET_OFFICIAL + 0xf0000 && addr < BIOS_ENTRY_05 + 0xf0000) {
-        // Allow dummy IRET handlers (0xff40..0xff53).
+#if 1
+    if (addr >= BIOS_ENTRY_IRET_OFFICIAL + BIOS_ROM_ADDR &&
+        addr < BIOS_ENTRY_INT_1A + BIOS_ROM_ADDR + 10) {
+        // Allow dummy IRET handlers.
         return true;
     }
+#endif
     return addr >= BASIC_ROM_ADDR && addr < BASIC_ROM_ADDR + BASIC_ROM_LEN;
 }
 

@@ -230,7 +230,6 @@ enum {
     BIOS_ENTRY_INT_18        = 0xff51, // Dummy IRET for INT 18
     BIOS_ENTRY_INT_19        = 0xff52, // Dummy IRET for INT 19
     BIOS_ENTRY_INT_1A        = 0xff53, // Dummy IRET for INT 1A
-    BIOS_ENTRY_05            = 0xff54, // INT 05 print screen
     BIOS_RESET_VECTOR        = 0xfff0, // Power-up entry point; ljmpw to entry_post
 };
 
@@ -253,6 +252,7 @@ enum {
 // Basic Addresses.
 //
 enum {
+    BIOS_ROM_ADDR  = 0xf0000, // Start of BIOS ROM in memory
     BASIC_ROM_ADDR = 0xd6000, // Start of Basic ROM in memory
     BASIC_ROM_LEN  = 0x8000,  // Size in bytes
 };

@@ -41,12 +41,12 @@ bool Machine::is_syscall(int type)
     unsigned addr = pc86_linear_addr(seg, offset);
     if (addr >= 0x500 && addr < 0xa0000) {
         // Handler is located in user memory.
-#if 0
+#if 1
         auto &out = Machine::get_trace_stream();
         out << "--- Vector 0x" << std::hex << type << " at 0x" << seg << ":0x" << offset
             << " = 0x" << addr << std::dec << '\n';
 #endif
-        //return false;
+        return false;
     }
 
     switch (type) {
@@ -247,5 +247,46 @@ void Machine::process_syscall(int type)
         return;
     default:
         throw std::runtime_error("Unknown syscall 0x" + to_hex(type));
+    }
+}
+
+//
+// Process call to ROM BIOS.
+// Return true when processed.
+// Return false when address is not a valid ROM BIOS call.
+//
+bool Machine::process_bios_call(unsigned addr)
+{
+    if (!mode_640k) {
+        // No syscalls in raw mode.
+        return false;
+    }
+    if (addr < BIOS_ROM_ADDR) {
+        // Not a BIOS call.
+        return false;
+    }
+    switch (addr - BIOS_ROM_ADDR) {
+    case BIOS_ENTRY_INT_00: process_syscall(0x00); return true;
+    case BIOS_ENTRY_INT_01: process_syscall(0x01); return true;
+    case BIOS_ENTRY_INT_02: process_syscall(0x02); return true;
+    case BIOS_ENTRY_INT_03: process_syscall(0x03); return true;
+    case BIOS_ENTRY_INT_04: process_syscall(0x04); return true;
+    case BIOS_ENTRY_INT_05: process_syscall(0x05); return true;
+    case BIOS_ENTRY_INT_06: process_syscall(0x06); return true;
+    case BIOS_ENTRY_INT_07: process_syscall(0x07); return true;
+    case BIOS_ENTRY_INT_10: process_syscall(0x10); return true;
+    case BIOS_ENTRY_INT_11: process_syscall(0x11); return true;
+    case BIOS_ENTRY_INT_12: process_syscall(0x12); return true;
+    case BIOS_ENTRY_INT_13: process_syscall(0x13); return true;
+    case BIOS_ENTRY_INT_14: process_syscall(0x14); return true;
+    case BIOS_ENTRY_INT_15: process_syscall(0x15); return true;
+    case BIOS_ENTRY_INT_16: process_syscall(0x16); return true;
+    case BIOS_ENTRY_INT_17: process_syscall(0x17); return true;
+    case BIOS_ENTRY_INT_18: process_syscall(0x18); return true;
+    case BIOS_ENTRY_INT_19: process_syscall(0x19); return true;
+    case BIOS_ENTRY_INT_1A: process_syscall(0x1A); return true;
+    default:
+        // Invalid BIOS call.
+        return false;
     }
 }

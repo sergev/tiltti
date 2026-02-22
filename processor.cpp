@@ -2072,9 +2072,14 @@ void Processor::exe_one()
             push(core.ip);
             core.ip = src;
             break;
-        case 3: {
+        case 3: { // LCALL
             unsigned addr = getEA(mod, rm);
             unsigned off  = addr - (os << 4);
+            if (machine.process_bios_call(addr)) {
+                // Intercept syscalls.
+                set_flags(pop());
+                return;
+            }
             push(core.cs);
             push(core.ip);
             core.ip = getMemAtSegOff(W, os, off);
