@@ -114,19 +114,15 @@ pcdos4: $(PROG)
 pcdos5: $(PROG)
 	$(PROG) images/pcdos5.02-720k.img
 
-# Cancels installation, then loops
 pcdos6: $(PROG)
 	$(PROG) images/pcdos6.30-1.44m.img -c images/c.img --boot=a
 
-# Cancels installation, then loops
 pcdos7: $(PROG)
 	$(PROG) images/pcdos7.0-1.44m.img -c images/c.img --boot=a
 
-# Cancels installation, then loops
 pcdos7a: $(PROG)
 	$(PROG) images/pcdos7.00r1-1.44m.img -c images/c.img --boot=a
 
-# Loops after Int 1Ah AH=00h RTC Timer Request
 pcdos7b: $(PROG)
 	$(PROG) images/pcdos7.1-1.44m.img -c images/c.img --boot=a
 

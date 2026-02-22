@@ -474,8 +474,20 @@ void Machine::int13_get_drive_parameters()
     if (drive >= EXTSTART_HD) {
         // Hard disk: return geometry and drive count.
         unsigned disk_unit;
-        if (!dl_to_disk_unit(drive, disk_unit) || !disks[disk_unit]) {
+        if (!dl_to_disk_unit(drive, disk_unit)) {
             disk_ret(drive, DISK_RET_EPARAM);
+            return;
+        }
+        if (!disks[disk_unit]) {
+            // No drive at this unit: return success with DL=0 (number of fixed disks).
+            // This prevents DOS from looping when C: is not present.
+            cpu.set_ch(0);
+            cpu.set_cl(0);
+            cpu.set_dh(0);
+            cpu.set_dl(static_cast<uint8_t>(bda.hdcount));
+            cpu.set_al(0);
+            cpu.set_ah(0);
+            disk_ret(drive, DISK_RET_SUCCESS);
             return;
         }
         const auto &d = *disks[disk_unit].get();
