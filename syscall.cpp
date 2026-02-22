@@ -41,7 +41,7 @@ bool Machine::is_syscall(int type)
     unsigned addr = pc86_linear_addr(seg, offset);
     if (addr >= 0x500 && addr < 0xa0000) {
         // Handler is located in user memory.
-#if 1
+#if 0
         auto &out = Machine::get_trace_stream();
         out << "--- Vector 0x" << std::hex << type << " at 0x" << seg << ":0x" << offset
             << " = 0x" << addr << std::dec << '\n';
@@ -255,17 +255,21 @@ void Machine::process_syscall(int type)
 // Return true when processed.
 // Return false when address is not a valid ROM BIOS call.
 //
-bool Machine::process_bios_call(unsigned addr)
+bool Machine::process_bios_call(unsigned seg, unsigned off)
 {
     if (!mode_640k) {
         // No syscalls in raw mode.
         return false;
     }
-    if (addr < BIOS_ROM_ADDR) {
+    if (seg != BIOS_ROM_ADDR >> 4) {
         // Not a BIOS call.
         return false;
     }
-    switch (addr - BIOS_ROM_ADDR) {
+#if 0
+    auto &out = Machine::get_trace_stream();
+    out << "--- Bios call 0x" << std::hex << seg << ":0x" << off << std::dec << '\n';
+#endif
+    switch (off) {
     case BIOS_ENTRY_INT_00: process_syscall(0x00); return true;
     case BIOS_ENTRY_INT_01: process_syscall(0x01); return true;
     case BIOS_ENTRY_INT_02: process_syscall(0x02); return true;

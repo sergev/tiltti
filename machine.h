@@ -187,7 +187,7 @@ public:
     // Syscalls.
     bool is_syscall(int type);
     void process_syscall(int type);
-    bool process_bios_call(unsigned addr);
+    bool process_bios_call(unsigned seg, unsigned off);
     void handle_int10_video();
     void handle_int13_disk();
     void handle_int14_serial();

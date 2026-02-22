@@ -2075,15 +2075,17 @@ void Processor::exe_one()
         case 3: { // LCALL
             unsigned addr = getEA(mod, rm);
             unsigned off  = addr - (os << 4);
-            if (machine.process_bios_call(addr)) {
+            dst           = getMemAtSegOff(W, os, off);
+            unsigned seg  = getMemAtSegOff(W, os, off + 2);
+            if (machine.process_bios_call(seg, dst)) {
                 // Intercept syscalls.
                 set_flags(pop());
                 return;
             }
             push(core.cs);
             push(core.ip);
-            core.ip = getMemAtSegOff(W, os, off);
-            core.cs = getMemAtSegOff(W, os, off + 2);
+            core.ip = dst;
+            core.cs = seg;
             break;
         }
         case 4:
