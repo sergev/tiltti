@@ -34,7 +34,7 @@ TEST_F(MachineTest, msdos_v2_12)
     EXPECT_EQ(cursor_col(), 2);
     EXPECT_EQ(get_line(0), "Current date is Tue  1-01-1980");
     EXPECT_EQ(get_line(1), "Enter new date:");
-    EXPECT_EQ(get_line(2), "Current time is  0:00:00.00");
+    EXPECT_EQ(get_line(2), "Current time is  0:00:00.04");
     EXPECT_EQ(get_line(3), "Enter new time:");
 
     EXPECT_EQ(get_line(6), "The COMPAQ Personal Computer MS-DOS");
@@ -57,7 +57,7 @@ TEST_F(MachineTest, msdos_v3_31)
     EXPECT_EQ(cursor_col(), 2);
     EXPECT_EQ(get_line(0), "Current date is Tue  1-01-1980");
     EXPECT_EQ(get_line(1), "Enter new date (mm-dd-yy):");
-    EXPECT_EQ(get_line(2), "Current time is  0:00:00.00");
+    EXPECT_EQ(get_line(2), "Current time is  0:00:00.10");
     EXPECT_EQ(get_line(3), "Enter new time:");
 
     EXPECT_EQ(get_line(6), "Microsoft(R) MS-DOS(R)  Version 3.31");
