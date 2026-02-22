@@ -66,7 +66,9 @@ void MachineTest::run(const std::string &input)
     try {
         for (;;) {
             machine.run_batch(50000);
-            //machine.bda.timer_counter++;
+
+            // MS-DOS 6.22 needs the timer counter to be incremented.
+            machine.bda.timer_counter++;
         }
     } catch (const std::exception &ex) {
         ASSERT_STREQ(ex.what(), "Complete");

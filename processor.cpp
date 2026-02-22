@@ -2079,7 +2079,7 @@ void Processor::exe_one()
             unsigned seg  = getMemAtSegOff(W, os, off + 2);
             if (machine.process_bios_call(seg, dst)) {
                 // Intercept syscalls.
-                set_flags(pop());
+                pop(); // get rid of extra flags
                 return;
             }
             push(core.cs);
