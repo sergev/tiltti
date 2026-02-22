@@ -210,7 +210,26 @@ enum {
     BIOS_ENTRY_15_OFFICIAL   = 0xf859, // INT 15 system services
     BIOS_ENTRY_1A_OFFICIAL   = 0xfe6e, // INT 1A time services; dispatches to PCI BIOS if AH=B1h
     BIOS_ENTRY_08            = 0xfea5, // IRQ0 timer tick
-    BIOS_ENTRY_IRET_OFFICIAL = 0xff53, // Default interrupt vector (iret only)
+    BIOS_ENTRY_IRET_OFFICIAL = 0xff40, // Default interrupt vector (iret only)
+    BIOS_ENTRY_INT_00        = 0xff41, // Dummy IRET for INT 00
+    BIOS_ENTRY_INT_01        = 0xff42, // Dummy IRET for INT 01
+    BIOS_ENTRY_INT_02        = 0xff43, // Dummy IRET for INT 02
+    BIOS_ENTRY_INT_03        = 0xff44, // Dummy IRET for INT 03
+    BIOS_ENTRY_INT_04        = 0xff45, // Dummy IRET for INT 04
+    BIOS_ENTRY_INT_05        = 0xff46, // Dummy IRET for INT 05
+    BIOS_ENTRY_INT_06        = 0xff47, // Dummy IRET for INT 06
+    BIOS_ENTRY_INT_07        = 0xff48, // Dummy IRET for INT 07
+    BIOS_ENTRY_INT_10        = 0xff49, // Dummy IRET for INT 10
+    BIOS_ENTRY_INT_11        = 0xff4a, // Dummy IRET for INT 11
+    BIOS_ENTRY_INT_12        = 0xff4b, // Dummy IRET for INT 12
+    BIOS_ENTRY_INT_13        = 0xff4c, // Dummy IRET for INT 13
+    BIOS_ENTRY_INT_14        = 0xff4d, // Dummy IRET for INT 14
+    BIOS_ENTRY_INT_15        = 0xff4e, // Dummy IRET for INT 15
+    BIOS_ENTRY_INT_16        = 0xff4f, // Dummy IRET for INT 16
+    BIOS_ENTRY_INT_17        = 0xff50, // Dummy IRET for INT 17
+    BIOS_ENTRY_INT_18        = 0xff51, // Dummy IRET for INT 18
+    BIOS_ENTRY_INT_19        = 0xff52, // Dummy IRET for INT 19
+    BIOS_ENTRY_INT_1A        = 0xff53, // Dummy IRET for INT 1A
     BIOS_ENTRY_05            = 0xff54, // INT 05 print screen
     BIOS_RESET_VECTOR        = 0xfff0, // Power-up entry point; ljmpw to entry_post
 };

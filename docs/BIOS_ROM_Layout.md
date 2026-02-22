@@ -33,7 +33,26 @@ These addresses are required for IBM PC/AT compatibility. They are defined in **
 | 0xf859 | entry_15_official | INT 15 system services |
 | 0xfe6e | entry_1a_official | INT 1A time services; dispatches to PCI BIOS if AH=B1h |
 | 0xfea5 | entry_08 | IRQ0 timer tick |
-| 0xff53 | entry_iret_official | Default interrupt vector (iret only) |
+| 0xff40 | entry_iret_official | Default interrupt vector (generic dummy IRET) |
+| 0xff41 | BIOS_ENTRY_INT_00 | Dummy IRET for INT 00 |
+| 0xff42 | BIOS_ENTRY_INT_01 | Dummy IRET for INT 01 |
+| 0xff43 | BIOS_ENTRY_INT_02 | Dummy IRET for INT 02 |
+| 0xff44 | BIOS_ENTRY_INT_03 | Dummy IRET for INT 03 |
+| 0xff45 | BIOS_ENTRY_INT_04 | Dummy IRET for INT 04 |
+| 0xff46 | BIOS_ENTRY_INT_05 | Dummy IRET for INT 05 |
+| 0xff47 | BIOS_ENTRY_INT_06 | Dummy IRET for INT 06 |
+| 0xff48 | BIOS_ENTRY_INT_07 | Dummy IRET for INT 07 |
+| 0xff49 | BIOS_ENTRY_INT_10 | Dummy IRET for INT 10 |
+| 0xff4a | BIOS_ENTRY_INT_11 | Dummy IRET for INT 11 |
+| 0xff4b | BIOS_ENTRY_INT_12 | Dummy IRET for INT 12 |
+| 0xff4c | BIOS_ENTRY_INT_13 | Dummy IRET for INT 13 |
+| 0xff4d | BIOS_ENTRY_INT_14 | Dummy IRET for INT 14 |
+| 0xff4e | BIOS_ENTRY_INT_15 | Dummy IRET for INT 15 |
+| 0xff4f | BIOS_ENTRY_INT_16 | Dummy IRET for INT 16 |
+| 0xff50 | BIOS_ENTRY_INT_17 | Dummy IRET for INT 17 |
+| 0xff51 | BIOS_ENTRY_INT_18 | Dummy IRET for INT 18 |
+| 0xff52 | BIOS_ENTRY_INT_19 | Dummy IRET for INT 19 |
+| 0xff53 | BIOS_ENTRY_INT_1A | Dummy IRET for INT 1A |
 | 0xff54 | entry_05 | INT 05 print screen |
 | 0xfff0 | reset_vector | Power-up entry point; ljmpw to entry_post |
 

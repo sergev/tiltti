@@ -56,14 +56,26 @@ Machine::Machine(Memory &m)
 
     setup_bios_config_table();
 
-    // Dummy IRET handler
-    bios[BIOS_ENTRY_IRET_OFFICIAL] = 0xCF; // IRET opcode
+    // Dummy IRET handlers (one byte each: 0xCF)
+    for (unsigned o = BIOS_ENTRY_IRET_OFFICIAL; o < BIOS_ENTRY_05; o++)
+        bios[o] = 0xCF;
 
-    // Initialize IVT: all vectors to dummy IRET handler
-    const Seg_Off iret_vec = { .offset = BIOS_ENTRY_IRET_OFFICIAL, .seg = 0xf000 };
+    // Initialize IVT: vectors 00h-07h and 10h-1Ah to named dummies, rest to generic dummy
     const Seg_Off null_vec = { .offset = 0, .seg = 0 };
+    const uint16_t dummy_00_07[] = { BIOS_ENTRY_INT_00, BIOS_ENTRY_INT_01, BIOS_ENTRY_INT_02,
+                                     BIOS_ENTRY_INT_03, BIOS_ENTRY_INT_04, BIOS_ENTRY_INT_05,
+                                     BIOS_ENTRY_INT_06, BIOS_ENTRY_INT_07 };
+    const uint16_t dummy_10_1A[] = { BIOS_ENTRY_INT_10, BIOS_ENTRY_INT_11, BIOS_ENTRY_INT_12,
+                                     BIOS_ENTRY_INT_13, BIOS_ENTRY_INT_14, BIOS_ENTRY_INT_15,
+                                     BIOS_ENTRY_INT_16, BIOS_ENTRY_INT_17, BIOS_ENTRY_INT_18,
+                                     BIOS_ENTRY_INT_19, BIOS_ENTRY_INT_1A };
+    const Seg_Off iret_vec = { .offset = BIOS_ENTRY_IRET_OFFICIAL, .seg = 0xf000 };
     for (unsigned i = 0; i < 256; i++)
         ivt.ivec[i] = iret_vec;
+    for (unsigned i = 0; i < 8; i++)
+        ivt.ivec[i] = { .offset = dummy_00_07[i], .seg = 0xf000 };
+    for (unsigned i = 0; i < 11; i++)
+        ivt.ivec[0x10 + i] = { .offset = dummy_10_1A[i], .seg = 0xf000 };
     for (unsigned i = 0x60; i <= 0x66; i++)
         ivt.ivec[i] = null_vec;
     ivt.ivec[0x79] = null_vec;
@@ -182,8 +194,8 @@ uint16_t Machine::pop_keystroke()
 
 static bool basic_area(unsigned addr)
 {
-    if (addr >= BIOS_ENTRY_IRET_OFFICIAL + 0xf0000 && addr < BIOS_ENTRY_IRET_OFFICIAL + 0xf0010) {
-        // Allow dummy handler.
+    if (addr >= BIOS_ENTRY_IRET_OFFICIAL + 0xf0000 && addr < BIOS_ENTRY_05 + 0xf0000) {
+        // Allow dummy IRET handlers (0xff40..0xff53).
         return true;
     }
     return addr >= BASIC_ROM_ADDR && addr < BASIC_ROM_ADDR + BASIC_ROM_LEN;
@@ -216,6 +228,7 @@ void Machine::mem_store_byte(unsigned addr, Byte val)
     }
     if (addr >= 0xb0000 && addr <= 0xbffff) {
         video_dirty = true;
+        //print_byte_access(addr, val, "Byte Write");
     }
 }
 
@@ -257,6 +270,7 @@ void Machine::mem_store_word(unsigned addr, Word val)
     }
     if (addr >= 0xb0000 && addr <= 0xbffff) {
         video_dirty = true;
+        //print_word_access(addr, val, "Word Write");
     }
 }
 
