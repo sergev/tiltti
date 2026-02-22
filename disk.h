@@ -40,9 +40,6 @@ private:
     int file_descriptor{};
     unsigned size_sectors;
 
-    // Skip so many bytes at the beginning of the file.
-    unsigned file_offset{};
-
     // Embedded disk image, read only.
     const unsigned char *embedded_data{};
 
@@ -53,7 +50,7 @@ public:
     unsigned num_sectors;
 
     // Constructor throws exception if the file cannot be opened.
-    Disk(const std::string &path, Memory &memory, bool write_permit, unsigned offset = 0);
+    Disk(const std::string &path, Memory &memory);
     Disk(const unsigned char data[], Memory &memory, unsigned size_sectors, unsigned ncyl,
          unsigned nhead, unsigned nsect);
 

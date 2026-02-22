@@ -175,7 +175,7 @@ public:
     static bool dl_to_disk_unit(unsigned dl, unsigned &disk_unit);
     unsigned disk_io_chs(char op, unsigned disk_unit, unsigned cylinder, unsigned head,
                          unsigned sector, unsigned addr, unsigned nbytes);
-    void disk_mount(unsigned disk_unit, const std::string &path, bool write_permit);
+    void disk_mount(unsigned disk_unit, const std::string &path);
 
     // Boot from disk or floppy image. Mount only non-empty paths. Optional boot_drive
     // ("a","b","c","d") overrides default order (C then A then B). Empty = auto.

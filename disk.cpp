@@ -35,21 +35,21 @@
 //
 // Open binary image as disk.
 //
-Disk::Disk(const std::string &p, Memory &m, bool wp, unsigned offset)
-    : memory(m), path(p), write_permit(wp), file_offset(offset)
+Disk::Disk(const std::string &p, Memory &m) : memory(m), path(p)
 {
-    int open_flag = write_permit ? O_RDWR : O_RDONLY;
-    file_descriptor = open(path.c_str(), open_flag);
-    if (file_descriptor < 0 && write_permit) {
-        // Read-only file or permissions: open read-only and treat as write-protected.
-        if (errno == EACCES || errno == EROFS || errno == EPERM) {
-            write_permit = false;
-            file_descriptor = open(path.c_str(), O_RDONLY);
+    // Try to open for read/write.
+    file_descriptor = open(path.c_str(), O_RDWR);
+    if (file_descriptor >= 0) {
+        // File is writeable.
+        write_permit = true;
+    } else {
+        // Read-only file: treat as write-protected.
+        write_permit = false;
+        file_descriptor = open(path.c_str(), O_RDONLY);
+        if (file_descriptor < 0) {
+            throw std::runtime_error("Cannot open " + path);
         }
     }
-    if (file_descriptor < 0)
-        throw std::runtime_error("Cannot open " + path +
-                                 (write_permit ? " for write" : " for read"));
 
     // Get file size.
     struct stat stat;
@@ -169,7 +169,7 @@ void Disk::file_to_memory(unsigned lba, unsigned addr, unsigned nbytes)
     if (lba >= size_sectors)
         throw std::runtime_error("Sector number exceeds file size");
 
-    unsigned offset_bytes = lba * SECTOR_NBYTES + file_offset;
+    unsigned offset_bytes = lba * SECTOR_NBYTES;
     if (lseek(file_descriptor, offset_bytes, SEEK_SET) < 0)
         throw std::runtime_error("File seek error");
 
@@ -191,7 +191,7 @@ void Disk::memory_to_file(unsigned lba, unsigned addr, unsigned nbytes)
     if (lba >= size_sectors)
         throw std::runtime_error("Sector number exceeds file size");
 
-    unsigned offset_bytes = lba * SECTOR_NBYTES + file_offset;
+    unsigned offset_bytes = lba * SECTOR_NBYTES;
     if (lseek(file_descriptor, offset_bytes, SEEK_SET) < 0)
         throw std::runtime_error("File seek error");
 
@@ -221,7 +221,7 @@ void Disk::write_sector_fill(unsigned lba, unsigned n_sectors, uint8_t fill_byte
     memset(buf, fill_byte, sizeof(buf));
 
     for (unsigned i = 0; i < n_sectors; ++i) {
-        unsigned offset_bytes = (lba + i) * SECTOR_NBYTES + file_offset;
+        unsigned offset_bytes = (lba + i) * SECTOR_NBYTES;
         if (lseek(file_descriptor, offset_bytes, SEEK_SET) < 0) {
             throw std::runtime_error("File seek error");
         }

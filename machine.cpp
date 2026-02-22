@@ -424,7 +424,7 @@ unsigned Machine::disk_io_chs(char op, unsigned disk_unit, unsigned cylinder, un
 //
 // Open binary image and assign it to the disk unit.
 //
-void Machine::disk_mount(unsigned disk_unit, const std::string &path, bool write_permit)
+void Machine::disk_mount(unsigned disk_unit, const std::string &path)
 {
     if (disk_unit >= NDISKS) {
         throw std::runtime_error("Invalid disk unit " + std::to_string(disk_unit) +
@@ -435,7 +435,7 @@ void Machine::disk_mount(unsigned disk_unit, const std::string &path, bool write
     }
 
     // Open binary image as disk.
-    disks[disk_unit] = std::make_unique<Disk>(path, memory, write_permit);
+    disks[disk_unit] = std::make_unique<Disk>(path, memory);
 
     if (trace_enabled()) {
         auto const &disk = *disks[disk_unit].get();
@@ -458,16 +458,16 @@ void Machine::boot_disk(const std::string &filename, const std::string &filename
     mode_640k = true;
 
     if (!filename.empty()) {
-        disk_mount(FLOPPY_A, filename, true);
+        disk_mount(FLOPPY_A, filename);
     }
     if (!filename_b.empty()) {
-        disk_mount(FLOPPY_B, filename_b, true);
+        disk_mount(FLOPPY_B, filename_b);
     }
     if (!filename_c.empty()) {
-        disk_mount(DISK_C, filename_c, true);
+        disk_mount(DISK_C, filename_c);
     }
     if (!filename_d.empty()) {
-        disk_mount(DISK_D, filename_d, true);
+        disk_mount(DISK_D, filename_d);
     }
 
     // Set floppy count in equipment word: bits 7-6 = (number of floppies) - 1.

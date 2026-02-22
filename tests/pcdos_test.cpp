@@ -116,3 +116,90 @@ TEST_F(MachineTest, pcdos_v5_02)
 
     EXPECT_EQ(get_line(6), "A>");
 }
+
+//
+// Start PC DOS version 6.30
+//
+TEST_F(MachineTest, pcdos_v6_30)
+{
+    machine.boot_disk(TEST_DIR "/../images/pcdos6.30-1.44m.img");
+    run("");
+    show_screen();
+    EXPECT_EQ(cursor_row(), 15);
+    EXPECT_EQ(cursor_col(), 40);
+    EXPECT_EQ(get_line(1), "PC DOS 6.3 Setup");
+    EXPECT_EQ(get_line(14), "              │ To exit PC DOS 6.3 Setup, press Enter.           │");
+
+    run("\r");
+    EXPECT_EQ(cursor_row(), 0);
+    EXPECT_EQ(cursor_col(), 4);
+    EXPECT_EQ(get_line(0), "A:\\>");
+
+    run("ver\r");
+    EXPECT_EQ(cursor_row(), 6);
+    EXPECT_EQ(cursor_col(), 4);
+    EXPECT_EQ(get_line(0), "A:\\>ver");
+
+    EXPECT_EQ(get_line(2), "PC DOS Version 6.3");
+    EXPECT_EQ(get_line(3), "Revision 0");
+
+    EXPECT_EQ(get_line(6), "A:\\>");
+}
+
+//
+// Start PC DOS version 7.0
+//
+TEST_F(MachineTest, pcdos_v7_0_rev1)
+{
+    machine.boot_disk(TEST_DIR "/../images/pcdos7.0r1-1.44m.img");
+    run("");
+    show_screen();
+    EXPECT_EQ(cursor_row(), 2);
+    EXPECT_EQ(cursor_col(), 39);
+    EXPECT_EQ(get_line(0), "Starting PC DOS...");
+    EXPECT_EQ(get_line(2), "Do you want to install PC DOS 7.0[Y,N]?");
+
+    run("n\r");
+    EXPECT_EQ(cursor_row(), 4);
+    EXPECT_EQ(cursor_col(), 4);
+    EXPECT_EQ(get_line(3), "A:\\>");
+
+    run("ver\r");
+    EXPECT_EQ(cursor_row(), 10);
+    EXPECT_EQ(cursor_col(), 4);
+    EXPECT_EQ(get_line(6), "PC DOS Version 7.0");
+    EXPECT_EQ(get_line(7), "Revision 1");
+
+    EXPECT_EQ(get_line(10), "A:\\>");
+}
+
+//
+// Start PC DOS version 7.1
+//
+TEST_F(MachineTest, pcdos_v7_1)
+{
+    machine.boot_disk(TEST_DIR "/../images/pcdos7.1-1.44m.img");
+    run("");
+    show_screen();
+    EXPECT_EQ(cursor_row(), 11);
+    EXPECT_EQ(cursor_col(), 4);
+    EXPECT_EQ(get_line(0), "Starting PC DOS...");
+
+    EXPECT_EQ(get_line(3), "HIMEM: DOS XMS Driver, Version 3.15 - 05/30/94");
+    EXPECT_EQ(get_line(4), "Extended Memory Specification (XMS) Version 3.0");
+    EXPECT_EQ(get_line(5), "Copyright (C) IBM Corp. 1988, 1994");
+
+    EXPECT_EQ(get_line(7), "ERROR: HIMEM.SYS requires an 80x86-based machine.");
+    EXPECT_EQ(get_line(8), "       XMS Driver not installed.");
+
+    EXPECT_EQ(get_line(10), "HMA not available: Loading DOS low");
+    EXPECT_EQ(get_line(11), "A:\\>");
+
+    run("ver\r");
+    EXPECT_EQ(cursor_row(), 17);
+    EXPECT_EQ(cursor_col(), 4);
+    EXPECT_EQ(get_line(13), "PC DOS Version 7.1");
+    EXPECT_EQ(get_line(14), "Revision 0");
+
+    EXPECT_EQ(get_line(17), "A:\\>");
+}
