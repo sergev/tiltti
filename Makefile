@@ -118,12 +118,9 @@ pcdos6: $(PROG)
 	$(PROG) images/pcdos6.30-1.44m.img -c images/c.img --boot=a
 
 pcdos7: $(PROG)
-	$(PROG) images/pcdos7.0-1.44m.img -c images/c.img --boot=a
+	$(PROG) images/pcdos7.0r1-1.44m.img -c images/c.img --boot=a
 
-pcdos7a: $(PROG)
-	$(PROG) images/pcdos7.00r1-1.44m.img -c images/c.img --boot=a
-
-pcdos7b: $(PROG)
+pcdos71: $(PROG)
 	$(PROG) images/pcdos7.1-1.44m.img -c images/c.img --boot=a
 
 #
