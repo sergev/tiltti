@@ -167,7 +167,7 @@ void Machine::set_video_mode(unsigned mode)
     bda.video_mode      = (mode < 0x100) ? static_cast<uint8_t>(mode) : 0xff;
     bda.video_cols      = cols;
     bda.video_rows      = rows;
-    bda.video_pagesize  = pagesize;
+    bda.video_pagesize  = (pagesize + 2047) / 2048 * 2048;
     bda.video_pagestart = 0x0000;
     bda.video_page      = 0x00;
     bda.cursor_type     = is_text ? 0x0607 : 0x0000;
@@ -900,8 +900,8 @@ void Machine::int10_video_bios_functionality()
     std::memcpy(memory.get_ptr(addr + 4), bda49, 30);
 
     // BDA 0x84–0x86 (3 bytes)
-    const Byte *bda84 = memory.get_ptr(0x484);
-    std::memcpy(memory.get_ptr(addr + 34), bda84, 3);
+    memory.store8(addr + 34, bda.video_rows + 1);
+    memory.store16(addr + 35, bda.char_height);
 
     memory.store8(addr + 37, bda.dcc_index);
     memory.store16(addr + 39, 16); // colors

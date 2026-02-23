@@ -373,4 +373,12 @@ enum {
     KF0_CAPSLOCK = 0x40,
 };
 
+//
+// BDA kbd_flag1 bits (extended keyboard: right modifiers).
+//
+enum {
+    KF1_RCTRL = 0x04,  // Right Control
+    KF1_RALT  = 0x08,  // Right Alt
+};
+
 #endif // TILTTI_I86_ARCH_H

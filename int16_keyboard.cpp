@@ -182,9 +182,17 @@ void Machine::int16_check_mf2_keyboard_status()
     throw std::runtime_error("Unimplemented: Check MF-II keyboard status");
 }
 
+//
+// AH=12h — Get extended keyboard status.
+//
+// Return the full 16-bit keyboard status: AL = kbd_flag0 (shift/lock),
+// AH = RCTRL/RALT from kbd_flag1 (bits 2–3).
+//
 void Machine::int16_get_extended_keyboard_status()
 {
-    throw std::runtime_error("Unimplemented: Get extended keyboard status");
+    uint16_t ax = (bda.kbd_flag0 & 0xff) |
+                  ((bda.kbd_flag1 & (KF1_RCTRL | KF1_RALT)) << 8);
+    cpu.set_ax(ax);
 }
 
 void Machine::int16_keyboard_capability_check()

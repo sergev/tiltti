@@ -324,7 +324,7 @@ public:
     static void int16_get_keyboard_id();
     static void int16_read_mf2_keyboard_input();
     static void int16_check_mf2_keyboard_status();
-    static void int16_get_extended_keyboard_status();
+    void int16_get_extended_keyboard_status();
     static void int16_keyboard_capability_check();
     void int16_keyboard_capability_dos_keyb();
     static void int16_122key_capability_check();

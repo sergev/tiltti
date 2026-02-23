@@ -15,7 +15,7 @@ TEST_F(MachineTest, SetVideoModeClearsScreen)
     EXPECT_EQ(machine.bda.video_mode, 3);
     EXPECT_EQ(machine.bda.video_cols, 80);
     EXPECT_EQ(machine.bda.video_rows, 24);
-    EXPECT_EQ(machine.bda.video_pagesize, 80 * 25 * 2);
+    EXPECT_EQ(machine.bda.video_pagesize, 4096); // rounded up to 2048-byte boundary
     EXPECT_EQ(machine.bda.cursor_type, 0x0607);
     EXPECT_EQ(machine.bda.video_page, 0);
     for (int i = 0; i < 8; i++)
@@ -51,7 +51,7 @@ TEST_F(MachineTest, SelectDisplayPage)
     machine.int10_select_display_page();
 
     EXPECT_EQ(machine.bda.video_page, 1);
-    EXPECT_EQ(machine.bda.video_pagestart, 80 * 25 * 2);
+    EXPECT_EQ(machine.bda.video_pagestart, 4096); // pagesize * page
 
     cpu.set_ah(0x0f);
     machine.int10_get_current_video_mode();
@@ -191,9 +191,10 @@ TEST_F(MachineTest, VideoBiosFunctionality)
     for (unsigned i = 0; i < 30; i++)
         EXPECT_EQ(memory.load8(buf_linear + 4 + i), memory.load8(0x449 + i))
             << "bda_0x49[" << i << "]";
-    for (unsigned i = 0; i < 3; i++)
-        EXPECT_EQ(memory.load8(buf_linear + 34 + i), memory.load8(0x484 + i))
-            << "bda_0x84[" << i << "]";
+    // Buffer offset 34–36: video_rows+1, char_height (implementation writes these, not BDA copy)
+    EXPECT_EQ(memory.load8(buf_linear + 34), machine.bda.video_rows + 1);
+    EXPECT_EQ(memory.load8(buf_linear + 35), machine.bda.char_height & 0xff);
+    EXPECT_EQ(memory.load8(buf_linear + 36), machine.bda.char_height >> 8);
 }
 
 //
