@@ -22,7 +22,6 @@
 
 #include <cstring>
 
-#include "sdl_scancode_map.h"
 #include "vga_font_9x16.h"
 
 namespace {
@@ -58,6 +57,7 @@ Video_Adapter::Video_Adapter(const char *title, uint8_t *text_buffer)
 {
     font_buf_.fill(0);
     init_font();
+    init_keymap();
     if (!text_buffer) {
         text_buf_.fill(0);
         text_snapshot_.fill(0);
@@ -280,23 +280,33 @@ void Video_Adapter::pump_events(Machine &machine, unsigned timeout)
             if (state[SDL_SCANCODE_CAPSLOCK])
                 f0 |= KF0_CAPSLOCK;
             machine.set_kbd_modifiers(f0);
+            //TODO: also set f1
 
             if (event.type == SDL_KEYDOWN) {
-                uint32_t sdl_sc  = event.key.keysym.scancode;
-                uint8_t bios_sc  = sdl_to_bios_scancode(sdl_sc);
-                uint8_t bios_ext = sdl_to_bios_scancode_extended(sdl_sc);
-                uint8_t ascii    = 0;
+                auto const &key    = keymap[event.key.keysym.scancode];
+                uint16_t keystroke = 0;
 
-                if (mod & KMOD_SHIFT) {
-                    ascii = sdl_scancode_to_ascii_shifted(sdl_sc);
+                if (mod & KMOD_ALT) {
+                    // Alt modifier is active
+                    keystroke = key.alt;
+
+                } else if (mod & KMOD_CTRL) {
+                    // Ctrl modifier is active
+                    keystroke = key.control;
+
+                } else if ((mod & KMOD_SHIFT) ||
+                    (state[SDL_SCANCODE_CAPSLOCK] && is_alphabetic(event.key.keysym.scancode)) ||
+                    (state[SDL_SCANCODE_NUMLOCKCLEAR] && is_keypad(event.key.keysym.scancode))) {
+                    // Shift modifier is active,
+                    // or CapsLock for characters,
+                    // or NumLock for keypad.
+                    keystroke = key.shifted;
+                } else {
+                    keystroke = key.normal;
                 }
-                if (ascii == 0) {
-                    ascii = sdl_scancode_to_ascii_unshifted(sdl_sc);
-                }
-                if (bios_ext) {
-                    machine.push_keystroke((bios_ext << 8) | 0x00);
-                } else if (bios_sc) {
-                    machine.push_keystroke((bios_sc << 8) | ascii);
+
+                if (keystroke != 0) {
+                    machine.push_keystroke(keystroke);
                 }
             }
         }
@@ -315,4 +325,176 @@ void Video_Adapter::pump_events(Machine &machine, unsigned timeout)
         }
     }
     last_refresh = msec;
+}
+
+//
+// Return true for keys A-Z.
+//
+bool Video_Adapter::is_alphabetic(unsigned scancode)
+{
+    switch (scancode) {
+    case SDL_SCANCODE_A:
+    case SDL_SCANCODE_B:
+    case SDL_SCANCODE_C:
+    case SDL_SCANCODE_D:
+    case SDL_SCANCODE_E:
+    case SDL_SCANCODE_F:
+    case SDL_SCANCODE_G:
+    case SDL_SCANCODE_H:
+    case SDL_SCANCODE_I:
+    case SDL_SCANCODE_J:
+    case SDL_SCANCODE_K:
+    case SDL_SCANCODE_L:
+    case SDL_SCANCODE_M:
+    case SDL_SCANCODE_N:
+    case SDL_SCANCODE_O:
+    case SDL_SCANCODE_P:
+    case SDL_SCANCODE_Q:
+    case SDL_SCANCODE_R:
+    case SDL_SCANCODE_S:
+    case SDL_SCANCODE_T:
+    case SDL_SCANCODE_U:
+    case SDL_SCANCODE_V:
+    case SDL_SCANCODE_W:
+    case SDL_SCANCODE_X:
+    case SDL_SCANCODE_Y:
+    case SDL_SCANCODE_Z:
+        return true;
+    default:
+        return false;
+    }
+}
+
+//
+// Return true for keypad keys.
+//
+bool Video_Adapter::is_keypad(unsigned scancode)
+{
+    switch (scancode) {
+    case SDL_SCANCODE_KP_0:
+    case SDL_SCANCODE_KP_1:
+    case SDL_SCANCODE_KP_2:
+    case SDL_SCANCODE_KP_3:
+    case SDL_SCANCODE_KP_4:
+    case SDL_SCANCODE_KP_5:
+    case SDL_SCANCODE_KP_6:
+    case SDL_SCANCODE_KP_7:
+    case SDL_SCANCODE_KP_8:
+    case SDL_SCANCODE_KP_9:
+    case SDL_SCANCODE_KP_DIVIDE:
+    case SDL_SCANCODE_KP_ENTER:
+    case SDL_SCANCODE_KP_MINUS:
+    case SDL_SCANCODE_KP_MULTIPLY:
+    case SDL_SCANCODE_KP_PERIOD:
+    case SDL_SCANCODE_KP_PLUS:
+        return true;
+    default:
+        return false;
+    }
+}
+
+void Video_Adapter::init_keymap()
+{
+    // ---------------- Key --------------- Normal  Shifted Control Alt ----
+    // clang-format off
+    keymap[SDL_SCANCODE_ESCAPE]         = { 0x011B, 0x011B, 0x011B, 0      };
+    keymap[SDL_SCANCODE_F1]             = { 0x3B00, 0x5400, 0x5E00, 0x6800 };
+    keymap[SDL_SCANCODE_F2]             = { 0x3C00, 0x5500, 0x5F00, 0x6900 };
+    keymap[SDL_SCANCODE_F3]             = { 0x3D00, 0x5600, 0x6000, 0x6A00 };
+    keymap[SDL_SCANCODE_F4]             = { 0x3E00, 0x5700, 0x6100, 0x6B00 };
+    keymap[SDL_SCANCODE_F5]             = { 0x3F00, 0x5800, 0x6200, 0x6C00 };
+    keymap[SDL_SCANCODE_F6]             = { 0x4000, 0x5900, 0x6300, 0x6D00 };
+    keymap[SDL_SCANCODE_F7]             = { 0x4100, 0x5A00, 0x6400, 0x6E00 };
+    keymap[SDL_SCANCODE_F8]             = { 0x4200, 0x5B00, 0x6500, 0x6F00 };
+    keymap[SDL_SCANCODE_F9]             = { 0x4300, 0x5C00, 0x6600, 0x7000 };
+    keymap[SDL_SCANCODE_F10]            = { 0x4400, 0x5D00, 0x6700, 0x7100 };
+    keymap[SDL_SCANCODE_F11]            = { 0,      0,      0,      0      };
+    keymap[SDL_SCANCODE_F12]            = { 0,      0,      0,      0      };
+
+    keymap[SDL_SCANCODE_GRAVE]          = { 0x2960, 0x297E, 0,      0      };
+    keymap[SDL_SCANCODE_1]              = { 0x0231, 0x0221, 0,      0x7800 };
+    keymap[SDL_SCANCODE_2]              = { 0x0332, 0x0340, 0x0300, 0x7900 };
+    keymap[SDL_SCANCODE_3]              = { 0x0433, 0x0423, 0,      0x7A00 };
+    keymap[SDL_SCANCODE_4]              = { 0x0534, 0x0524, 0,      0x7B00 };
+    keymap[SDL_SCANCODE_5]              = { 0x0635, 0x0625, 0,      0x7C00 };
+    keymap[SDL_SCANCODE_6]              = { 0x0736, 0x075E, 0x071E, 0x7D00 };
+    keymap[SDL_SCANCODE_7]              = { 0x0837, 0x0826, 0,      0x7E00 };
+    keymap[SDL_SCANCODE_8]              = { 0x0938, 0x092A, 0,      0x7F00 };
+    keymap[SDL_SCANCODE_9]              = { 0x0A39, 0x0A28, 0,      0x8000 };
+    keymap[SDL_SCANCODE_0]              = { 0x0B30, 0x0B29, 0,      0x8100 };
+    keymap[SDL_SCANCODE_MINUS]          = { 0x0C2D, 0x0C5F, 0x0C1F, 0x8200 };
+    keymap[SDL_SCANCODE_EQUALS]         = { 0x0D3D, 0x0D2B, 0,      0x8300 };
+    keymap[SDL_SCANCODE_BACKSPACE]      = { 0x0E08, 0x0E08, 0,      0      };
+
+    keymap[SDL_SCANCODE_TAB]            = { 0x0F09, 0x0F00, 0,      0      };
+    keymap[SDL_SCANCODE_Q]              = { 0x1071, 0x1051, 0x1011, 0x1000 };
+    keymap[SDL_SCANCODE_W]              = { 0x1177, 0x1157, 0x1117, 0x1100 };
+    keymap[SDL_SCANCODE_E]              = { 0x1265, 0x1245, 0x1205, 0x1200 };
+    keymap[SDL_SCANCODE_R]              = { 0x1372, 0x1352, 0x1312, 0x1300 };
+    keymap[SDL_SCANCODE_T]              = { 0x1474, 0x1454, 0x1414, 0x1400 };
+    keymap[SDL_SCANCODE_Y]              = { 0x1579, 0x1559, 0x1519, 0x1500 };
+    keymap[SDL_SCANCODE_U]              = { 0x1675, 0x1655, 0x1615, 0x1600 };
+    keymap[SDL_SCANCODE_I]              = { 0x1769, 0x1749, 0x1709, 0x1700 };
+    keymap[SDL_SCANCODE_O]              = { 0x186F, 0x184F, 0x180F, 0x1800 };
+    keymap[SDL_SCANCODE_P]              = { 0x1970, 0x1950, 0x1910, 0x1900 };
+    keymap[SDL_SCANCODE_LEFTBRACKET]    = { 0x1A5B, 0x1A7B, 0x1A1B, 0      };
+    keymap[SDL_SCANCODE_RIGHTBRACKET]   = { 0x1B5D, 0x1B7D, 0x1B1D, 0      };
+    keymap[SDL_SCANCODE_BACKSLASH]      = { 0x2B5C, 0x2B7C, 0x2B1C, 0      };
+
+    keymap[SDL_SCANCODE_A]              = { 0x1E61, 0x1E41, 0x1E01, 0x1E00 };
+    keymap[SDL_SCANCODE_S]              = { 0x1F73, 0x1F53, 0x1F13, 0x1F00 };
+    keymap[SDL_SCANCODE_D]              = { 0x2064, 0x2044, 0x2004, 0x2000 };
+    keymap[SDL_SCANCODE_F]              = { 0x2166, 0x2146, 0x2106, 0x2100 };
+    keymap[SDL_SCANCODE_G]              = { 0x2267, 0x2247, 0x2207, 0x2200 };
+    keymap[SDL_SCANCODE_H]              = { 0x2368, 0x2348, 0x2308, 0x2300 };
+    keymap[SDL_SCANCODE_J]              = { 0x246A, 0x244A, 0x240A, 0x2400 };
+    keymap[SDL_SCANCODE_K]              = { 0x256B, 0x254B, 0x250B, 0x2500 };
+    keymap[SDL_SCANCODE_L]              = { 0x266C, 0x264C, 0x260C, 0x2600 };
+    keymap[SDL_SCANCODE_SEMICOLON]      = { 0x273B, 0x273A, 0,      0      };
+    keymap[SDL_SCANCODE_APOSTROPHE]     = { 0x2827, 0x2822, 0,      0      };
+    keymap[SDL_SCANCODE_RETURN]         = { 0x1C0D, 0x1C0D, 0x1C0A, 0      };
+
+    keymap[SDL_SCANCODE_NONUSBACKSLASH] = { 0x2B5C, 0x2B7C, 0x2B1C, 0      };
+    keymap[SDL_SCANCODE_Z]              = { 0x2C7A, 0x2C5A, 0x2C1A, 0x2C00 };
+    keymap[SDL_SCANCODE_X]              = { 0x2D78, 0x2D58, 0x2D18, 0x2D00 };
+    keymap[SDL_SCANCODE_C]              = { 0x2E63, 0x2E43, 0x2E03, 0x2E00 };
+    keymap[SDL_SCANCODE_V]              = { 0x2F76, 0x2F56, 0x2F16, 0x2F00 };
+    keymap[SDL_SCANCODE_B]              = { 0x3062, 0x3042, 0x3002, 0x3000 };
+    keymap[SDL_SCANCODE_N]              = { 0x316E, 0x314E, 0x310E, 0x3100 };
+    keymap[SDL_SCANCODE_M]              = { 0x326D, 0x324D, 0x320D, 0x3200 };
+    keymap[SDL_SCANCODE_COMMA]          = { 0x332C, 0x333C, 0,      0      };
+    keymap[SDL_SCANCODE_PERIOD]         = { 0x342E, 0x343E, 0,      0      };
+    keymap[SDL_SCANCODE_SLASH]          = { 0x352F, 0x353F, 0,      0      };
+
+    keymap[SDL_SCANCODE_SPACE]          = { 0x3920, 0x3920, 0x3920, 0x3920 };
+
+    keymap[SDL_SCANCODE_INSERT]         = { 0x5200, 0x5200, 0,      0      };
+    keymap[SDL_SCANCODE_HOME]           = { 0x4700, 0x4700, 0x7700, 0      };
+    keymap[SDL_SCANCODE_PAGEUP]         = { 0x4900, 0x4900, 0x8400, 0      };
+    keymap[SDL_SCANCODE_DELETE]         = { 0x5300, 0x5300, 0,      0      };
+    keymap[SDL_SCANCODE_END]            = { 0x4F00, 0x4F00, 0x7500, 0      };
+    keymap[SDL_SCANCODE_PAGEDOWN]       = { 0x5100, 0x5100, 0x7600, 0      };
+
+    keymap[SDL_SCANCODE_UP]             = { 0x4800, 0x4800, 0,      0      };
+    keymap[SDL_SCANCODE_LEFT]           = { 0x4B00, 0x4B00, 0x7300, 0      };
+    keymap[SDL_SCANCODE_DOWN]           = { 0x5000, 0x5000, 0,      0      };
+    keymap[SDL_SCANCODE_RIGHT]          = { 0x4D00, 0x4D00, 0x7400, 0      };
+
+    keymap[SDL_SCANCODE_KP_DIVIDE]      = { 0x352F, 0x352F, 0,      0      };
+    keymap[SDL_SCANCODE_KP_MULTIPLY]    = { 0x372A, 0x372A, 0,      0      };
+    keymap[SDL_SCANCODE_KP_MINUS]       = { 0x4A2D, 0x4A2D, 0,      0      };
+    keymap[SDL_SCANCODE_KP_7]           = { 0x4700, 0x4737, 0x7700, 0      };
+    keymap[SDL_SCANCODE_KP_8]           = { 0x4800, 0x4838, 0,      0      };
+    keymap[SDL_SCANCODE_KP_9]           = { 0x4900, 0x4939, 0x8400, 0      };
+    keymap[SDL_SCANCODE_KP_PLUS]        = { 0x4E2B, 0x4E2B, 0,      0      };
+    keymap[SDL_SCANCODE_KP_4]           = { 0x4B00, 0x4B34, 0x7300, 0      };
+    keymap[SDL_SCANCODE_KP_5]           = { 0,      0x4C35, 0,      0      };
+    keymap[SDL_SCANCODE_KP_6]           = { 0x4D00, 0x4D36, 0x7400, 0      };
+    keymap[SDL_SCANCODE_KP_1]           = { 0x4F00, 0x4F31, 0x7500, 0      };
+    keymap[SDL_SCANCODE_KP_2]           = { 0x5000, 0x5032, 0,      0      };
+    keymap[SDL_SCANCODE_KP_3]           = { 0x5100, 0x5133, 0x7600, 0      };
+    keymap[SDL_SCANCODE_KP_ENTER]       = { 0x1C0D, 0x1C0D, 0x1C0A, 0      };
+    keymap[SDL_SCANCODE_KP_0]           = { 0x5200, 0x5230, 0,      0      };
+    keymap[SDL_SCANCODE_KP_PERIOD]      = { 0x5300, 0x532E, 0,      0      };
+    // clang-format on
 }

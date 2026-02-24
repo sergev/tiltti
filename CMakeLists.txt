@@ -52,7 +52,6 @@ add_library(simulator STATIC
     int17_printer.cpp
     int1a_rtc_timer.cpp
     video_adapter.cpp
-    sdl_scancode_map.cpp
 )
 target_link_libraries(simulator PUBLIC SDL2::SDL2)
 

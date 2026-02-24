@@ -94,9 +94,22 @@ private:
     unsigned cursor_row_ = 0;
     bool cursor_visible_ = false;
 
+    // SDL scancode (0..511) -> BIOS scancode set 1 and US ASCII.
+    static const unsigned MAP_SIZE = 512;
+    struct Scancode_Map {
+        uint16_t normal;
+        uint16_t shifted;
+        uint16_t control;
+        uint16_t alt;
+    };
+    Scancode_Map keymap[MAP_SIZE]{};
+
     void init_font();
+    void init_keymap();
     void draw_cell(const uint8_t *text_buf, unsigned col, unsigned row, bool draw_cursor);
     void present();
+    static bool is_alphabetic(unsigned scancode);
+    static bool is_keypad(unsigned scancode);
 };
 
 #endif /* VIDEO_ADAPTER_H */
