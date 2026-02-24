@@ -171,14 +171,36 @@ void Machine::int16_get_keyboard_id()
     throw std::runtime_error("Unimplemented: Get keyboard ID");
 }
 
+//
+// AH=10h — Read MF-II (enhanced) keyboard input.
+//
+// Same as AH=00h but for enhanced keyboard: same buffer, same keycode format.
+// Wait until a key is available, return it in AX and remove it from the buffer.
+//
 void Machine::int16_read_mf2_keyboard_input()
 {
-    throw std::runtime_error("Unimplemented: Read MF-II keyboard input");
+    while (!has_keystroke()) {
+        event_callback(10);
+    }
+    uint16_t ax = pop_keystroke();
+    cpu.set_ax(ax);
 }
 
+//
+// AH=11h — Check MF-II keyboard status.
+//
+// Same as AH=01h for enhanced keyboard: check buffer without removing.
+// ZF = 1 if empty, ZF = 0 if key available (AX = keycode).
+//
 void Machine::int16_check_mf2_keyboard_status()
 {
-    throw std::runtime_error("Unimplemented: Check MF-II keyboard status");
+    event_callback(0);
+    if (has_keystroke()) {
+        cpu.set_zf(0);
+        cpu.set_ax(peek_keystroke());
+    } else {
+        cpu.set_zf(1);
+    }
 }
 
 //

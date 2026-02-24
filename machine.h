@@ -323,8 +323,8 @@ public:
     static void int16_store_keystroke_in_buffer();
     void int16_get_keyboard_functionality();
     static void int16_get_keyboard_id();
-    static void int16_read_mf2_keyboard_input();
-    static void int16_check_mf2_keyboard_status();
+    void int16_read_mf2_keyboard_input();
+    void int16_check_mf2_keyboard_status();
     void int16_get_extended_keyboard_status();
     static void int16_keyboard_capability_check();
     void int16_keyboard_capability_dos_keyb();
