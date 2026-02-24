@@ -414,8 +414,8 @@ void Video_Adapter::init_keymap()
     keymap[SDL_SCANCODE_F8]             = { 0x4200, 0x5B00, 0x6500, 0x6F00 };
     keymap[SDL_SCANCODE_F9]             = { 0x4300, 0x5C00, 0x6600, 0x7000 };
     keymap[SDL_SCANCODE_F10]            = { 0x4400, 0x5D00, 0x6700, 0x7100 };
-    keymap[SDL_SCANCODE_F11]            = { 0,      0,      0,      0      };
-    keymap[SDL_SCANCODE_F12]            = { 0,      0,      0,      0      };
+    keymap[SDL_SCANCODE_F11]            = { 0x8500, 0x8700, 0x8900, 0x8B00 };
+    keymap[SDL_SCANCODE_F12]            = { 0x8600, 0x8800, 0x8A00, 0x8C00 };
 
     keymap[SDL_SCANCODE_GRAVE]          = { 0x2960, 0x297E, 0,      0      };
     keymap[SDL_SCANCODE_1]              = { 0x0231, 0x0221, 0,      0x7800 };
