@@ -110,6 +110,13 @@ static void do_int10_1b00(void)
 
     out("  AL = 0x1B (supported)\n");
 
+    out("  Raw Video Save Area (64 bytes):\n");
+    for (i = 0; i < 64; i += 8) {
+        out("  +%02Xh: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+            i, buf[i], buf[i + 1], buf[i + 2], buf[i + 3],
+            buf[i + 4], buf[i + 5], buf[i + 6], buf[i + 7]);
+    }
+
     static_off = (unsigned long)buf[0] | ((unsigned long)buf[1] << 8);
     static_seg = (unsigned long)buf[2] | ((unsigned long)buf[3] << 8);
     out("  pfrFnality    = %04lX:%04lX (VgaStaticFnalityRec)\n", static_seg, static_off);
