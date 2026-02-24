@@ -1378,8 +1378,8 @@ void Processor::exe_one()
         core.ip = (core.ip + dst) & 0xffff;
         break;
     case 0xea:
-        dst     = fetch(W);
-        src     = fetch(W);
+        dst = fetch(W);
+        src = fetch(W);
         if (machine.process_bios_call(src, dst)) {
             // Intercept syscalls.
             core.ip = pop();

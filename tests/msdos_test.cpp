@@ -74,7 +74,7 @@ TEST_F(MachineTest, msdos_v6_22)
     machine.boot_disk(TEST_DIR "/../images/msdos6.22-1.44m.img");
 
     run("@5");
-    //show_screen();
+    // show_screen();
     EXPECT_EQ(cursor_row(), 8);
     EXPECT_EQ(cursor_col(), 4);
     EXPECT_EQ(get_line(0), "Starting MS-DOS...");

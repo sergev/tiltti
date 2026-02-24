@@ -76,6 +76,6 @@ TEST_F(MachineTest, Int15GetEbdasegment)
     cpu.set_ah(0xc1);
     machine.int15_get_ebda_segment();
 
-    EXPECT_EQ(cpu.get_es(), 0x9fc0u);      // EBDA at 0x9fc00 -> segment 0x9fc0
-    EXPECT_EQ(cpu.get_flags() & 1, 0u);    // CF = 0
+    EXPECT_EQ(cpu.get_es(), 0x9fc0u);   // EBDA at 0x9fc00 -> segment 0x9fc0
+    EXPECT_EQ(cpu.get_flags() & 1, 0u); // CF = 0
 }

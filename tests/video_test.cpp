@@ -1,6 +1,6 @@
-#include "fixture.h"
-
 #include <array>
+
+#include "fixture.h"
 
 //
 // INT 10h AH=00h: Set video mode 3, clear screen, verify BDA and video memory.

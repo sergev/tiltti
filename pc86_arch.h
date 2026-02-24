@@ -113,10 +113,10 @@ struct Bios_Data_Area {
     uint16_t ebda_seg;
     // 40:10
     uint16_t equipment_list_flags;
-    uint8_t reserved_12h;       // 40:12 Reserved for manufacturing test
+    uint8_t reserved_12h; // 40:12 Reserved for manufacturing test
     uint16_t mem_size_kb;
-    uint8_t reserved_15h[2];     // 40:15 Reserved for manufacturing test (2 bytes)
-    uint16_t kbd_flag0;         // 40:17 Keyboard flags 1 (low byte), 40:18 Keyboard flags 2 (high byte)
+    uint8_t reserved_15h[2]; // 40:15 Reserved for manufacturing test (2 bytes)
+    uint16_t kbd_flag0; // 40:17 Keyboard flags 1 (low byte), 40:18 Keyboard flags 2 (high byte)
     uint8_t alt_keypad;
     uint16_t kbd_buf_head;
     uint16_t kbd_buf_tail;
@@ -127,7 +127,7 @@ struct Bios_Data_Area {
     // 40:40
     uint8_t floppy_motor_counter;
     uint8_t floppy_last_status;
-    uint8_t floppy_controller_status[7];  // 40:42 Floppy drive controller status
+    uint8_t floppy_controller_status[7]; // 40:42 Floppy drive controller status
     uint8_t video_mode;
     uint16_t video_cols;
     uint16_t video_pagesize;
@@ -140,8 +140,8 @@ struct Bios_Data_Area {
     uint16_t crtc_address;
     uint8_t video_msr;
     uint8_t video_pal;
-    Seg_Off block_move_ss_sp;   // 40:67 Save area for SS:SP during block move
-    uint8_t reserved_post_6b;  // 40:6B Reserved for POST
+    Seg_Off block_move_ss_sp; // 40:67 Save area for SS:SP during block move
+    uint8_t reserved_post_6b; // 40:6B Reserved for POST
     uint32_t timer_counter;
     // 40:70
     uint8_t timer_rollover;
@@ -151,8 +151,8 @@ struct Bios_Data_Area {
     uint8_t hdcount;
     uint8_t disk_control_byte;
     uint8_t port_disk;
-    uint8_t lpt_timeout[3];    // 40:78 LPT1, 79 LPT2, 7A LPT3 timeout
-    uint8_t int4b_flags;       // 40:7B INT 4Bh flags (VDS and SCSI)
+    uint8_t lpt_timeout[3]; // 40:78 LPT1, 79 LPT2, 7A LPT3 timeout
+    uint8_t int4b_flags;    // 40:7B INT 4Bh flags (VDS and SCSI)
     uint8_t com_timeout[4];
     // 40:80
     uint16_t kbd_buf_start_offset;
@@ -169,9 +169,9 @@ struct Bios_Data_Area {
     uint8_t disk_interrupt_flag;
     uint8_t floppy_harddisk_info;
     // 40:90
-    uint8_t floppy_media_state[2];  // 40:90 drive 0, 91 drive 1
-    uint8_t floppy_workarea[2];     // 40:92 drive 0, 93 drive 1 workarea
-    uint8_t floppy_track[2];        // 40:94 drive 0, 95 drive 1 current cylinder
+    uint8_t floppy_media_state[2]; // 40:90 drive 0, 91 drive 1
+    uint8_t floppy_workarea[2];    // 40:92 drive 0, 93 drive 1 workarea
+    uint8_t floppy_track[2];       // 40:94 drive 0, 95 drive 1 current cylinder
     uint8_t kbd_flag1;
     uint8_t kbd_led;
     Seg_Off user_wait_complete_flag;
@@ -180,11 +180,11 @@ struct Bios_Data_Area {
     uint8_t rtc_wait_flag;
     uint8_t other_a1[7];
     Seg_Off video_savetable;
-    uint8_t reserved_ac[8];    // 40:AC Reserved (8 bytes through 40:B3)
+    uint8_t reserved_ac[8]; // 40:AC Reserved (8 bytes through 40:B3)
     // 40:B4
-    uint8_t kbd_nmi_save[24];  // 40:B4 Keyboard NMI pre-processing save (PC Convertible)
-    uint8_t reserved_cc[2];    // 40:CC Reserved
-    uint16_t days_since_1980;  // 40:CE Count of days since 1-1-1980 (later XT/PS/2)
+    uint8_t kbd_nmi_save[24]; // 40:B4 Keyboard NMI pre-processing save (PC Convertible)
+    uint8_t reserved_cc[2];   // 40:CC Reserved
+    uint16_t days_since_1980; // 40:CE Count of days since 1-1-1980 (later XT/PS/2)
     uint8_t reserved_d0[48];  // 40:D0 Reserved
 } __attribute__((packed));
 
@@ -199,22 +199,22 @@ static_assert(sizeof(Bios_Data_Area) == 0x100, "BDA must be 256 bytes");
 
 // Fixed Entry Points
 enum {
-    BIOS_ENTRY_POST          = 0xe05b, // POST entry point; jumped to from reset vector
-    BIOS_ENTRY_02            = 0xe2c3, // INT 02 NMI handler
-    BIOS_ENTRY_19_OFFICIAL   = 0xe6f2, // INT 19 bootstrap
-    BIOS_ENTRY_14            = 0xe739, // INT 14 serial services
-    BIOS_ENTRY_16            = 0xe82e, // INT 16 keyboard services
-    BIOS_ENTRY_09            = 0xe987, // IRQ1 keyboard
-    BIOS_ENTRY_40            = 0xec59, // INT 13h diskette / INT 40 floppy
-    BIOS_ENTRY_0E            = 0xef57, // IRQ6 floppy
-    BIOS_ENTRY_17            = 0xefd2, // INT 17 printer services
-    BIOS_ENTRY_10_0X0F       = 0xf045, // INT 10h functions 00h-0Fh jump table
-    BIOS_ENTRY_10            = 0xf065, // INT 10 video services
-    BIOS_ENTRY_12            = 0xf841, // INT 12 memory size
-    BIOS_ENTRY_11            = 0xf84d, // INT 11 equipment list
-    BIOS_ENTRY_15_OFFICIAL   = 0xf859, // INT 15 system services
-    BIOS_ENTRY_1A_OFFICIAL   = 0xfe6e, // INT 1A time of day services
-    BIOS_ENTRY_08            = 0xfea5, // IRQ0 timer tick
+    BIOS_ENTRY_POST        = 0xe05b, // POST entry point; jumped to from reset vector
+    BIOS_ENTRY_02          = 0xe2c3, // INT 02 NMI handler
+    BIOS_ENTRY_19_OFFICIAL = 0xe6f2, // INT 19 bootstrap
+    BIOS_ENTRY_14          = 0xe739, // INT 14 serial services
+    BIOS_ENTRY_16          = 0xe82e, // INT 16 keyboard services
+    BIOS_ENTRY_09          = 0xe987, // IRQ1 keyboard
+    BIOS_ENTRY_40          = 0xec59, // INT 13h diskette / INT 40 floppy
+    BIOS_ENTRY_0E          = 0xef57, // IRQ6 floppy
+    BIOS_ENTRY_17          = 0xefd2, // INT 17 printer services
+    BIOS_ENTRY_10_0X0F     = 0xf045, // INT 10h functions 00h-0Fh jump table
+    BIOS_ENTRY_10          = 0xf065, // INT 10 video services
+    BIOS_ENTRY_12          = 0xf841, // INT 12 memory size
+    BIOS_ENTRY_11          = 0xf84d, // INT 11 equipment list
+    BIOS_ENTRY_15_OFFICIAL = 0xf859, // INT 15 system services
+    BIOS_ENTRY_1A_OFFICIAL = 0xfe6e, // INT 1A time of day services
+    BIOS_ENTRY_08          = 0xfea5, // IRQ0 timer tick
     // Dummy stubs (1 byte IRET each); 0xFF40-0xFF4D reserved (machine ID + BIOS version)
     BIOS_ENTRY_INT_00        = 0xff38, // Dummy stub for INT 00
     BIOS_ENTRY_INT_01        = 0xff39, // Dummy stub for INT 01
@@ -238,11 +238,12 @@ enum {
     BIOS_VIDEO_PARAMS         = 0xf0a4,  // 88 bytes - Video parameter tables (INT 1D pointer)
     BIOS_VIDEO_FUNC_STATIC    = 0xf0100, // 16 bytes - INT 10h AH=1Bh static functionality table
     BIOS_VGA_FONT8            = 0xfa6e,  // 1024 bytes - 8x8 VGA font for lower 128 characters
-    BIOS_INIT_VECTORS   = 0xfef3,  // Initial interrupt vector offsets (INT 08h-1Fh) loaded by POST
-    BIOS_INIT_VECTORS_70 = 0xff23, // 16 bytes - Initial interrupt vector offsets (INT 70h-77h) (AT+)
-    BIOS_DATE         = 0xfff5, // 8 bytes - BIOS build date string "MM/DD/YY"
-    BIOS_MODEL_ID     = 0xfffe, // 1 byte - Model ID (e.g. 0xFC for AT)
-    BIOS_CHECKSUM     = 0xffff, // 1 byte - ROM checksum (sum of all bytes in ROM = 0)
+    BIOS_INIT_VECTORS = 0xfef3, // Initial interrupt vector offsets (INT 08h-1Fh) loaded by POST
+    BIOS_INIT_VECTORS_70 =
+        0xff23,             // 16 bytes - Initial interrupt vector offsets (INT 70h-77h) (AT+)
+    BIOS_DATE     = 0xfff5, // 8 bytes - BIOS build date string "MM/DD/YY"
+    BIOS_MODEL_ID = 0xfffe, // 1 byte - Model ID (e.g. 0xFC for AT)
+    BIOS_CHECKSUM = 0xffff, // 1 byte - ROM checksum (sum of all bytes in ROM = 0)
 };
 
 //

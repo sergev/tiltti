@@ -2,9 +2,9 @@
 // Unit test: verify Bios_Data_Area field offsets match the BDA specification
 // (legacy/bios_data_area.txt, segment 40h). Uses offsetof() for each field.
 //
-#include <cstddef>
-
 #include <gtest/gtest.h>
+
+#include <cstddef>
 
 #include "pc86_arch.h"
 
@@ -24,7 +24,8 @@ TEST(BdaOffsetsTest, OffsetsMatchSpecification)
     EXPECT_EQ(offsetof(Bios_Data_Area, reserved_12h), 0x12u);
     EXPECT_EQ(offsetof(Bios_Data_Area, mem_size_kb), 0x13u);
     EXPECT_EQ(offsetof(Bios_Data_Area, reserved_15h), 0x15u);
-    EXPECT_EQ(offsetof(Bios_Data_Area, kbd_flag0), 0x17u);  // 40:17 Keyboard flags 1, 40:18 Keyboard flags 2
+    EXPECT_EQ(offsetof(Bios_Data_Area, kbd_flag0),
+              0x17u); // 40:17 Keyboard flags 1, 40:18 Keyboard flags 2
     EXPECT_EQ(offsetof(Bios_Data_Area, alt_keypad), 0x19u);
 
     // 40:1A - Keyboard buffer pointers and buffer

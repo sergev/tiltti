@@ -57,12 +57,14 @@ Machine::Machine(Memory &m)
     setup_bios_config_table();
     bios[BIOS_MODEL_ID] = 0xFC;
 
-    // Dummy IRET stubs at 0xFF38-0xFF3F and generic at 0xFF53. Leave 0xFF40-0xFF4D clear (reserved).
+    // Dummy IRET stubs at 0xFF38-0xFF3F and generic at 0xFF53. Leave 0xFF40-0xFF4D clear
+    // (reserved).
     for (unsigned o = BIOS_ENTRY_INT_00; o <= BIOS_ENTRY_INT_18; o++)
         bios[o] = 0xCF;
     bios[BIOS_ENTRY_IRET_OFFICIAL] = 0xCF;
 
-    // Initialize IVT: real fixed addresses for BIOS services, unique stubs for 00-07 and 18, rest to 0xFF53
+    // Initialize IVT: real fixed addresses for BIOS services, unique stubs for 00-07 and 18, rest
+    // to 0xFF53
     const Seg_Off null_vec  = { .offset = 0, .seg = 0 };
     const Seg_Off iret_vec  = { .offset = BIOS_ENTRY_IRET_OFFICIAL, .seg = 0xf000 };
     const uint16_t seg_bios = 0xf000;
@@ -220,7 +222,8 @@ uint16_t Machine::pop_keystroke()
 static bool basic_area(unsigned addr)
 {
 #if 1
-    // Allow execution in ROM stub/entry range: 0xFF38-0xFF3F, 0xFF53, 0xFF54 up to reset. 0xFF40-0xFF4D reserved.
+    // Allow execution in ROM stub/entry range: 0xFF38-0xFF3F, 0xFF53, 0xFF54 up to reset.
+    // 0xFF40-0xFF4D reserved.
     if (addr >= BIOS_ENTRY_INT_00 + BIOS_ROM_ADDR && addr <= BIOS_ENTRY_INT_18 + BIOS_ROM_ADDR)
         return true;
     if (addr == BIOS_ENTRY_IRET_OFFICIAL + BIOS_ROM_ADDR)

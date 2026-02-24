@@ -55,7 +55,8 @@ TEST_F(MachineTest, pcdos_v3_30)
     EXPECT_EQ(get_line(3), "Enter new time:");
 
     EXPECT_EQ(get_line(6), "The IBM Personal Computer DOS");
-    EXPECT_EQ(get_line(7), "Version 3.30 (C)Copyright International Business Machines Corp 1981, 1987");
+    EXPECT_EQ(get_line(7),
+              "Version 3.30 (C)Copyright International Business Machines Corp 1981, 1987");
     EXPECT_EQ(get_line(8), "             (C)Copyright Microsoft Corp 1981, 1986");
 
     EXPECT_EQ(get_line(10), "A>");
@@ -127,13 +128,14 @@ TEST_F(MachineTest, pcdos_v6_30)
     machine.boot_disk(TEST_DIR "/../images/pcdos6.30-1.44m.img");
 
     run("@5");
-    //show_screen();
+    // show_screen();
     EXPECT_EQ(cursor_row(), 9);
     EXPECT_EQ(cursor_col(), 4);
     EXPECT_EQ(get_line(0), "Starting PC DOS...");
     EXPECT_EQ(get_line(2), "PC DOS is bypassing your CONFIG.SYS and AUTOEXEC.BAT files.");
     EXPECT_EQ(get_line(5), "PC DOS Version 6.30");
-    EXPECT_EQ(get_line(6), "             (C)Copyright International Business Machines Corp 1981-1993.");
+    EXPECT_EQ(get_line(6),
+              "             (C)Copyright International Business Machines Corp 1981-1993.");
     EXPECT_EQ(get_line(7), "             (C)Copyright Microsoft Corp 1981-1993.");
     EXPECT_EQ(get_line(9), "A:\\>");
 
@@ -156,13 +158,14 @@ TEST_F(MachineTest, pcdos_v7_0_rev1)
     machine.boot_disk(TEST_DIR "/../images/pcdos7.0r1-1.44m.img");
 
     run("@5");
-    //show_screen();
+    // show_screen();
     EXPECT_EQ(cursor_row(), 8);
     EXPECT_EQ(cursor_col(), 4);
     EXPECT_EQ(get_line(0), "Starting PC DOS...");
     EXPECT_EQ(get_line(2), "PC DOS is bypassing your CONFIG.SYS and AUTOEXEC.BAT files.");
     EXPECT_EQ(get_line(5), "PC DOS Version 7.00");
-    EXPECT_EQ(get_line(6), "             (C)Copyright International Business Machines Corp 1981-1995.");
+    EXPECT_EQ(get_line(6),
+              "             (C)Copyright International Business Machines Corp 1981-1995.");
     EXPECT_EQ(get_line(8), "A:\\>");
 
     run("ver\r");
@@ -182,13 +185,14 @@ TEST_F(MachineTest, pcdos_v7_1)
     machine.boot_disk(TEST_DIR "/../images/pcdos7.1-1.44m.img");
 
     run("@5");
-    //show_screen();
+    // show_screen();
     EXPECT_EQ(cursor_row(), 8);
     EXPECT_EQ(cursor_col(), 4);
     EXPECT_EQ(get_line(0), "Starting PC DOS...");
     EXPECT_EQ(get_line(2), "PC DOS is bypassing your CONFIG.SYS and AUTOEXEC.BAT files.");
     EXPECT_EQ(get_line(5), "PC DOS Version 7.10");
-    EXPECT_EQ(get_line(6), "             (C)Copyright International Business Machines Corp 1981-2002.");
+    EXPECT_EQ(get_line(6),
+              "             (C)Copyright International Business Machines Corp 1981-2002.");
     EXPECT_EQ(get_line(8), "A:\\>");
 
     run("ver\r");
