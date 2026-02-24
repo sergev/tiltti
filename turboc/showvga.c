@@ -2,8 +2,7 @@
  * showvga.c -- Standalone Turbo C CLI: show current VGA mode and BDA video fields.
  * Uses INT 10h AH=0Fh, INT 10h AX=1B00h, and direct BDA read at 40h.
  * Output goes to both stdout and vga.out.
- * VgaDynamicStateRec and VgaStaticFnalityRec per vga_dynamic_state_table.html
- * and vga_static_functionality_table.html.
+ * INT 10h AH=1Bh returns the 64-byte Video Save Area (INT 10h AH=1Bh layout).
  */
 #include <stdio.h>
 #include <stdarg.h>
@@ -64,7 +63,7 @@ static void do_int10_0f(void)
     out("  BH (page)    = %u\n", outregs.h.bh);
 }
 
-/* VgaDynamicStateRec (64 bytes) per vga_dynamic_state_table.html */
+/* INT 10h AH=1Bh return buffer (64 bytes, Video Save Area layout). */
 static void do_int10_1b00(void)
 {
     static unsigned char buf[64];
@@ -91,7 +90,7 @@ static void do_int10_1b00(void)
         NULL, NULL
     };
 
-    out("\n--- INT 10h AX=1B00h (VgaDynamicStateRec) ---\n");
+    out("\n--- INT 10h AX=1B00h (Video Save Area) ---\n");
 
     in.x.ax = 0x1B00;
     in.x.bx = 0;
@@ -110,45 +109,49 @@ static void do_int10_1b00(void)
 
     out("  AL = 0x1B (supported)\n");
 
+    out("  Raw Video Save Area (64 bytes):\n");
+    for (i = 0; i < 64; i += 8) {
+        out("  +%02Xh: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+            i, buf[i], buf[i + 1], buf[i + 2], buf[i + 3],
+            buf[i + 4], buf[i + 5], buf[i + 6], buf[i + 7]);
+    }
+
     static_off = (unsigned long)buf[0] | ((unsigned long)buf[1] << 8);
     static_seg = (unsigned long)buf[2] | ((unsigned long)buf[3] << 8);
-    out("  pfrFnality    = %04lX:%04lX (VgaStaticFnalityRec)\n", static_seg, static_off);
+    out("  pfrFnality    = %04lX:%04lX (static functionality table)\n", static_seg, static_off);
 
-    out("  bCurMode      = 0x%02X\n", buf[0x04]);
-    out("  bCrtClms      = %u\n", buf[0x05] | (buf[0x06] << 8));
-    out("  wCrtBufLen    = %u bytes\n", buf[0x07] | (buf[0x08] << 8));
-    out("  pCrtPgStart   = 0x%04X\n", buf[0x09] | (buf[0x0A] << 8));
+    out("  bCurDcc       = 0x%02X (active DCC)\n", buf[0x04]);
+    out("  bCurMode      = 0x%02X\n", buf[0x05]);
+    out("  bCrtClms      = %u\n", buf[0x06] | (buf[0x07] << 8));
+    out("  wCrtBufLen    = %u bytes\n", buf[0x08] | (buf[0x09] << 8));
+    out("  pCrtPgStart   = 0x%04X\n", buf[0x0A] | (buf[0x0B] << 8));
 
     out("  awCrsrPos     =");
     for (i = 0; i < 8; i++) {
-        unsigned int pos = buf[0x0B + i * 2] | (buf[0x0C + i * 2] << 8);
+        unsigned int pos = buf[0x0C + i * 2] | (buf[0x0D + i * 2] << 8);
         out(" page%u:(row=%u,col=%u)", i, pos >> 8, pos & 0xFF);
     }
     out("\n");
 
-    out("  wCrsrType     = 0x%04X (start/end scan)\n", buf[0x1B] | (buf[0x1C] << 8));
-    out("  bCurPg        = %u\n", buf[0x1D]);
-    out("  wCrtcPort     = 0x%04X (3B4=mono, 3D4=color)\n", buf[0x1E] | (buf[0x1F] << 8));
-    out("  bModeSetReg   = 0x%02X (port 3?8)\n", buf[0x20]);
-    out("  bClrSetReg    = 0x%02X (port 3?9)\n", buf[0x21]);
-    out("  bCrtRows      = %u (character rows on screen)\n", buf[0x22]);
-    out("  bCrtPoints    = %u (scan lines per character cell)\n", buf[0x23] | (buf[0x24] << 8));
-    out("  bCurDcc       = 0x%02X (active DCC)\n", buf[0x25]);
-    out("  bAltDcc       = 0x%02X (alternate DCC, 00 if only one video system)\n", buf[0x26]);
-    out("  wMaxClrs      = %u (0000=monochrome)\n", buf[0x27] | (buf[0x28] << 8));
-    out("  bMaxPgs       = %u\n", buf[0x29]);
-    out("  bScanLnsCode  = %u (0=200, 1=350, 2=400, 3=480)\n", buf[0x2A]);
-    out("  bFont1        = %u (primary font block)\n", buf[0x2B]);
-    out("  bFont2        = %u (secondary font block)\n", buf[0x2C]);
+    out("  wCrsrType     = 0x%04X (start/end scan)\n", buf[0x1C] | (buf[0x1D] << 8));
+    out("  bCurPg        = %u\n", buf[0x16]);
+    out("  wCrtcPort     = 0x%02X (3B4=mono, 3D4=color)\n", buf[0x17]);
+    out("  bModeSetReg   = 0x%02X (port 3?8)\n", buf[0x18]);
+    out("  bClrSetReg    = 0x%02X (port 3?9)\n", buf[0x19]);
+    out("  bCrtRows      = %u (character rows on screen)\n", buf[0x1A]);
+    out("  bCrtPoints    = %u (scan lines per character cell)\n", buf[0x1B]);
+    out("  bMaxPgs       = %u\n", buf[0x23]);
+    out("  bScanLnsCode  = %u (0=200, 1=350, 2=400, 3=480)\n", buf[0x24]);
+    out("  bFont1        = %u (primary font block)\n", buf[0x25]);
+    out("  bFont2        = %u (secondary font block)\n", buf[0x26]);
 
-    out_bitfield("rMiscFlags", buf[0x2D], rMiscFlags_bits, 6);
+    out_bitfield("rMiscFlags", buf[0x27], rMiscFlags_bits, 6);
 
-    out("  res           = +2eH 3 bytes (reserved)\n");
-    out("  bVidMemCode   = %u (0=64K, 1=128K, 2=192K, 3=256K)\n", buf[0x31]);
+    out("  bVidMemCode   = %u (0=64K, 1=128K, 2=192K, 3=256K)\n", buf[0x2C]);
 
-    out_bitfield("rSaveStatus", buf[0x32], rSaveStatus_bits, 6);
+    out_bitfield("rSaveStatus", buf[0x2D], rSaveStatus_bits, 6);
 
-    out("  res           = +33H 0dH bytes (reserved)\n");
+    out("  res           = +2eH and +2fH (reserved)\n");
 
     /* VgaStaticFnalityRec (16 bytes) per vga_static_functionality_table.html */
     if (static_seg != 0 || static_off != 0) {

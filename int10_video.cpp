@@ -871,44 +871,39 @@ void Machine::int10_display_combination_code()
 // AH=1Bh - Video BIOS functionality
 //
 // Return a table describing video BIOS capabilities and current state.
+// Fills the 64-byte INT 10h AH=1Bh Video Save Area at ES:DI.
 // Inputs:
-//      ES:DI = pointer to `struct video_func_info`
+//      ES:DI = pointer to buffer (Int10_1Bh_Return_Table)
 // Outputs:
-//      Buffer filled with:
-//          pointer to static functionality table
-//          copy of BDA 0x49–0x66 and 0x84–0x86
-//          DCC index
-//          colors (16)
-//          pages (8)
-//          scan lines (2)
-//          video memory (3)
-//      AL = 0x1B
+//      Buffer filled per INT 10h AH=1Bh spec; AL = 0x1B
 //
 void Machine::int10_video_bios_functionality()
 {
-    const unsigned addr          = pc86_linear_addr(cpu.get_es(), cpu.get_di());
-    constexpr unsigned info_size = 64; // sizeof(video_func_info)
+    const unsigned addr = pc86_linear_addr(cpu.get_es(), cpu.get_di());
 
-    std::memset(memory.get_ptr(addr), 0, info_size);
+    Int10_1Bh_Return_Table table = {};
 
-    // static_functionality: seg:off of table at BIOS_VIDEO_FUNC_STATIC
-    memory.store16(addr + 0, 0);
-    memory.store16(addr + 2, static_cast<uint16_t>(BIOS_VIDEO_FUNC_STATIC >> 4));
+    table.dynamic_save_offset  = 0;
+    table.dynamic_save_segment = static_cast<uint16_t>(BIOS_VIDEO_FUNC_STATIC >> 4);
+    table.dcc                  = bda.dcc_index;
+    table.active_video_mode    = bda.video_mode;
+    table.num_columns          = bda.video_cols;
+    table.active_page_size     = bda.video_pagesize;
+    table.active_page_offset   = bda.video_pagestart;
+    for (int i = 0; i < 8; i++)
+        table.cursor_pos[i] = bda.cursor_pos[i];
+    table.cursor_type           = bda.cursor_type;
+    table.active_display_page   = bda.video_page;
+    table.crtc_address          = static_cast<uint8_t>(bda.crtc_address & 0xFF);
+    table.mode_select          = bda.video_msr;
+    table.color_palette         = bda.video_pal;
+    table.num_rows              = bda.video_rows;
+    table.char_height           = static_cast<uint8_t>(bda.char_height & 0xFF);
+    table.num_video_pages       = 8;
+    table.scan_lines            = 2;
+    table.video_memory_available = 3;
 
-    // BDA 0x49–0x66 (30 bytes)
-    const Byte *bda49 = memory.get_ptr(0x449);
-    std::memcpy(memory.get_ptr(addr + 4), bda49, 30);
-
-    // BDA 0x84–0x86 (3 bytes)
-    memory.store8(addr + 34, bda.video_rows + 1);
-    memory.store16(addr + 35, bda.char_height);
-
-    memory.store8(addr + 37, bda.dcc_index);
-    memory.store16(addr + 39, 16); // colors
-    memory.store8(addr + 41, 8);   // pages
-    memory.store8(addr + 42, 2);   // scan_lines
-    memory.store8(addr + 49, 3);   // video_mem
-
+    std::memcpy(memory.get_ptr(addr), &table, sizeof(table));
     cpu.set_al(0x1B);
 }
 

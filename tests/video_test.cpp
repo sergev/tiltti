@@ -193,10 +193,13 @@ TEST_F(MachineTest, VideoSaveTableInBiosRom)
 }
 
 //
-// INT 10h AH=1Bh: Video BIOS functionality — fill video_func_info at ES:DI.
+// INT 10h AH=1Bh: Video BIOS functionality — fill Int10_1Bh_Return_Table at ES:DI.
 //
 TEST_F(MachineTest, VideoBiosFunctionality)
 {
+    cpu.set_al(0x03);
+    machine.int10_set_video_mode(); // ensure BDA has known state
+
     const unsigned buf_linear = 0x500;
     cpu.set_es(0x50);
     cpu.set_di(0);
@@ -204,23 +207,38 @@ TEST_F(MachineTest, VideoBiosFunctionality)
 
     EXPECT_EQ(cpu.get_al(), 0x1B);
 
+    // Pointer to static table (00h)
     EXPECT_EQ(memory.load16(buf_linear + 0), 0x0000);
     EXPECT_EQ(memory.load16(buf_linear + 2), static_cast<uint16_t>(BIOS_VIDEO_FUNC_STATIC >> 4));
 
-    EXPECT_EQ(memory.load16(buf_linear + 39), 16); // colors
-    EXPECT_EQ(memory.load8(buf_linear + 41), 8);   // pages
-    EXPECT_EQ(memory.load8(buf_linear + 42), 2);   // scan_lines
-    EXPECT_EQ(memory.load8(buf_linear + 49), 3);   // video_mem
+    // DCC, mode, columns (04h–07h)
+    EXPECT_EQ(memory.load8(buf_linear + 0x04), machine.bda.dcc_index);
+    EXPECT_EQ(memory.load8(buf_linear + 0x05), machine.bda.video_mode);
+    EXPECT_EQ(memory.load16(buf_linear + 0x06), machine.bda.video_cols);
 
-    EXPECT_EQ(memory.load8(buf_linear + 37), machine.bda.dcc_index);
+    // Page size, page start (08h–0Bh)
+    EXPECT_EQ(memory.load16(buf_linear + 0x08), machine.bda.video_pagesize);
+    EXPECT_EQ(memory.load16(buf_linear + 0x0A), machine.bda.video_pagestart);
 
-    for (unsigned i = 0; i < 30; i++)
-        EXPECT_EQ(memory.load8(buf_linear + 4 + i), memory.load8(0x449 + i))
-            << "bda_0x49[" << i << "]";
-    // Buffer offset 34–36: video_rows+1, char_height (implementation writes these, not BDA copy)
-    EXPECT_EQ(memory.load8(buf_linear + 34), machine.bda.video_rows + 1);
-    EXPECT_EQ(memory.load8(buf_linear + 35), machine.bda.char_height & 0xff);
-    EXPECT_EQ(memory.load8(buf_linear + 36), machine.bda.char_height >> 8);
+    // Cursor positions (0Ch–1Bh, 8 words)
+    for (int i = 0; i < 8; i++)
+        EXPECT_EQ(memory.load16(buf_linear + 0x0C + i * 2), machine.bda.cursor_pos[i]);
+
+    // Cursor type (1Ch), active page (16h), CRT (17h), mode select (18h), palette (19h)
+    EXPECT_EQ(memory.load16(buf_linear + 0x1C), machine.bda.cursor_type);
+    EXPECT_EQ(memory.load8(buf_linear + 0x16), machine.bda.video_page);
+    EXPECT_EQ(memory.load8(buf_linear + 0x17), machine.bda.crtc_address & 0xFF);
+    EXPECT_EQ(memory.load8(buf_linear + 0x18), machine.bda.video_msr);
+    EXPECT_EQ(memory.load8(buf_linear + 0x19), machine.bda.video_pal);
+
+    // Rows, char height (1Ah–1Bh)
+    EXPECT_EQ(memory.load8(buf_linear + 0x1A), machine.bda.video_rows);
+    EXPECT_EQ(memory.load8(buf_linear + 0x1B), machine.bda.char_height & 0xFF);
+
+    // Num pages, scan lines, video memory (23h, 24h, 2Ch)
+    EXPECT_EQ(memory.load8(buf_linear + 0x23), 8);
+    EXPECT_EQ(memory.load8(buf_linear + 0x24), 2);
+    EXPECT_EQ(memory.load8(buf_linear + 0x2C), 3);
 }
 
 //

@@ -219,6 +219,44 @@ static_assert(sizeof(Video_Param) == 64, "Video_Param must be 64 bytes");
 static_assert(sizeof(Video_Save_Pointer) == 28, "Video_Save_Pointer must be 28 bytes");
 
 //
+// INT 10h AH=1Bh return table (Video Save Area). 64 bytes at ES:DI.
+// Layout per INT 10h AH=1Bh specification (segment 40h style).
+//
+struct Int10_1Bh_Return_Table {
+    uint16_t dynamic_save_offset;   // 00h pointer to table (we use static table: 0)
+    uint16_t dynamic_save_segment;  // 02h
+    uint8_t  dcc;                   // 04h Display Combination Code
+    uint8_t  active_video_mode;     // 05h
+    uint16_t num_columns;           // 06h
+    uint16_t active_page_size;      // 08h
+    uint16_t active_page_offset;    // 0Ah
+    uint16_t cursor_pos[8];         // 0Ch 8 words (8 pages)
+    uint16_t cursor_type;           // 14h (note: 0Ch+16=1Ch; spec labels this 14h)
+    uint8_t  active_display_page;   // 16h
+    uint8_t  crtc_address;          // 17h (low byte of port)
+    uint8_t  mode_select;          // 18h
+    uint8_t  color_palette;         // 19h
+    uint8_t  num_rows;              // 1Ah (rows - 1)
+    uint8_t  char_height;           // 1Bh
+    uint16_t default_font_pointer;  // 1Ch
+    uint8_t  display_mode_capability; // 1Eh
+    uint8_t  reserved_1f[3];       // 1Fh
+    uint8_t  reserved_22;          // 22h
+    uint8_t  num_video_pages;       // 23h
+    uint8_t  scan_lines;            // 24h
+    uint8_t  primary_char_block;     // 25h
+    uint8_t  secondary_char_block;  // 26h
+    uint8_t  misc_capabilities;     // 27h
+    uint8_t  reserved_28[4];        // 28h
+    uint8_t  video_memory_available; // 2Ch
+    uint8_t  save_pointer_state;    // 2Dh
+    uint8_t  display_information;   // 2Eh
+    uint8_t  reserved_2f[9];       // 2Fh (9 bytes to keep total 64; spec may say 17)
+} __attribute__((packed));
+
+static_assert(sizeof(Int10_1Bh_Return_Table) == 64, "Int10_1Bh_Return_Table must be 64 bytes");
+
+//
 // BIOS Fixed Addresses.
 // These are required for IBM PC/AT compatibility.
 // Physical address = segment base 0xF0000 + offset.
