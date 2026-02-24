@@ -228,6 +228,7 @@ public:
 
     void setup_bios_config_table();
     void setup_floppy();
+    void build_video_save_table();
     void set_video_mode(unsigned mode);
     void clear_video_memory();
     void read_dap(unsigned addr, unsigned &count, Word &buf_seg, Word &buf_off,

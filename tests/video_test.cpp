@@ -167,6 +167,32 @@ TEST_F(MachineTest, TeletypeOutput)
 }
 
 //
+// BDA 40h:A8 and Video Save Pointer Table: verify table chain in BIOS ROM.
+//
+TEST_F(MachineTest, VideoSaveTableInBiosRom)
+{
+    // BDA video_savetable must point to save table at linear 0xF0110 (seg=0xF010, off=0x10).
+    EXPECT_EQ(machine.bda.video_savetable.seg, 0xF010u);
+    EXPECT_EQ(machine.bda.video_savetable.offset, 0x10u);
+
+    const unsigned save_linear =
+        (static_cast<unsigned>(machine.bda.video_savetable.seg) << 4) + machine.bda.video_savetable.offset;
+    EXPECT_EQ(save_linear, BIOS_VIDEO_SAVE_TABLE);
+
+    // First pointer in save table (videoparam) must point to param table at 0xF012C.
+    const unsigned videoparam_off = memory.load16(save_linear + 0);
+    const unsigned videoparam_seg = memory.load16(save_linear + 2);
+    const unsigned param_linear   = (videoparam_seg << 4) + videoparam_off;
+    EXPECT_EQ(param_linear, BIOS_VIDEO_PARAM_TABLE);
+
+    // First Video_Param entry (mode 3): 80×25, cheight 16, slength 4096.
+    EXPECT_EQ(memory.load8(param_linear + 0), 80);   // twidth
+    EXPECT_EQ(memory.load8(param_linear + 1), 24);   // theightm1
+    EXPECT_EQ(memory.load8(param_linear + 2), 16);   // cheight
+    EXPECT_EQ(memory.load16(param_linear + 3), 4096); // slength
+}
+
+//
 // INT 10h AH=1Bh: Video BIOS functionality — fill video_func_info at ES:DI.
 //
 TEST_F(MachineTest, VideoBiosFunctionality)

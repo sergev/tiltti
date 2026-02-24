@@ -191,6 +191,34 @@ struct Bios_Data_Area {
 static_assert(sizeof(Bios_Data_Area) == 0x100, "BDA must be 256 bytes");
 
 //
+// Video Save Pointer Table and Video Parameter Table (INT 10h / BDA 40h:A8).
+// Layout matches SeaBIOS legacy/seabios/src/std/vga.h for guest compatibility.
+//
+struct Video_Param {
+    uint8_t  twidth;
+    uint8_t  theightm1;
+    uint8_t  cheight;
+    uint16_t slength;
+    uint8_t  sequ_regs[4];
+    uint8_t  miscreg;
+    uint8_t  crtc_regs[25];
+    uint8_t  actl_regs[20];
+    uint8_t  grdc_regs[9];
+} __attribute__((packed));
+
+struct Video_Save_Pointer {
+    Seg_Off videoparam;
+    Seg_Off paramdynamicsave;
+    Seg_Off textcharset;
+    Seg_Off graphcharset;
+    Seg_Off secsavepointer;
+    uint8_t reserved[8];
+} __attribute__((packed));
+
+static_assert(sizeof(Video_Param) == 64, "Video_Param must be 64 bytes");
+static_assert(sizeof(Video_Save_Pointer) == 28, "Video_Save_Pointer must be 28 bytes");
+
+//
 // BIOS Fixed Addresses.
 // These are required for IBM PC/AT compatibility.
 // Physical address = segment base 0xF0000 + offset.
@@ -237,6 +265,8 @@ enum {
     BIOS_DISKETTE_PARAM_TABLE = 0xefc7,  // 11 bytes - Floppy Disk Base Table
     BIOS_VIDEO_PARAMS         = 0xf0a4,  // 88 bytes - Video parameter tables (INT 1D pointer)
     BIOS_VIDEO_FUNC_STATIC    = 0xf0100, // 16 bytes - INT 10h AH=1Bh static functionality table
+    BIOS_VIDEO_SAVE_TABLE     = 0xf0110, // 28 bytes - Video Save Pointer Table (BDA 40h:A8)
+    BIOS_VIDEO_PARAM_TABLE    = 0xf012c, // N×64 bytes - Video Parameter Table (N entries)
     BIOS_VGA_FONT8            = 0xfa6e,  // 1024 bytes - 8x8 VGA font for lower 128 characters
     BIOS_INIT_VECTORS = 0xfef3, // Initial interrupt vector offsets (INT 08h-1Fh) loaded by POST
     BIOS_INIT_VECTORS_70 =

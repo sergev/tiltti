@@ -125,6 +125,9 @@ Machine::Machine(Memory &m)
     memory.store8(static_addr + 9, 0x08);     // active_cblocks
     memory.store16(static_addr + 10, 0x0ce7); // misc_flags
     // bytes 12-15 reserved, leave zero
+
+    // BDA 40h:A8: Video Save Pointer Table and Video Parameter Table in BIOS ROM.
+    build_video_save_table();
 }
 
 //
@@ -278,6 +281,11 @@ Byte Machine::mem_load_byte(unsigned addr)
         print_byte_access(addr, val, "Byte Read");
     }
 #if 0
+    if (addr >= 0x400 && addr <= 0x4ff) {
+        print_byte_access(addr, val, "Byte BDA");
+    }
+#endif
+#if 0
     if (addr >= BIOS_ROM_ADDR) {
         print_byte_access(addr, val, "Byte ROM");
     }
@@ -331,6 +339,11 @@ Word Machine::mem_load_word(unsigned addr)
     if (debug_all) {
         print_word_access(addr, val, "Word Read");
     }
+#if 0
+    if (addr >= 0x400 && addr <= 0x4ff) {
+        print_byte_access(addr, val, "Word BDA");
+    }
+#endif
 #if 0
     if (addr >= BIOS_ROM_ADDR) {
         print_byte_access(addr, val, "Word ROM");
@@ -607,6 +620,37 @@ void Machine::setup_floppy()
 
     // Vector 0x1E points to the floppy param table.
     ivt.ivec[0x1e] = { .offset = BIOS_DISKETTE_PARAM_TABLE, .seg = 0xf000 };
+}
+
+//
+// Build Video Save Pointer Table and Video Parameter Table in BIOS ROM (BDA 40h:A8).
+// Layout matches SeaBIOS for guest compatibility.
+//
+void Machine::build_video_save_table()
+{
+    constexpr unsigned nparam = 8;
+    constexpr uint16_t seg_bios_video = 0xF010;  // paragraph for 0xF0100
+
+    // Video Save Pointer Table at 0xF0110: videoparam -> param table, rest zero.
+    const unsigned save_addr = BIOS_VIDEO_SAVE_TABLE;
+    memory.store16(save_addr + 0, 0x2C);  // videoparam.offset (0xF012C - 0xF0100)
+    memory.store16(save_addr + 2, seg_bios_video);
+    for (unsigned i = 4; i < sizeof(Video_Save_Pointer); i++)
+        memory.store8(save_addr + i, 0);
+
+    // Video Parameter Table at 0xF012C: 8 entries × 64 bytes; fill entry 0 for mode 3.
+    const unsigned param_addr = BIOS_VIDEO_PARAM_TABLE;
+    std::memset(memory.get_ptr(param_addr), 0, nparam * sizeof(Video_Param));
+
+    Video_Param *p0 = reinterpret_cast<Video_Param *>(memory.get_ptr(param_addr));
+    p0->twidth    = 80;
+    p0->theightm1 = 24;
+    p0->cheight   = 16;
+    p0->slength   = 4096;
+
+    // BDA 40h:A8: pointer to save table (linear 0xF0110 -> seg=0xF010, off=0x10).
+    bda.video_savetable.offset = 0x10;
+    bda.video_savetable.seg    = seg_bios_video;
 }
 
 //
