@@ -146,7 +146,3 @@ drdos8: $(PROG)
 #
 cpm1:   $(PROG)
 	$(PROG) images/cpm1.1-320k.img
-
-# Loops after installing handler for Int e6
-cpm3:   $(PROG)
-	$(PROG) images/cpm3.1-320k.img
