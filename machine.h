@@ -130,8 +130,9 @@ public:
     // Clear video_dirty flag.
     VideoRefreshParams get_video_refresh_params();
 
-    // Update BDA kbd_flag0 from host modifier state (called by main() from SDL).
-    void set_kbd_modifiers(uint16_t flags);
+    // Update BDA kbd_flag0 (flags) and kbd_flag1 (f1: RCTRL/RALT) from host modifier state
+    // (called by main() from SDL).
+    void set_kbd_modifiers(uint16_t flags, uint8_t f1);
 
     // Set font buffer for INT 10h AH=11h; display (e.g. Video_Adapter) owns the storage.
     void set_font_buffer(uint8_t *ptr, size_t size);

@@ -161,12 +161,14 @@ VideoRefreshParams Machine::get_video_refresh_params()
     return p;
 }
 
-void Machine::set_kbd_modifiers(uint16_t flags)
+void Machine::set_kbd_modifiers(uint16_t flags, uint8_t f1)
 {
     bda.kbd_flag0 &=
         ~(KF0_RSHIFT | KF0_LSHIFT | KF0_CTRL | KF0_ALT | KF0_SCROLL | KF0_NUMLOCK | KF0_CAPSLOCK);
     bda.kbd_flag0 |= flags & (KF0_RSHIFT | KF0_LSHIFT | KF0_CTRL | KF0_ALT | KF0_SCROLL |
                               KF0_NUMLOCK | KF0_CAPSLOCK);
+    bda.kbd_flag1 &= ~(KF1_RCTRL | KF1_RALT);
+    bda.kbd_flag1 |= f1 & (KF1_RCTRL | KF1_RALT);
 }
 
 void Machine::push_keystroke(uint16_t ax)

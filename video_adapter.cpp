@@ -279,8 +279,12 @@ void Video_Adapter::pump_events(Machine &machine, unsigned timeout)
                 f0 |= KF0_NUMLOCK;
             if (state[SDL_SCANCODE_CAPSLOCK])
                 f0 |= KF0_CAPSLOCK;
-            machine.set_kbd_modifiers(f0);
-            //TODO: also set f1
+            uint8_t f1 = 0;
+            if (mod & KMOD_RCTRL)
+                f1 |= KF1_RCTRL;
+            if (mod & KMOD_RALT)
+                f1 |= KF1_RALT;
+            machine.set_kbd_modifiers(f0, f1);
 
             if (event.type == SDL_KEYDOWN) {
                 auto const &key    = keymap[event.key.keysym.scancode];
