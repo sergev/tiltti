@@ -195,41 +195,31 @@ struct Bios_Data_Area {
 enum {
     BIOS_ENTRY_POST          = 0xe05b, // POST entry point; jumped to from reset vector
     BIOS_ENTRY_02            = 0xe2c3, // INT 02 NMI handler
-    BIOS_ENTRY_13_OFFICIAL   = 0xe3fe, // INT 13 disk services (jumps to entry_13)
-    BIOS_ENTRY_19_OFFICIAL   = 0xe6f2, // INT 19 bootstrap (jumps to entry_19)
+    BIOS_ENTRY_19_OFFICIAL   = 0xe6f2, // INT 19 bootstrap
     BIOS_ENTRY_14            = 0xe739, // INT 14 serial services
     BIOS_ENTRY_16            = 0xe82e, // INT 16 keyboard services
     BIOS_ENTRY_09            = 0xe987, // IRQ1 keyboard
-    BIOS_ENTRY_40            = 0xec59, // INT 40 floppy disk
+    BIOS_ENTRY_40            = 0xec59, // INT 13h diskette / INT 40 floppy
     BIOS_ENTRY_0E            = 0xef57, // IRQ6 floppy
     BIOS_ENTRY_17            = 0xefd2, // INT 17 printer services
-    BIOS_ENTRY_10_0X0F       = 0xf045, // INT 10h functions 0-F (stub: iretw)
-    BIOS_ENTRY_10            = 0xf065, // INT 10 video services (stub: iretw)
+    BIOS_ENTRY_10_0X0F       = 0xf045, // INT 10h functions 00h-0Fh jump table
+    BIOS_ENTRY_10            = 0xf065, // INT 10 video services
     BIOS_ENTRY_12            = 0xf841, // INT 12 memory size
     BIOS_ENTRY_11            = 0xf84d, // INT 11 equipment list
     BIOS_ENTRY_15_OFFICIAL   = 0xf859, // INT 15 system services
-    BIOS_ENTRY_1A_OFFICIAL   = 0xfe6e, // INT 1A time services; dispatches to PCI BIOS if AH=B1h
+    BIOS_ENTRY_1A_OFFICIAL   = 0xfe6e, // INT 1A time of day services
     BIOS_ENTRY_08            = 0xfea5, // IRQ0 timer tick
-    BIOS_ENTRY_IRET_OFFICIAL = 0xff40, // Default interrupt vector (iret only)
-    BIOS_ENTRY_INT_00        = 0xff41, // Dummy IRET for INT 00
-    BIOS_ENTRY_INT_01        = 0xff42, // Dummy IRET for INT 01
-    BIOS_ENTRY_INT_02        = 0xff43, // Dummy IRET for INT 02
-    BIOS_ENTRY_INT_03        = 0xff44, // Dummy IRET for INT 03
-    BIOS_ENTRY_INT_04        = 0xff45, // Dummy IRET for INT 04
-    BIOS_ENTRY_INT_05        = 0xff46, // Dummy IRET for INT 05
-    BIOS_ENTRY_INT_06        = 0xff47, // Dummy IRET for INT 06
-    BIOS_ENTRY_INT_07        = 0xff48, // Dummy IRET for INT 07
-    BIOS_ENTRY_INT_10        = 0xff49, // Dummy IRET for INT 10
-    BIOS_ENTRY_INT_11        = 0xff4a, // Dummy IRET for INT 11
-    BIOS_ENTRY_INT_12        = 0xff4b, // Dummy IRET for INT 12
-    BIOS_ENTRY_INT_13        = 0xff4c, // Dummy IRET for INT 13
-    BIOS_ENTRY_INT_14        = 0xff4d, // Dummy IRET for INT 14
-    BIOS_ENTRY_INT_15        = 0xff4e, // Dummy IRET for INT 15
-    BIOS_ENTRY_INT_16        = 0xff4f, // Dummy IRET for INT 16
-    BIOS_ENTRY_INT_17        = 0xff50, // Dummy IRET for INT 17
-    BIOS_ENTRY_INT_18        = 0xff51, // Dummy IRET for INT 18
-    BIOS_ENTRY_INT_19        = 0xff52, // Dummy IRET for INT 19
-    BIOS_ENTRY_INT_1A        = 0xff53, // Dummy IRET for INT 1A
+    // Dummy stubs (1 byte IRET each); 0xFF40-0xFF4D reserved (machine ID + BIOS version)
+    BIOS_ENTRY_INT_00        = 0xff38, // Dummy stub for INT 00
+    BIOS_ENTRY_INT_01        = 0xff39, // Dummy stub for INT 01
+    BIOS_ENTRY_INT_02        = 0xff3a, // Dummy stub for INT 02
+    BIOS_ENTRY_INT_03        = 0xff3b, // Dummy stub for INT 03
+    BIOS_ENTRY_INT_04        = 0xff3c, // Dummy stub for INT 04
+    BIOS_ENTRY_INT_06        = 0xff3d, // Dummy stub for INT 06
+    BIOS_ENTRY_INT_07        = 0xff3e, // Dummy stub for INT 07
+    BIOS_ENTRY_INT_18        = 0xff3f, // Dummy stub for INT 18 (no IBM fixed address)
+    BIOS_ENTRY_IRET_OFFICIAL = 0xff53, // Generic dummy IRET for other vectors
+    BIOS_ENTRY_05            = 0xff54, // INT 05 print screen
     BIOS_RESET_VECTOR        = 0xfff0, // Power-up entry point; ljmpw to entry_post
 };
 
@@ -242,7 +232,8 @@ enum {
     BIOS_VIDEO_PARAMS         = 0xf0a4,  // 88 bytes - Video parameter tables (INT 1D pointer)
     BIOS_VIDEO_FUNC_STATIC    = 0xf0100, // 16 bytes - INT 10h AH=1Bh static functionality table
     BIOS_VGA_FONT8            = 0xfa6e,  // 1024 bytes - 8x8 VGA font for lower 128 characters
-    BIOS_INIT_VECTORS = 0xfef3, // 13 bytes - Initial interrupt vector offsets loaded by POST
+    BIOS_INIT_VECTORS   = 0xfef3,  // Initial interrupt vector offsets (INT 08h-1Fh) loaded by POST
+    BIOS_INIT_VECTORS_70 = 0xff23, // 16 bytes - Initial interrupt vector offsets (INT 70h-77h) (AT+)
     BIOS_DATE         = 0xfff5, // 8 bytes - BIOS build date string "MM/DD/YY"
     BIOS_MODEL_ID     = 0xfffe, // 1 byte - Model ID (e.g. 0xFC for AT)
     BIOS_CHECKSUM     = 0xffff, // 1 byte - ROM checksum (sum of all bytes in ROM = 0)

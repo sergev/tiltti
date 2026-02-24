@@ -84,7 +84,7 @@ The 8259 PIC maps hardware interrupts to vectors:
 
 ### Default Handler: entry_iret_official
 
-Unhandled vectors point to `entry_iret_official` in `src/romlayout.S`, which simply executes `iretw` and returns. Used for CPU exceptions that the BIOS does not handle and for unused software interrupt numbers.
+Unhandled vectors point to `entry_iret_official` at F000:FF53 (single byte IRET, 0xCF). In this project the IVT is set in `machine.cpp`; dummy stubs for INT 00–04, 06, 07, 18 are at F000:FF38–FF3F (one byte each). Area F000:FF40–FF4D is reserved (machine ID + BIOS version on some systems). INT 05 print screen is at F000:FF54.
 
 ---
 
@@ -100,9 +100,9 @@ Unhandled vectors point to `entry_iret_official` in `src/romlayout.S`, which sim
 #### 0x05 — Print Screen
 
 - **Purpose**: INT 05h — Print Screen service
-- **Entry**: `entry_05` (via IRQ_ENTRY_ARG) → `handle_05`
-- **Initialization**: `ivt_init()` in `src/post.c`
-- **C Handler**: `handle_05()` in `src/misc.c` — stub (calls debug_enter only)
+- **Entry**: `entry_05` at F000:FF54 (IBM fixed address) → handled by emulator
+- **Initialization**: IVT set in `machine.cpp`
+- **C Handler**: Print screen service dispatched via `process_bios_call()`
 
 #### 0x08 — IRQ0 System Timer
 

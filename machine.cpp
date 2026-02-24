@@ -55,27 +55,40 @@ Machine::Machine(Memory &m)
     ebda.size    = (sizeof(ebda) + 1023) / 1024; // round up
 
     setup_bios_config_table();
+    bios[BIOS_MODEL_ID] = 0xFC;
 
-    // Dummy IRET handlers (one byte each: 0xCF)
-    for (unsigned o = BIOS_ENTRY_IRET_OFFICIAL; o <= BIOS_ENTRY_INT_1A; o++)
+    // Dummy IRET stubs at 0xFF38-0xFF3F and generic at 0xFF53. Leave 0xFF40-0xFF4D clear (reserved).
+    for (unsigned o = BIOS_ENTRY_INT_00; o <= BIOS_ENTRY_INT_18; o++)
         bios[o] = 0xCF;
+    bios[BIOS_ENTRY_IRET_OFFICIAL] = 0xCF;
 
-    // Initialize IVT: vectors 00h-07h and 10h-1Ah to named dummies, rest to generic dummy
-    const Seg_Off null_vec       = { .offset = 0, .seg = 0 };
-    const uint16_t dummy_00_07[] = { BIOS_ENTRY_INT_00, BIOS_ENTRY_INT_01, BIOS_ENTRY_INT_02,
-                                     BIOS_ENTRY_INT_03, BIOS_ENTRY_INT_04, BIOS_ENTRY_INT_05,
-                                     BIOS_ENTRY_INT_06, BIOS_ENTRY_INT_07 };
-    const uint16_t dummy_10_1A[] = { BIOS_ENTRY_INT_10, BIOS_ENTRY_INT_11, BIOS_ENTRY_INT_12,
-                                     BIOS_ENTRY_INT_13, BIOS_ENTRY_INT_14, BIOS_ENTRY_INT_15,
-                                     BIOS_ENTRY_INT_16, BIOS_ENTRY_INT_17, BIOS_ENTRY_INT_18,
-                                     BIOS_ENTRY_INT_19, BIOS_ENTRY_INT_1A };
-    const Seg_Off iret_vec       = { .offset = BIOS_ENTRY_IRET_OFFICIAL, .seg = 0xf000 };
+    // Initialize IVT: real fixed addresses for BIOS services, unique stubs for 00-07 and 18, rest to 0xFF53
+    const Seg_Off null_vec  = { .offset = 0, .seg = 0 };
+    const Seg_Off iret_vec  = { .offset = BIOS_ENTRY_IRET_OFFICIAL, .seg = 0xf000 };
+    const uint16_t seg_bios = 0xf000;
     for (unsigned i = 0; i < 256; i++)
         ivt.ivec[i] = iret_vec;
-    for (unsigned i = 0; i < 8; i++)
-        ivt.ivec[i] = { .offset = dummy_00_07[i], .seg = 0xf000 };
-    for (unsigned i = 0; i < 11; i++)
-        ivt.ivec[0x10 + i] = { .offset = dummy_10_1A[i], .seg = 0xf000 };
+    // INT 00-04, 06, 07 -> stubs at 0xFF38-0xFF3E; INT 05 -> 0xFF54
+    ivt.ivec[0x00] = { .offset = BIOS_ENTRY_INT_00, .seg = seg_bios };
+    ivt.ivec[0x01] = { .offset = BIOS_ENTRY_INT_01, .seg = seg_bios };
+    ivt.ivec[0x02] = { .offset = BIOS_ENTRY_INT_02, .seg = seg_bios };
+    ivt.ivec[0x03] = { .offset = BIOS_ENTRY_INT_03, .seg = seg_bios };
+    ivt.ivec[0x04] = { .offset = BIOS_ENTRY_INT_04, .seg = seg_bios };
+    ivt.ivec[0x05] = { .offset = BIOS_ENTRY_05, .seg = seg_bios };
+    ivt.ivec[0x06] = { .offset = BIOS_ENTRY_INT_06, .seg = seg_bios };
+    ivt.ivec[0x07] = { .offset = BIOS_ENTRY_INT_07, .seg = seg_bios };
+    // INT 10-1A -> real fixed addresses
+    ivt.ivec[0x10] = { .offset = BIOS_ENTRY_10, .seg = seg_bios };
+    ivt.ivec[0x11] = { .offset = BIOS_ENTRY_11, .seg = seg_bios };
+    ivt.ivec[0x12] = { .offset = BIOS_ENTRY_12, .seg = seg_bios };
+    ivt.ivec[0x13] = { .offset = BIOS_ENTRY_40, .seg = seg_bios };
+    ivt.ivec[0x14] = { .offset = BIOS_ENTRY_14, .seg = seg_bios };
+    ivt.ivec[0x15] = { .offset = BIOS_ENTRY_15_OFFICIAL, .seg = seg_bios };
+    ivt.ivec[0x16] = { .offset = BIOS_ENTRY_16, .seg = seg_bios };
+    ivt.ivec[0x17] = { .offset = BIOS_ENTRY_17, .seg = seg_bios };
+    ivt.ivec[0x18] = { .offset = BIOS_ENTRY_INT_18, .seg = seg_bios };
+    ivt.ivec[0x19] = { .offset = BIOS_ENTRY_19_OFFICIAL, .seg = seg_bios };
+    ivt.ivec[0x1a] = { .offset = BIOS_ENTRY_1A_OFFICIAL, .seg = seg_bios };
     for (unsigned i = 0x60; i <= 0x66; i++)
         ivt.ivec[i] = null_vec;
     ivt.ivec[0x79] = null_vec;
@@ -207,11 +220,13 @@ uint16_t Machine::pop_keystroke()
 static bool basic_area(unsigned addr)
 {
 #if 1
-    if (addr >= BIOS_ENTRY_IRET_OFFICIAL + BIOS_ROM_ADDR &&
-        addr < BIOS_ENTRY_INT_1A + BIOS_ROM_ADDR + 10) {
-        // Allow dummy IRET handlers.
+    // Allow execution in ROM stub/entry range: 0xFF38-0xFF3F, 0xFF53, 0xFF54 up to reset. 0xFF40-0xFF4D reserved.
+    if (addr >= BIOS_ENTRY_INT_00 + BIOS_ROM_ADDR && addr <= BIOS_ENTRY_INT_18 + BIOS_ROM_ADDR)
         return true;
-    }
+    if (addr == BIOS_ENTRY_IRET_OFFICIAL + BIOS_ROM_ADDR)
+        return true;
+    if (addr >= BIOS_ENTRY_05 + BIOS_ROM_ADDR && addr < BIOS_RESET_VECTOR + BIOS_ROM_ADDR)
+        return true;
 #endif
     return addr >= BASIC_ROM_ADDR && addr < BASIC_ROM_ADDR + BASIC_ROM_LEN;
 }
@@ -259,6 +274,11 @@ Byte Machine::mem_load_byte(unsigned addr)
     if (debug_all) {
         print_byte_access(addr, val, "Byte Read");
     }
+#if 0
+    if (addr >= BIOS_ROM_ADDR) {
+        print_byte_access(addr, val, "Byte ROM");
+    }
+#endif
     return val;
 }
 
@@ -308,6 +328,11 @@ Word Machine::mem_load_word(unsigned addr)
     if (debug_all) {
         print_word_access(addr, val, "Word Read");
     }
+#if 0
+    if (addr >= BIOS_ROM_ADDR) {
+        print_byte_access(addr, val, "Word ROM");
+    }
+#endif
     return val;
 }
 

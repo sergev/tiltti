@@ -1380,8 +1380,15 @@ void Processor::exe_one()
     case 0xea:
         dst     = fetch(W);
         src     = fetch(W);
-        core.ip = static_cast<Word>(dst & 0xffff);
-        core.cs = static_cast<Word>(src & 0xffff);
+        if (machine.process_bios_call(src, dst)) {
+            // Intercept syscalls.
+            core.ip = pop();
+            core.cs = pop();
+            pop(); // get rid of extra flags
+            return;
+        }
+        core.ip = dst;
+        core.cs = src;
         break;
 
     //
@@ -2091,11 +2098,20 @@ void Processor::exe_one()
         case 4:
             core.ip = src;
             break;
-        case 5: {
+        case 5: { // LJMP
             unsigned addr = getEA(mod, rm);
             unsigned off  = addr - (os << 4);
-            core.ip       = getMemAtSegOff(W, os, off);
-            core.cs       = getMemAtSegOff(W, os, off + 2);
+            dst           = getMemAtSegOff(W, os, off);
+            unsigned seg  = getMemAtSegOff(W, os, off + 2);
+            if (machine.process_bios_call(seg, dst)) {
+                // Intercept syscalls.
+                core.ip = pop();
+                core.cs = pop();
+                pop(); // get rid of extra flags
+                return;
+            }
+            core.ip = dst;
+            core.cs = seg;
             break;
         }
         case 6:

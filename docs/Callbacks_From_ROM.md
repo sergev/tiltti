@@ -81,7 +81,7 @@ The BIOS uses `call16_int()` ([`src/stacks.c`](src/stacks.c)) which invokes `int
 #### INT 05h — Print Screen
 
 - **Trigger**: Keyboard driver calls `call16_int(0x05, &br)` when Print Screen is pressed.
-- **Default**: BIOS installs `entry_05` (stub that only calls `debug_enter`). User can replace.
+- **Default**: BIOS installs `entry_05` at F000:FF54 (IBM fixed address). Generic dummy IRET is at F000:FF53. User can replace.
 
 #### INT 15h AH=85 — SysReq
 
