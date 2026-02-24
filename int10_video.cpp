@@ -713,7 +713,7 @@ void Machine::int10_palette_control()
 // AL=02h,12h: ROM 8-line → bda.char_height=8.
 // AL=04h,14h: ROM 16-line → bda.char_height=16.
 // AL=03h: Set block specifier (no-op).
-// AL=30h: Get font info; return ES:BP, CX=bytes/char, DL=rows (from bda.char_height).
+// AL=30h: Get font info; return ES:BP, CX=bytes/char, DL=rows (from bda.video_rows).
 //
 void Machine::int10_char_generator()
 {
@@ -758,8 +758,8 @@ void Machine::int10_char_generator()
             height = 16;
         cpu.set_es(0);
         cpu.set_bp(0);
-        cpu.set_cx(static_cast<uint16_t>(height));
-        cpu.set_dl(static_cast<uint8_t>(height));
+        cpu.set_cx(height);
+        cpu.set_dl(bda.video_rows);
     }
 }
 
