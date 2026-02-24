@@ -141,6 +141,9 @@ drdos7: $(PROG)
 drdos8: $(PROG)
 	$(PROG) images/drdos8.0-1.44m.img
 
+drdos81: $(PROG)
+	$(PROG) images/drdos8.1-1.44m.img
+
 #
 # Run CPM
 #
