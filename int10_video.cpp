@@ -966,6 +966,16 @@ void Machine::int10_vbe()
         const uint16_t es   = cpu.get_es();
         const uint16_t di   = cpu.get_di();
 
+        if (debug_all || debug_syscalls) {
+            auto &out = Machine::get_trace_stream();
+            auto save = out.flags();
+            out << "\tAH=4Fh VBE AL=00h Get controller info" << std::endl;
+            out << "\tES:DI=0x" << std::setw(4) << std::setfill('0') << std::hex << es
+                << ":0x" << std::setw(4) << di << " buffer=0x" << std::setw(8) << addr
+                << std::endl;
+            out.flags(save);
+        }
+
         std::memset(memory.get_ptr(addr), 0, 256);
 
         memory.store32(addr + 0, VESA_SIGNATURE);
@@ -979,10 +989,24 @@ void Machine::int10_vbe()
         return;
     }
     case 0x03:
+        if (debug_all || debug_syscalls) {
+            auto &out = Machine::get_trace_stream();
+            auto save = out.flags();
+            out << "\tAH=4Fh VBE AL=03h Get current mode" << std::endl;
+            out << "\tBX=0xFFFF (no VBE mode)" << std::endl;
+            out.flags(save);
+        }
         cpu.set_bx(0xFFFF);
         cpu.set_ax(0x004F);
         return;
     default:
+        if (debug_all || debug_syscalls) {
+            auto &out = Machine::get_trace_stream();
+            auto save = out.flags();
+            out << "\tAH=4Fh VBE AL=0x" << std::setw(2) << std::setfill('0') << std::hex
+                << (unsigned)cpu.get_al() << "h Unsupported" << std::endl;
+            out.flags(save);
+        }
         cpu.set_ax(0x014F);
         return;
     }

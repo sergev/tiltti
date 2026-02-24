@@ -72,6 +72,7 @@ static void do_int10_1b00(void)
     struct SREGS sregs;
     unsigned int i;
     unsigned long static_seg, static_off;
+    unsigned char far *ptrFnality;
     static const char *rMiscFlags_bits[] = {
         "all modes on all displays active",
         "gray-scale summing is active",
@@ -119,7 +120,8 @@ static void do_int10_1b00(void)
 
     static_off = (unsigned long)buf[0] | ((unsigned long)buf[1] << 8);
     static_seg = (unsigned long)buf[2] | ((unsigned long)buf[3] << 8);
-    out("  pfrFnality    = %04lX:%04lX (VgaStaticFnalityRec)\n", static_seg, static_off);
+    ptrFnality = (unsigned char far *)MK_FP((unsigned)static_seg, (unsigned)static_off);
+    out("  ptrFnality    = %04lX:%04lX (VgaStaticFnalityRec)\n", static_seg, static_off);
 
     out("  bCurMode      = 0x%02X\n", buf[0x04]);
     out("  bCrtClms      = %u\n", buf[0x05] | (buf[0x06] << 8));
@@ -159,7 +161,13 @@ static void do_int10_1b00(void)
 
     /* VgaStaticFnalityRec (16 bytes) per vga_static_functionality_table.html */
     if (static_seg != 0 || static_off != 0) {
-        unsigned char far *st = (unsigned char far *)MK_FP((unsigned)static_seg, (unsigned)static_off);
+        out("  Raw VgaStaticFnalityRec (16 bytes):\n");
+        for (i = 0; i < 16; i += 8) {
+            out("  +%02Xh: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+                i, ptrFnality[i], ptrFnality[i + 1], ptrFnality[i + 2], ptrFnality[i + 3],
+                ptrFnality[i + 4], ptrFnality[i + 5], ptrFnality[i + 6], ptrFnality[i + 7]);
+        }
+
         static const char *rMiscFlags1_bits[] = {
             "all modes on all displays",
             "gray-scale summing (INT 10h 101bh)",
@@ -189,30 +197,30 @@ static void do_int10_1b00(void)
         };
 
         out("\n  --- VgaStaticFnalityRec (16 bytes) ---\n");
-        out("  bModes1       = 0x%02X (bit0=mode00..bit7=mode07)\n", st[0]);
-        out("  bModes2       = 0x%02X (bit0=mode08..bit7=mode0F)\n", st[1]);
-        out("  bModes3       = 0x%02X (bit0=mode10..bit3=mode13)\n", st[2]);
+        out("  bModes1       = 0x%02X (bit0=mode00..bit7=mode07)\n", ptrFnality[0]);
+        out("  bModes2       = 0x%02X (bit0=mode08..bit7=mode0F)\n", ptrFnality[1]);
+        out("  bModes3       = 0x%02X (bit0=mode10..bit3=mode13)\n", ptrFnality[2]);
         /* List supported modes from bModes1 */
         out("  modes supported (from bModes1):");
         for (i = 0; i < 8; i++)
-            if (st[0] & (1 << i))
+            if (ptrFnality[0] & (1 << i))
                 out(" %u", i);
         out("\n");
         out("  res           = +3 4 bytes (reserved)\n");
-        out("  bScanLnsFlgs  = 0x%02X (bit0=200, bit1=350, bit2=400)\n", st[7]);
+        out("  bScanLnsFlgs  = 0x%02X (bit0=200, bit1=350, bit2=400)\n", ptrFnality[7]);
         out("    scan lines available:");
-        if (st[7] & 1) out(" 200");
-        if (st[7] & 2) out(" 350");
-        if (st[7] & 4) out(" 400");
+        if (ptrFnality[7] & 1) out(" 200");
+        if (ptrFnality[7] & 2) out(" 350");
+        if (ptrFnality[7] & 4) out(" 400");
         out("\n");
-        out("  bFontBlks     = %u (font blocks available, 4=EGA 8=VGA)\n", st[8]);
-        out("  bMaxFonts     = %u (max active font blocks in text mode)\n", st[9]);
+        out("  bFontBlks     = %u (font blocks available, 4=EGA 8=VGA)\n", ptrFnality[8]);
+        out("  bMaxFonts     = %u (max active font blocks in text mode)\n", ptrFnality[9]);
 
-        out_bitfield("rMiscFlags1", st[0x0A], rMiscFlags1_bits, 8);
-        out_bitfield("rMiscFlags2", st[0x0B], rMiscFlags2_bits, 4);
+        out_bitfield("rMiscFlags1", ptrFnality[0x0A], rMiscFlags1_bits, 8);
+        out_bitfield("rMiscFlags2", ptrFnality[0x0B], rMiscFlags2_bits, 4);
 
         out("  res           = +0cH 2 bytes (reserved)\n");
-        out_bitfield("rSaveCaps", st[0x0E], rSaveCaps_bits, 6);
+        out_bitfield("rSaveCaps", ptrFnality[0x0E], rSaveCaps_bits, 6);
         out("  res           = +0fH 1 byte (reserved)\n");
     }
 }
