@@ -270,15 +270,15 @@ void Video_Adapter::pump_events(Machine &machine, unsigned timeout)
             if (mod & KMOD_LSHIFT)
                 f0 |= KF0_LSHIFT;
             if (mod & KMOD_CTRL)
-                f0 |= KF0_CTRL;
+                f0 |= KF0_CTRLACTIVE;
             if (mod & KMOD_ALT)
-                f0 |= KF0_ALT;
+                f0 |= KF0_ALTACTIVE;
             if (state[SDL_SCANCODE_SCROLLLOCK])
-                f0 |= KF0_SCROLL;
+                f0 |= KF0_SCROLLACTIVE;
             if (state[SDL_SCANCODE_NUMLOCKCLEAR])
-                f0 |= KF0_NUMLOCK;
+                f0 |= KF0_NUMACTIVE;
             if (state[SDL_SCANCODE_CAPSLOCK])
-                f0 |= KF0_CAPSLOCK;
+                f0 |= KF0_CAPSACTIVE;
             uint8_t f1 = 0;
             if (mod & KMOD_RCTRL)
                 f1 |= KF1_RCTRL;
@@ -299,8 +299,10 @@ void Video_Adapter::pump_events(Machine &machine, unsigned timeout)
                     keystroke = key.control;
 
                 } else if ((mod & KMOD_SHIFT) ||
-                    (state[SDL_SCANCODE_CAPSLOCK] && is_alphabetic(event.key.keysym.scancode)) ||
-                    (state[SDL_SCANCODE_NUMLOCKCLEAR] && is_keypad(event.key.keysym.scancode))) {
+                           (state[SDL_SCANCODE_CAPSLOCK] &&
+                            is_alphabetic(event.key.keysym.scancode)) ||
+                           (state[SDL_SCANCODE_NUMLOCKCLEAR] &&
+                            is_keypad(event.key.keysym.scancode))) {
                     // Shift modifier is active,
                     // or CapsLock for characters,
                     // or NumLock for keypad.

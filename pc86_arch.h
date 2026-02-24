@@ -361,24 +361,34 @@ struct Extended_Bios_Data_Area {
 #define EXTSTART_CD 0xE0 // CD-ROM
 
 //
-// BDA kbd_flag0 bits (low byte).
+// BDA kbd_flag0 bits (SeaBIOS src/std/bda.h).
+// Low byte: shift/modifier and lock state; high byte: LCTRL/LALT, pause, lock bits.
 //
 enum {
-    KF0_RSHIFT   = 0x01,
-    KF0_LSHIFT   = 0x02,
-    KF0_CTRL     = 0x04,
-    KF0_ALT      = 0x08,
-    KF0_SCROLL   = 0x10,
-    KF0_NUMLOCK  = 0x20,
-    KF0_CAPSLOCK = 0x40,
+    KF0_RSHIFT       = 0x01,
+    KF0_LSHIFT       = 0x02,
+    KF0_CTRLACTIVE   = 0x04,
+    KF0_ALTACTIVE    = 0x08,
+    KF0_SCROLLACTIVE = 0x10,
+    KF0_NUMACTIVE    = 0x20,
+    KF0_CAPSACTIVE   = 0x40,
+    KF0_LCTRL        = 0x100,
+    KF0_LALT         = 0x200,
+    KF0_PAUSEACTIVE  = 0x800,
+    KF0_SCROLL       = 0x1000,
+    KF0_NUM          = 0x2000,
+    KF0_CAPS         = 0x4000,
 };
 
 //
-// BDA kbd_flag1 bits (extended keyboard: right modifiers).
+// BDA kbd_flag1 bits (SeaBIOS src/std/bda.h).
 //
 enum {
-    KF1_RCTRL = 0x04,  // Right Control
-    KF1_RALT  = 0x08,  // Right Alt
+    KF1_LAST_E1 = 0x01,
+    KF1_LAST_E0 = 0x02,
+    KF1_RCTRL   = 0x04,
+    KF1_RALT    = 0x08,
+    KF1_101KBD  = 0x10,
 };
 
 #endif // TILTTI_I86_ARCH_H

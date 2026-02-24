@@ -61,7 +61,7 @@ Machine::Machine(Memory &m)
         bios[o] = 0xCF;
 
     // Initialize IVT: vectors 00h-07h and 10h-1Ah to named dummies, rest to generic dummy
-    const Seg_Off null_vec = { .offset = 0, .seg = 0 };
+    const Seg_Off null_vec       = { .offset = 0, .seg = 0 };
     const uint16_t dummy_00_07[] = { BIOS_ENTRY_INT_00, BIOS_ENTRY_INT_01, BIOS_ENTRY_INT_02,
                                      BIOS_ENTRY_INT_03, BIOS_ENTRY_INT_04, BIOS_ENTRY_INT_05,
                                      BIOS_ENTRY_INT_06, BIOS_ENTRY_INT_07 };
@@ -69,7 +69,7 @@ Machine::Machine(Memory &m)
                                      BIOS_ENTRY_INT_13, BIOS_ENTRY_INT_14, BIOS_ENTRY_INT_15,
                                      BIOS_ENTRY_INT_16, BIOS_ENTRY_INT_17, BIOS_ENTRY_INT_18,
                                      BIOS_ENTRY_INT_19, BIOS_ENTRY_INT_1A };
-    const Seg_Off iret_vec = { .offset = BIOS_ENTRY_IRET_OFFICIAL, .seg = 0xf000 };
+    const Seg_Off iret_vec       = { .offset = BIOS_ENTRY_IRET_OFFICIAL, .seg = 0xf000 };
     for (unsigned i = 0; i < 256; i++)
         ivt.ivec[i] = iret_vec;
     for (unsigned i = 0; i < 8; i++)
@@ -88,6 +88,9 @@ Machine::Machine(Memory &m)
 
     // Video mode 80×25 color.
     bda.equipment_list_flags = 0x0021;
+
+    // Keyboard: 101-key keyboard (SeaBIOS kbd_init).
+    bda.kbd_flag1 = KF1_101KBD;
 
     // Floppy disk installed.
     setup_floppy();
@@ -163,10 +166,17 @@ VideoRefreshParams Machine::get_video_refresh_params()
 
 void Machine::set_kbd_modifiers(uint16_t flags, uint8_t f1)
 {
-    bda.kbd_flag0 &=
-        ~(KF0_RSHIFT | KF0_LSHIFT | KF0_CTRL | KF0_ALT | KF0_SCROLL | KF0_NUMLOCK | KF0_CAPSLOCK);
-    bda.kbd_flag0 |= flags & (KF0_RSHIFT | KF0_LSHIFT | KF0_CTRL | KF0_ALT | KF0_SCROLL |
-                              KF0_NUMLOCK | KF0_CAPSLOCK);
+    constexpr uint16_t kbd_flag0_mask = KF0_RSHIFT | KF0_LSHIFT | KF0_CTRLACTIVE | KF0_ALTACTIVE |
+                                        KF0_SCROLLACTIVE | KF0_NUMACTIVE | KF0_CAPSACTIVE |
+                                        KF0_LCTRL | KF0_LALT;
+    bda.kbd_flag0 &= ~kbd_flag0_mask;
+    bda.kbd_flag0 |= flags & (KF0_RSHIFT | KF0_LSHIFT | KF0_CTRLACTIVE | KF0_ALTACTIVE |
+                              KF0_SCROLLACTIVE | KF0_NUMACTIVE | KF0_CAPSACTIVE);
+    // Set LCTRL when Ctrl is active and right Ctrl is not; same for LALT.
+    if ((flags & KF0_CTRLACTIVE) && !(f1 & KF1_RCTRL))
+        bda.kbd_flag0 |= KF0_LCTRL;
+    if ((flags & KF0_ALTACTIVE) && !(f1 & KF1_RALT))
+        bda.kbd_flag0 |= KF0_LALT;
     bda.kbd_flag1 &= ~(KF1_RCTRL | KF1_RALT);
     bda.kbd_flag1 |= f1 & (KF1_RCTRL | KF1_RALT);
 }
@@ -233,7 +243,7 @@ void Machine::mem_store_byte(unsigned addr, Byte val)
     }
     if (addr >= 0xb0000 && addr <= 0xbffff) {
         video_dirty = true;
-        //print_byte_access(addr, val, "Byte Write");
+        // print_byte_access(addr, val, "Byte Write");
     }
 }
 
@@ -275,7 +285,7 @@ void Machine::mem_store_word(unsigned addr, Word val)
     }
     if (addr >= 0xb0000 && addr <= 0xbffff) {
         video_dirty = true;
-        //print_word_access(addr, val, "Word Write");
+        // print_word_access(addr, val, "Word Write");
     }
 }
 
@@ -443,8 +453,8 @@ void Machine::disk_mount(unsigned disk_unit, const std::string &path)
         auto const &disk = *disks[disk_unit].get();
         std::cout << "Mount image '" << path << "' as disk " << disk_unit
                   << ", CHS = " << disk.num_cylinders << "/" << disk.num_heads << "/"
-                  << disk.num_sectors
-                  << (disk.is_writable() ? "" : " (write-protected)") << std::endl;
+                  << disk.num_sectors << (disk.is_writable() ? "" : " (write-protected)")
+                  << std::endl;
     }
 }
 
@@ -474,8 +484,8 @@ void Machine::boot_disk(const std::string &filename, const std::string &filename
 
     // Set floppy count in equipment word: bits 7-6 = (number of floppies) - 1.
     const unsigned nfloppy = disks[FLOPPY_B] ? 2 : (disks[FLOPPY_A] ? 1 : 0);
-    bda.equipment_list_flags = (bda.equipment_list_flags & ~0x41) | 0x01 |
-                              (nfloppy ? ((nfloppy - 1) << 6) : 0);
+    bda.equipment_list_flags =
+        (bda.equipment_list_flags & ~0x41) | 0x01 | (nfloppy ? ((nfloppy - 1) << 6) : 0);
 
     // Set hard disk count for INT 13h AH=08h and similar.
     bda.hdcount = (disks[DISK_D] ? 2 : 0) + (disks[DISK_C] ? 1 : 0);
@@ -484,15 +494,24 @@ void Machine::boot_disk(const std::string &filename, const std::string &filename
     unsigned boot_unit;
     if (!boot_drive.empty()) {
         switch (boot_drive[0]) {
-        case 'a': boot_unit = FLOPPY_A; break;
-        case 'b': boot_unit = FLOPPY_B; break;
-        case 'c': boot_unit = DISK_C; break;
-        case 'd': boot_unit = DISK_D; break;
-        default: boot_unit = NDISKS; break;
+        case 'a':
+            boot_unit = FLOPPY_A;
+            break;
+        case 'b':
+            boot_unit = FLOPPY_B;
+            break;
+        case 'c':
+            boot_unit = DISK_C;
+            break;
+        case 'd':
+            boot_unit = DISK_D;
+            break;
+        default:
+            boot_unit = NDISKS;
+            break;
         }
         if (boot_unit >= NDISKS || !disks[boot_unit]) {
-            throw std::runtime_error("Boot drive " + boot_drive +
-                                     " not present or not mounted");
+            throw std::runtime_error("Boot drive " + boot_drive + " not present or not mounted");
         }
     } else {
         if (disks[DISK_C])

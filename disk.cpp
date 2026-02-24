@@ -21,11 +21,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include <cerrno>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <cerrno>
 #include <cstring>
 #include <filesystem>
 #include <iostream>
@@ -44,7 +44,7 @@ Disk::Disk(const std::string &p, Memory &m) : memory(m), path(p)
         write_permit = true;
     } else {
         // Read-only file: treat as write-protected.
-        write_permit = false;
+        write_permit    = false;
         file_descriptor = open(path.c_str(), O_RDONLY);
         if (file_descriptor < 0) {
             throw std::runtime_error("Cannot open " + path);
@@ -105,13 +105,13 @@ Disk::Disk(const std::string &p, Memory &m) : memory(m), path(p)
             num_sectors = 9;
             break;
         default:
-            throw std::runtime_error(
-                "Unrecognized size of floppy image: " + std::to_string(size_sectors / 2) + " kbytes");
+            throw std::runtime_error("Unrecognized size of floppy image: " +
+                                     std::to_string(size_sectors / 2) + " kbytes");
         }
     } else {
         // Hard disk: standard IDE logical geometry (CHS limit 1024 cyl).
-        num_heads   = 16;
-        num_sectors = 63;
+        num_heads     = 16;
+        num_sectors   = 63;
         num_cylinders = size_sectors / (num_heads * num_sectors);
         if (num_cylinders > 1024)
             num_cylinders = 1024;

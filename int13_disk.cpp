@@ -272,7 +272,8 @@ void Machine::int13_read_sectors()
         disk_ret(drive, DISK_RET_ENOTREADY);
         return;
     }
-    auto status = disk_io_chs('r', disk_unit, cylinder, head, sector, addr, nsectors * SECTOR_NBYTES);
+    auto status =
+        disk_io_chs('r', disk_unit, cylinder, head, sector, addr, nsectors * SECTOR_NBYTES);
     if (status == DISK_RET_SUCCESS) {
         cpu.set_al(nsectors);
     } else {
@@ -320,7 +321,8 @@ void Machine::int13_write_sectors()
         disk_ret(drive, DISK_RET_ENOTREADY);
         return;
     }
-    auto status = disk_io_chs('w', disk_unit, cylinder, head, sector, addr, nsectors * SECTOR_NBYTES);
+    auto status =
+        disk_io_chs('w', disk_unit, cylinder, head, sector, addr, nsectors * SECTOR_NBYTES);
     if (status == DISK_RET_SUCCESS) {
         cpu.set_al(nsectors);
     } else {
@@ -396,9 +398,8 @@ void Machine::int13_format_track()
 
         out << "\tAH=05h Format track" << std::endl;
         out << "\tDL=0x" << std::setw(2) << (unsigned)drive << " AL=0x" << std::setw(2)
-            << (unsigned)nsect << " (sectors/track) CHS=" << cylinder << "/" << head
-            << " ES:BX=0x" << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx()
-            << std::endl;
+            << (unsigned)nsect << " (sectors/track) CHS=" << cylinder << "/" << head << " ES:BX=0x"
+            << std::setw(4) << cpu.get_es() << ":0x" << std::setw(4) << cpu.get_bx() << std::endl;
         out.flags(save);
     }
 
@@ -492,8 +493,8 @@ void Machine::int13_get_drive_parameters()
         }
         const auto &d = *disks[disk_unit].get();
         // INT 13h reserves last cylinder for HD; report max = num_cylinders - 1.
-        unsigned max_cyl          = d.num_cylinders > 1 ? d.num_cylinders - 1 : 0;
-        unsigned max_head         = d.num_heads - 1;
+        unsigned max_cyl           = d.num_cylinders > 1 ? d.num_cylinders - 1 : 0;
+        unsigned max_head          = d.num_heads - 1;
         unsigned sectors_per_track = d.num_sectors;
         cpu.set_ch(max_cyl & 0xff);
         cpu.set_cl((((max_cyl >> 8) & 3) << 6) | (sectors_per_track & 0x3f));
@@ -514,14 +515,14 @@ void Machine::int13_get_drive_parameters()
     const unsigned nfloppy = ((bda.equipment_list_flags >> 6) & 3) + 1;
     unsigned max_cyl, max_head, sectors_per_track;
     if (disks[drive]) {
-        const auto &d = *disks[drive].get();
-        max_cyl          = d.num_cylinders - 1;  // 0-based max cylinder
-        max_head         = d.num_heads - 1;
+        const auto &d     = *disks[drive].get();
+        max_cyl           = d.num_cylinders - 1; // 0-based max cylinder
+        max_head          = d.num_heads - 1;
         sectors_per_track = d.num_sectors;
     } else {
         // Default 1.44 MB: 80 cylinders, 2 heads, 18 sectors.
-        max_cyl          = 79;
-        max_head         = 1;
+        max_cyl           = 79;
+        max_head          = 1;
         sectors_per_track = 18;
     }
 
@@ -532,7 +533,7 @@ void Machine::int13_get_drive_parameters()
     cpu.set_dl(static_cast<uint8_t>(nfloppy));
     cpu.set_es(0xf000);
     cpu.set_di(BIOS_DISKETTE_PARAM_TABLE);
-    cpu.set_bx(4);  // 1.44 MB floppy type
+    cpu.set_bx(4); // 1.44 MB floppy type
     disk_ret(drive, DISK_RET_SUCCESS);
 }
 
@@ -652,12 +653,12 @@ void Machine::int13_read_disk_drive_size()
         // Floppy: drive 1 exists only when equipment word reports 2 floppies.
         const unsigned nfloppy = ((bda.equipment_list_flags >> 6) & 3) + 1;
         if (drive == 1 && nfloppy < 2) {
-            cpu.set_ah(0);  // No drive
+            cpu.set_ah(0); // No drive
             cpu.set_cf(1);
             bda.floppy_last_status = DISK_RET_EPARAM;
             return;
         }
-        cpu.set_ah(1);  // Drive present, type 1 (floppy)
+        cpu.set_ah(1); // Drive present, type 1 (floppy)
         disk_ret(drive, DISK_RET_SUCCESS);
         return;
     }
@@ -670,7 +671,7 @@ void Machine::int13_read_disk_drive_size()
         return;
     }
     if (!disks[disk_unit]) {
-        cpu.set_ah(0);  // No drive
+        cpu.set_ah(0); // No drive
         cpu.set_cf(1);
         bda.disk_last_status = DISK_RET_EPARAM;
         return;
@@ -678,7 +679,7 @@ void Machine::int13_read_disk_drive_size()
     const auto &d = *disks[disk_unit].get();
     uint32_t sector_count =
         (d.num_cylinders > 1 ? d.num_cylinders - 1 : 0) * d.num_heads * d.num_sectors;
-    cpu.set_ah(3);  // Type 3 = hard disk
+    cpu.set_ah(3); // Type 3 = hard disk
     cpu.set_cx(static_cast<uint16_t>(sector_count >> 16));
     cpu.set_dx(static_cast<uint16_t>(sector_count & 0xffff));
     disk_ret(drive, DISK_RET_SUCCESS);
@@ -728,14 +729,14 @@ void Machine::int13_edd_installation_check()
         return;
     }
     cpu.set_bx(0xAA55);
-    cpu.set_cx(0x0007);  // extended disk access + EDD + removable supported
-    cpu.set_ah(0x30);    // EDD version 3.0
+    cpu.set_cx(0x0007); // extended disk access + EDD + removable supported
+    cpu.set_ah(0x30);   // EDD version 3.0
     disk_ret(drive, DISK_RET_SUCCESS);
 }
 
 void Machine::int13_extended_read()
 {
-    unsigned drive = cpu.get_dl();
+    unsigned drive    = cpu.get_dl();
     unsigned dap_addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
     unsigned count;
     Word buf_seg, buf_off;
@@ -762,7 +763,7 @@ void Machine::int13_extended_read()
         disk_ret(drive, DISK_RET_ENOTREADY);
         return;
     }
-    const auto &disk = *disks[disk_unit].get();
+    const auto &disk      = *disks[disk_unit].get();
     unsigned size_sectors = disk.get_size_sectors();
     if (count == 0 || lba >= size_sectors) {
         disk_ret(drive, DISK_RET_EPARAM);
@@ -791,7 +792,7 @@ void Machine::int13_extended_read()
 
 void Machine::int13_extended_write()
 {
-    unsigned drive = cpu.get_dl();
+    unsigned drive    = cpu.get_dl();
     unsigned dap_addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
     unsigned count;
     Word buf_seg, buf_off;
@@ -850,7 +851,7 @@ void Machine::int13_extended_write()
 
 void Machine::int13_extended_verify()
 {
-    unsigned drive = cpu.get_dl();
+    unsigned drive    = cpu.get_dl();
     unsigned dap_addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
     unsigned count;
     Word buf_seg, buf_off;
@@ -861,8 +862,8 @@ void Machine::int13_extended_verify()
         auto &out = Machine::get_trace_stream();
         auto save = out.flags();
         out << "\tAH=44h Extended verify (LBA)" << std::endl;
-        out << "\tDL=0x" << std::setw(2) << (unsigned)drive << " count=" << count
-            << " LBA=0x" << std::setw(16) << lba << std::endl;
+        out << "\tDL=0x" << std::setw(2) << (unsigned)drive << " count=" << count << " LBA=0x"
+            << std::setw(16) << lba << std::endl;
         out.flags(save);
     }
 
@@ -875,7 +876,7 @@ void Machine::int13_extended_verify()
         disk_ret(drive, DISK_RET_ENOTREADY);
         return;
     }
-    const auto &disk = *disks[disk_unit].get();
+    const auto &disk      = *disks[disk_unit].get();
     unsigned size_sectors = disk.get_size_sectors();
     if (count == 0 || lba >= size_sectors) {
         disk_ret(drive, DISK_RET_EPARAM);
@@ -935,7 +936,7 @@ void Machine::int13_eject_media()
 
 void Machine::int13_extended_seek()
 {
-    unsigned drive = cpu.get_dl();
+    unsigned drive    = cpu.get_dl();
     unsigned dap_addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
     unsigned count;
     Word buf_seg, buf_off;
@@ -991,10 +992,10 @@ void Machine::int13_get_edd_parameters()
         return;
     }
     const auto &d = *disks[disk_unit].get();
-    unsigned buf = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
+    unsigned buf  = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
     // EDD 1.1 / 3.0 minimal parameter block (30 bytes).
-    memory.store16(buf + 0, 0x1E);  // size
-    memory.store16(buf + 2, 0x40);  // info: DMA boundary alignment
+    memory.store16(buf + 0, 0x1E); // size
+    memory.store16(buf + 2, 0x40); // info: DMA boundary alignment
     memory.store32(buf + 4, d.num_cylinders);
     memory.store32(buf + 8, d.num_heads);
     memory.store32(buf + 12, d.num_sectors);

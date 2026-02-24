@@ -144,7 +144,6 @@ void Machine::int16_check_keyboard_status()
 void Machine::int16_get_shift_flag_status()
 {
     cpu.set_al(static_cast<uint8_t>(bda.kbd_flag0 & 0xff));
-    cpu.set_ah(0);
 }
 
 void Machine::int16_store_keystroke_in_buffer()
@@ -190,7 +189,7 @@ void Machine::int16_check_mf2_keyboard_status()
 //
 void Machine::int16_get_extended_keyboard_status()
 {
-    uint16_t ax = (bda.kbd_flag0 & 0xff) |
+    uint16_t ax = (bda.kbd_flag0 & ~((KF1_RCTRL | KF1_RALT) << 8)) |
                   ((bda.kbd_flag1 & (KF1_RCTRL | KF1_RALT)) << 8);
     cpu.set_ax(ax);
 }

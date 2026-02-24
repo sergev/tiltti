@@ -62,7 +62,8 @@ static void print_usage(std::ostream &out, const char *prog_name)
     out << "    disk_a.img              Optional positional argument = drive A: (same as -a)"
         << std::endl;
     out << "Options:" << std::endl;
-    out << "    --boot=a|b|c|d          Boot from specified drive (default: C if present, else A, else B)"
+    out << "    --boot=a|b|c|d          Boot from specified drive (default: C if present, else A, "
+           "else B)"
         << std::endl;
     out << "    -V, --version           Print the version number and exit" << std::endl;
     out << "    -h, --help              Display available options" << std::endl;

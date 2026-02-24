@@ -184,7 +184,7 @@ void Machine::int1a_set_cmos_time()
 
     // Sync BIOS tick counter so AH=00h (read tick count) stays consistent.
     unsigned sec_since_midnight = ((local_hour * 60) + local_min) * 60 + local_sec;
-    bda.timer_counter = (sec_since_midnight * 1000u) / 55;
+    bda.timer_counter           = (sec_since_midnight * 1000u) / 55;
 
     cpu.set_ah(0);
     cpu.set_al(0x02 | (dl & 1)); // Status B: 24-hour mode + DSE
@@ -215,10 +215,11 @@ void Machine::int1a_read_cmos_date()
     cpu.set_cf(0);
 
     // Debug.
-    //auto &out = Machine::get_trace_stream();
-    //out << "--- Year: CH=" << std::hex << (unsigned)cpu.get_ch() << ", CL=" << (unsigned)cpu.get_cl() << std::dec << std::endl;
-    //out << "--- Month: DH=" << std::hex << (unsigned)cpu.get_dh() << std::dec << std::endl;
-    //out << "--- Day: DL=" << std::hex << (unsigned)cpu.get_dl() << std::dec << std::endl;
+    // auto &out = Machine::get_trace_stream();
+    // out << "--- Year: CH=" << std::hex << (unsigned)cpu.get_ch() << ", CL=" <<
+    // (unsigned)cpu.get_cl() << std::dec << std::endl; out << "--- Month: DH=" << std::hex <<
+    // (unsigned)cpu.get_dh() << std::dec << std::endl; out << "--- Day: DL=" << std::hex <<
+    // (unsigned)cpu.get_dl() << std::dec << std::endl;
 }
 
 //
