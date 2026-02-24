@@ -22,6 +22,7 @@ add_definitions(-DBUILD_DIR="${CMAKE_BINARY_DIR}")
 
 set(TEST_SOURCES
     fixture.cpp
+    bda_offsets_test.cpp
     machine_test.cpp
     video_test.cpp
     add_adc.cpp

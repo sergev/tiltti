@@ -1,6 +1,6 @@
 # BIOS Data Area (BDA)
 
-The BIOS Data Area (BDA) is a 256-byte memory region located at physical addresses 0x400-0x500. It contains system configuration and runtime state used by the BIOS and operating systems. The structure is defined in `src/std/bda.h` as `struct bios_data_area_s`. All BDA access in SeaBIOS uses the `GET_BDA(var)` and `SET_BDA(var, val)` macros from `src/biosvar.h`, which reference segment `SEG_BDA` (0x0040).
+The BIOS Data Area (BDA) is a 256-byte memory region located at physical addresses 0x400-0x500. It contains system configuration and runtime state used by the BIOS and operating systems. The structure is defined in `pc86_arch.h` as `struct Bios_Data_Area`. Layout follows segment 40h as specified in `legacy/bios_data_area.txt`.
 
 Note: `startBoot()` clears low memory from 0x7000 to 0x90000 but leaves the BDA (0x400-0x500) intact.
 
@@ -12,10 +12,9 @@ Note: `startBoot()` clears low memory from 0x7000 to 0x90000 but leaves the BDA 
 | 0x08 | 6 | port_lpt[3] |
 | 0x0E | 2 | ebda_seg |
 | 0x10 | 2 | equipment_list_flags |
-| 0x12 | 1 | pad1 |
+| 0x12 | 1 | reserved_12h |
 | 0x13 | 2 | mem_size_kb |
-| 0x15 | 1 | pad2 |
-| 0x16 | 1 | ps2_ctrl_flag |
+| 0x15 | 2 | reserved_15h[2] |
 | 0x17 | 2 | kbd_flag0 |
 | 0x19 | 1 | alt_keypad |
 | 0x1A | 2 | kbd_buf_head |
@@ -25,7 +24,7 @@ Note: `startBoot()` clears low memory from 0x7000 to 0x90000 but leaves the BDA 
 | 0x3F | 1 | floppy_motor_status |
 | 0x40 | 1 | floppy_motor_counter |
 | 0x41 | 1 | floppy_last_status |
-| 0x42 | 7 | floppy_return_status[7] |
+| 0x42 | 7 | floppy_controller_status[7] |
 | 0x49 | 1 | video_mode |
 | 0x4A | 2 | video_cols |
 | 0x4C | 2 | video_pagesize |
@@ -36,8 +35,8 @@ Note: `startBoot()` clears low memory from 0x7000 to 0x90000 but leaves the BDA 
 | 0x63 | 2 | crtc_address |
 | 0x65 | 1 | video_msr |
 | 0x66 | 1 | video_pal |
-| 0x67 | 4 | jump |
-| 0x6B | 1 | other_6b |
+| 0x67 | 4 | block_move_ss_sp |
+| 0x6B | 1 | reserved_post_6b |
 | 0x6C | 4 | timer_counter |
 | 0x70 | 1 | timer_rollover |
 | 0x71 | 1 | break_flag |
@@ -46,7 +45,8 @@ Note: `startBoot()` clears low memory from 0x7000 to 0x90000 but leaves the BDA 
 | 0x75 | 1 | hdcount |
 | 0x76 | 1 | disk_control_byte |
 | 0x77 | 1 | port_disk |
-| 0x78 | 4 | lpt_timeout[4] |
+| 0x78 | 3 | lpt_timeout[3] |
+| 0x7B | 1 | int4b_flags |
 | 0x7C | 4 | com_timeout[4] |
 | 0x80 | 2 | kbd_buf_start_offset |
 | 0x82 | 2 | kbd_buf_end_offset |
@@ -61,7 +61,8 @@ Note: `startBoot()` clears low memory from 0x7000 to 0x90000 but leaves the BDA 
 | 0x8D | 1 | disk_error_controller |
 | 0x8E | 1 | disk_interrupt_flag |
 | 0x8F | 1 | floppy_harddisk_info |
-| 0x90 | 4 | floppy_media_state[4] |
+| 0x90 | 2 | floppy_media_state[2] |
+| 0x92 | 2 | floppy_workarea[2] |
 | 0x94 | 2 | floppy_track[2] |
 | 0x96 | 1 | kbd_flag1 |
 | 0x97 | 1 | kbd_led |
@@ -70,8 +71,11 @@ Note: `startBoot()` clears low memory from 0x7000 to 0x90000 but leaves the BDA 
 | 0xA0 | 1 | rtc_wait_flag |
 | 0xA1 | 7 | other_a1[7] |
 | 0xA8 | 4 | video_savetable |
-| 0xAC | 4 | other_ac[4] |
-| 0xB0 | 80 | other_b0[80] |
+| 0xAC | 8 | reserved_ac[8] |
+| 0xB4 | 24 | kbd_nmi_save[24] |
+| 0xCC | 2 | reserved_cc[2] |
+| 0xCE | 2 | days_since_1980 |
+| 0xD0 | 48 | reserved_d0[48] |
 
 ## Initialization Flow
 
@@ -126,8 +130,8 @@ INT 11h equipment list. Bits indicate installed hardware. SeaBIOS sets: bit 1 (F
   - `cdrom.c`: bits 0 and 6 (0x41) — floppy present
 - **Usage**: INT 11h returns this word in AX
 
-#### pad1, pad2 (u8 each)
-Unused padding. Zero-initialized.
+#### reserved_12h (u8)
+Reserved for manufacturing test (40:12). Zero-initialized.
 
 #### mem_size_kb (u16)
 Conventional memory size in kilobytes (below 1 MB). Used by INT 12h.
@@ -135,8 +139,8 @@ Conventional memory size in kilobytes (below 1 MB). Used by INT 12h.
 - **Initialization**: `bda_init()` sets to `ebda_seg / 64` (equivalent to end-of-RAM in KB)
 - **Usage**: INT 12h returns this value; `malloc_low()` may decrease it when shrinking EBDA
 
-#### ps2_ctrl_flag (u8)
-Legacy PS/2 controller flag. SeaBIOS does not use this field. Zero.
+#### reserved_15h[2] (u8 × 2)
+Reserved for manufacturing test (40:15–40:16). Zero-initialized.
 
 #### kbd_flag0 (u16)
 Keyboard status flags. See `bda.h` for `KF0_*` bits (shift, ctrl, alt, caps, num, scroll, etc.).
@@ -206,8 +210,8 @@ Last status code from floppy INT 13h operations.
 - **Initialization**: Zero
 - **Usage**: `disk_ret()` in `src/disk.c` sets for floppy drives (DL < 0x80)
 
-#### floppy_return_status[7] (u8 × 7)
-Result bytes from last Floppy Disk Controller command.
+#### floppy_controller_status[7] (u8 × 7)
+Floppy drive controller status (40:42). Result bytes from last Floppy Disk Controller command.
 
 - **Initialization**: Filled by floppy driver after FDC commands
 - **Usage**: `floppy_dma_cmd()` in `src/hw/floppy.c` populates after read/write/format
@@ -218,14 +222,17 @@ Encodes last data rate used (bits 6–7) and drive data rate (bits 2–3). See `
 - **Initialization**: Zero; `floppy_reset()` clears
 - **Usage**: Set during `floppy_prep()` for media detection
 
-#### floppy_media_state[4] (u8 × 4)
-Per-drive media state. See `FMS_*` in `bda.h`: `FMS_DRIVE_STATE_MASK`, `FMS_MEDIA_DRIVE_ESTABLISHED`, `FMS_DOUBLE_STEPPING`, `FMS_DATA_RATE_MASK`.
+#### floppy_media_state[2] (u8 × 2)
+Per-drive media state for drives 0 and 1 (40:90, 40:91). See `FMS_*` in `bda.h`: `FMS_DRIVE_STATE_MASK`, `FMS_MEDIA_DRIVE_ESTABLISHED`, `FMS_DOUBLE_STEPPING`, `FMS_DATA_RATE_MASK`.
 
 - **Initialization**: Zero; `floppy_reset()` clears first two drives
 - **Usage**: Updated in `floppy_prep()` during read/write
 
+#### floppy_workarea[2] (u8 × 2)
+Floppy drive 0 and 1 workarea (40:92, 40:93). Zero-initialized.
+
 #### floppy_track[2] (u8 × 2)
-Current track for floppy drives 0 and 1.
+Current track for floppy drives 0 and 1 (40:94, 40:95).
 
 - **Initialization**: Zero; `floppy_reset()` clears
 - **Usage**: Set in `floppy_prep()` when seeking; read for read/write
@@ -340,14 +347,14 @@ Far pointer to video parameter/save table.
 
 ### 40:67 - System
 
-#### jump (struct segoff_s)
-Resume/warm-boot vector at 40h:67h. Used for Ctrl+Alt+Del and other soft resets.
+#### block_move_ss_sp (Seg_Off)
+Save area for SS:SP during block move (40:67).
 
 - **Initialization**: Zero; set by OS or firmware for resume
-- **Usage**: `handle_resume()` in `src/resume.c` uses for status 0x05, 0x0a, 0x0b, 0x0c
+- **Usage**: Used during BIOS block move operations
 
-#### other_6b (u8)
-Unused. Zero.
+#### reserved_post_6b (u8)
+Reserved for POST (40:6B). Zero.
 
 #### timer_counter (u32)
 BIOS tick count at ~18.2 Hz. Rolls over at `TICKS_PER_DAY` (1573040).
@@ -398,11 +405,14 @@ Disk controller control byte. 0xC0 = disable IRQ.
 #### port_disk (u8)
 Legacy disk controller port. SeaBIOS does not set. Zero.
 
-#### lpt_timeout[4] (u8 × 4)
-Timeout in ticks for LPT ports. Indexed by port number.
+#### lpt_timeout[3] (u8 × 3)
+Timeout in ticks for LPT1, LPT2, LPT3 (40:78–40:7A).
 
 - **Initialization**: `detect_parport()` sets (e.g., 0x14) with each port
 - **Usage**: INT 17h uses for printer operations
+
+#### int4b_flags (u8)
+INT 4Bh flags (VDS and SCSI) (40:7B). Zero if not used.
 
 #### com_timeout[4] (u8 × 4)
 Timeout in ticks for COM ports. Indexed by port number.
@@ -445,5 +455,20 @@ State of RTC wait. `RWS_WAIT_PENDING` (bit 0) = wait active; `RWS_WAIT_ELAPSED` 
 
 ### Reserved / Unused
 
-#### other_a1[7], other_ac[4], other_b0[80]
-Reserved/padding. Zero-initialized. SeaBIOS does not use.
+#### other_a1[7]
+Reserved for network adapters (40:A1). Zero-initialized.
+
+#### reserved_ac[8]
+Reserved (40:AC–40:B3). Zero-initialized.
+
+#### kbd_nmi_save[24]
+Keyboard NMI pre-processing save area, PC Convertible only (40:B4–40:CB). Zero-initialized.
+
+#### reserved_cc[2]
+Reserved (40:CC–40:CD). Zero-initialized.
+
+#### days_since_1980 (u16)
+Count of days since 1-1-1980 (40:CE). Later XT and PS/2 systems only. Zero if not used.
+
+#### reserved_d0[48]
+Reserved (40:D0–40:FF). Zero-initialized.

@@ -24,7 +24,8 @@ Printer-related BDA fields are documented in [BIOS_Data_Area.md](BIOS_Data_Area.
 | BDA offset | Field | Description |
 |------------|--------|-------------|
 | 0x08–0x0D | port_lpt[3] | I/O base addresses for LPT1–LPT3 (e.g. 0x378, 0x278, 0x3BC). Zero if port not present. |
-| 0x78–0x7B | lpt_timeout[4] | Timeout in timer ticks for each LPT port (e.g. 0x14). Used by AH=00h. |
+| 0x78–0x7A | lpt_timeout[3] | Timeout in timer ticks for LPT1, LPT2, LPT3 (e.g. 0x14). Used by AH=00h. |
+| 0x7B | int4b_flags | INT 4Bh flags (VDS and SCSI); not used by INT 17h. |
 
 - **Initialization**: `lpt_setup()` in `src/serial.c` probes LPT1 (0x378) and LPT2 (0x278) via `detect_parport()`, writes detected ports to `port_lpt[]` and sets `lpt_timeout[]` (0x14 per port). The equipment list (bits 14–15) is set to the number of parallel ports. LPT3 (0x3BC) is not probed by default.
 

@@ -104,7 +104,7 @@ struct Interrupt_Vector_Table {
 };
 
 //
-// Bios Data Area (BDA)
+// Bios Data Area (BDA). Layout follows segment 40h as in https://pcdosretro.gitlab.io/biosdata.txt.
 //
 struct Bios_Data_Area {
     // 40:00
@@ -113,11 +113,10 @@ struct Bios_Data_Area {
     uint16_t ebda_seg;
     // 40:10
     uint16_t equipment_list_flags;
-    uint8_t pad1;
+    uint8_t reserved_12h;       // 40:12 Reserved for manufacturing test
     uint16_t mem_size_kb;
-    uint8_t pad2;
-    uint8_t ps2_ctrl_flag;
-    uint16_t kbd_flag0;
+    uint8_t reserved_15h[2];     // 40:15 Reserved for manufacturing test (2 bytes)
+    uint16_t kbd_flag0;         // 40:17 Keyboard flags 1 (low byte), 40:18 Keyboard flags 2 (high byte)
     uint8_t alt_keypad;
     uint16_t kbd_buf_head;
     uint16_t kbd_buf_tail;
@@ -128,7 +127,7 @@ struct Bios_Data_Area {
     // 40:40
     uint8_t floppy_motor_counter;
     uint8_t floppy_last_status;
-    uint8_t floppy_return_status[7];
+    uint8_t floppy_controller_status[7];  // 40:42 Floppy drive controller status
     uint8_t video_mode;
     uint16_t video_cols;
     uint16_t video_pagesize;
@@ -141,8 +140,8 @@ struct Bios_Data_Area {
     uint16_t crtc_address;
     uint8_t video_msr;
     uint8_t video_pal;
-    Seg_Off jump;
-    uint8_t other_6b;
+    Seg_Off block_move_ss_sp;   // 40:67 Save area for SS:SP during block move
+    uint8_t reserved_post_6b;  // 40:6B Reserved for POST
     uint32_t timer_counter;
     // 40:70
     uint8_t timer_rollover;
@@ -152,7 +151,8 @@ struct Bios_Data_Area {
     uint8_t hdcount;
     uint8_t disk_control_byte;
     uint8_t port_disk;
-    uint8_t lpt_timeout[4];
+    uint8_t lpt_timeout[3];    // 40:78 LPT1, 79 LPT2, 7A LPT3 timeout
+    uint8_t int4b_flags;       // 40:7B INT 4Bh flags (VDS and SCSI)
     uint8_t com_timeout[4];
     // 40:80
     uint16_t kbd_buf_start_offset;
@@ -169,8 +169,9 @@ struct Bios_Data_Area {
     uint8_t disk_interrupt_flag;
     uint8_t floppy_harddisk_info;
     // 40:90
-    uint8_t floppy_media_state[4];
-    uint8_t floppy_track[2];
+    uint8_t floppy_media_state[2];  // 40:90 drive 0, 91 drive 1
+    uint8_t floppy_workarea[2];     // 40:92 drive 0, 93 drive 1 workarea
+    uint8_t floppy_track[2];        // 40:94 drive 0, 95 drive 1 current cylinder
     uint8_t kbd_flag1;
     uint8_t kbd_led;
     Seg_Off user_wait_complete_flag;
@@ -179,10 +180,15 @@ struct Bios_Data_Area {
     uint8_t rtc_wait_flag;
     uint8_t other_a1[7];
     Seg_Off video_savetable;
-    uint8_t other_ac[4];
-    // 40:B0
-    uint8_t other_b0[5 * 16];
+    uint8_t reserved_ac[8];    // 40:AC Reserved (8 bytes through 40:B3)
+    // 40:B4
+    uint8_t kbd_nmi_save[24];  // 40:B4 Keyboard NMI pre-processing save (PC Convertible)
+    uint8_t reserved_cc[2];    // 40:CC Reserved
+    uint16_t days_since_1980;  // 40:CE Count of days since 1-1-1980 (later XT/PS/2)
+    uint8_t reserved_d0[48];  // 40:D0 Reserved
 } __attribute__((packed));
+
+static_assert(sizeof(Bios_Data_Area) == 0x100, "BDA must be 256 bytes");
 
 //
 // BIOS Fixed Addresses.
