@@ -644,9 +644,9 @@ done_prefix:
     // Show instruction: address, opcode and mnemonics.
     machine.trace_instruction();
 
-    op      = opcode[plen];
-    d       = (op >> 1) & 1;
-    w       = op & 1;
+    op = opcode[plen];
+    d  = (op >> 1) & 1;
+    w  = op & 1;
     core.ip += 1;
 
     // For REP string instructions: full REP loop in one step (match legacy cycle_opcode).
@@ -1386,11 +1386,11 @@ void Processor::exe_one()
         intercept_bios_call();
         break;
     case 0xe9:
-        dst     = signconv(W, fetch(W));
+        dst = signconv(W, fetch(W));
         core.ip += dst;
         break;
     case 0xeb:
-        dst     = signconv(B, fetch(B));
+        dst = signconv(B, fetch(B));
         core.ip += dst;
         break;
     case 0xea: // RETF
@@ -1765,8 +1765,8 @@ void Processor::exe_one()
             if (src == 1)
                 core.flags.f.o = msb(w, dst) != core.flags.f.c;
             for (int cnt = 0; cnt < src; ++cnt) {
-                temp_cf = (dst & 1) != 0;
-                dst     = ((dst >> 1) | (core.flags.f.c ? SIGN[w] : 0)) & MASK[w];
+                temp_cf        = (dst & 1) != 0;
+                dst            = ((dst >> 1) | (core.flags.f.c ? SIGN[w] : 0)) & MASK[w];
                 core.flags.f.c = temp_cf;
             }
             if (src != 1) {
@@ -1784,7 +1784,7 @@ void Processor::exe_one()
                 int last_bit = 0;
                 if (src == shl_thresh) {
                     int eff_shift = shl_thresh - 1;
-                    last_bit      = (static_cast<unsigned>(orig_dst) << eff_shift) & MASK[w] & SIGN[w];
+                    last_bit = (static_cast<unsigned>(orig_dst) << eff_shift) & MASK[w] & SIGN[w];
                 }
                 core.flags.f.c = last_bit != 0;
                 core.flags.f.o = core.flags.f.c;

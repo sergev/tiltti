@@ -36,7 +36,8 @@
 //
 // Open binary image as disk.
 //
-Disk::Disk(const std::string &p, Memory &m, bool hard_disk) : memory(m), path(p), is_hard_disk(hard_disk)
+Disk::Disk(const std::string &p, Memory &m, bool hard_disk)
+    : memory(m), path(p), is_hard_disk(hard_disk)
 {
     // Try to open for read/write.
     file_descriptor = open(path.c_str(), O_RDWR);
@@ -75,7 +76,8 @@ Disk::Disk(const std::string &p, Memory &m, bool hard_disk) : memory(m), path(p)
 // Create fresh image from scratch. For unit tests.
 //
 Disk::Disk(const std::string &p, Memory &m, ImageFormat format, unsigned sz)
-    : memory(m), path(p), write_permit(true), size_sectors(sz), is_hard_disk(format == ImageFormat::VhdDynamic)
+    : memory(m), path(p), write_permit(true), size_sectors(sz),
+      is_hard_disk(format == ImageFormat::VhdDynamic)
 {
     file_descriptor = open(path.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0600);
     if (file_descriptor < 0) {
@@ -168,8 +170,8 @@ void Disk::set_geometry(unsigned sz, bool throw_on_unknown_floppy)
             break;
         default:
             if (throw_on_unknown_floppy) {
-                throw std::runtime_error("Unrecognized size of floppy image: " +
-                                         std::to_string(sz / 2) + " kbytes");
+                throw std::runtime_error(
+                    "Unrecognized size of floppy image: " + std::to_string(sz / 2) + " kbytes");
             }
             num_heads     = 16;
             num_sectors   = 63;
@@ -274,7 +276,8 @@ void Disk::memory_to_file(unsigned lba, unsigned addr, unsigned nbytes)
 
 //
 // Write sectors filled with a single byte (e.g. for format track).
-// Floppies: write fill_byte. Hard disks: write zeros only to allocated blocks (VHD: skip unallocated).
+// Floppies: write fill_byte. Hard disks: write zeros only to allocated blocks (VHD: skip
+// unallocated).
 //
 void Disk::write_sector_fill(unsigned lba, unsigned n_sectors, uint8_t fill_byte)
 {

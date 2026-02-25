@@ -92,8 +92,8 @@ bool Disk::vhd_try_init(off_t file_size)
     if (disk_type != 3) {
         throw std::runtime_error("Fixed/differencing VHD not supported; only dynamic VHD");
     }
-    is_vhd_dynamic     = true;
-    size_sectors       = read_be64(footer + 0x28) / SECTOR_NBYTES;
+    is_vhd_dynamic             = true;
+    size_sectors               = read_be64(footer + 0x28) / SECTOR_NBYTES;
     const uint64_t data_offset = read_be64(footer + 0x10);
 
     // Dynamic header at data_offset. Layout per spec: TableOffset@0x10, Version@0x18,
@@ -104,10 +104,10 @@ bool Disk::vhd_try_init(off_t file_size)
         memcmp(dyn_header, "cxsparse", 8) != 0) {
         throw std::runtime_error("Invalid dynamic VHD header");
     }
-    vhd_bat_file_offset   = read_be64(dyn_header + 0x10);
-    vhd_block_size        = read_be32(dyn_header + 0x20);
+    vhd_bat_file_offset        = read_be64(dyn_header + 0x10);
+    vhd_block_size             = read_be32(dyn_header + 0x20);
     const uint32_t max_entries = read_be32(dyn_header + 0x1C);
-    vhd_sectors_per_block = vhd_block_size / SECTOR_NBYTES;
+    vhd_sectors_per_block      = vhd_block_size / SECTOR_NBYTES;
 
     vhd_bat.resize(max_entries);
     if (lseek(file_descriptor, vhd_bat_file_offset, SEEK_SET) < 0) {
@@ -193,11 +193,12 @@ void Disk::vhd_write_sector_zeroes(unsigned lba, unsigned n_sectors)
 //
 bool Disk::vhd_lba_to_file_offset(unsigned lba, uint64_t *file_offset) const
 {
-    const unsigned block_idx      = lba / vhd_sectors_per_block;
+    const unsigned block_idx       = lba / vhd_sectors_per_block;
     const unsigned sector_in_block = lba % vhd_sectors_per_block;
     if (block_idx >= vhd_bat.size() || vhd_bat[block_idx] == 0xFFFFFFFF)
         return false;
-    *file_offset = (uint64_t)vhd_bat[block_idx] * SECTOR_NBYTES + SECTOR_NBYTES + sector_in_block * SECTOR_NBYTES;
+    *file_offset = (uint64_t)vhd_bat[block_idx] * SECTOR_NBYTES + SECTOR_NBYTES +
+                   sector_in_block * SECTOR_NBYTES;
     return true;
 }
 
@@ -207,16 +208,16 @@ bool Disk::vhd_lba_to_file_offset(unsigned lba, uint64_t *file_offset) const
 //
 void Disk::vhd_create_empty(off_t total_size_bytes)
 {
-    const uint32_t block_size     = 0x200000;
-    const uint64_t table_offset   = 1536;
+    const uint32_t block_size      = 0x200000;
+    const uint64_t table_offset    = 1536;
     const uint32_t num_bat_entries = (total_size_bytes + block_size - 1) / block_size;
-    const uint32_t bat_size       = (num_bat_entries * 4 + 511) & ~511;
+    const uint32_t bat_size        = (num_bat_entries * 4 + 511) & ~511;
 
-    is_vhd_dynamic     = true;
-    vhd_block_size     = block_size;
+    is_vhd_dynamic        = true;
+    vhd_block_size        = block_size;
     vhd_sectors_per_block = block_size / SECTOR_NBYTES;
-    vhd_bat_file_offset  = table_offset;
-    vhd_next_block_start = table_offset + bat_size;
+    vhd_bat_file_offset   = table_offset;
+    vhd_next_block_start  = table_offset + bat_size;
     vhd_bat.resize(num_bat_entries, 0xFFFFFFFF);
 
     uint64_t cyls = total_size_bytes / (SECTOR_NBYTES * 16 * 63);
@@ -240,7 +241,7 @@ void Disk::vhd_create_empty(off_t total_size_bytes)
     write_be32(footer + 0x3C, 3);
 
     footer[0x40] = footer[0x41] = footer[0x42] = footer[0x43] = 0;
-    uint32_t sum = 0;
+    uint32_t sum                                              = 0;
     for (size_t i = 0; i < sizeof(footer); ++i)
         sum += footer[i];
     write_be32(footer + 0x40, 0xFFFFFFFF - sum);
@@ -255,7 +256,7 @@ void Disk::vhd_create_empty(off_t total_size_bytes)
     write_be32(dyn_header + 0x20, block_size);
 
     dyn_header[0x24] = dyn_header[0x25] = dyn_header[0x26] = dyn_header[0x27] = 0;
-    sum = 0;
+    sum                                                                       = 0;
     for (size_t i = 0; i < sizeof(dyn_header); ++i)
         sum += dyn_header[i];
     write_be32(dyn_header + 0x24, 0xFFFFFFFF - sum);
@@ -321,7 +322,7 @@ void Disk::vhd_ensure_block_allocated(unsigned block_idx)
         throw std::runtime_error("VHD footer read failed");
 
     footer[0x40] = footer[0x41] = footer[0x42] = footer[0x43] = 0;
-    uint32_t sum = 0;
+    uint32_t sum                                              = 0;
     for (size_t i = 0; i < sizeof(footer); ++i)
         sum += footer[i];
     write_be32(footer + 0x40, 0xFFFFFFFF - sum);
@@ -350,7 +351,7 @@ void Disk::vhd_update_footer()
         return;
 
     footer[0x40] = footer[0x41] = footer[0x42] = footer[0x43] = 0;
-    uint32_t sum = 0;
+    uint32_t sum                                              = 0;
     for (size_t i = 0; i < sizeof(footer); ++i)
         sum += footer[i];
     write_be32(footer + 0x40, 0xFFFFFFFF - sum);

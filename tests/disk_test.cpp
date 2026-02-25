@@ -1,14 +1,15 @@
-#include "fixture.h"
+#include "disk.h"
+
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <unistd.h>
 
-#include "disk.h"
+#include "fixture.h"
 #include "memory.h"
 #include "pc86_arch.h"
 
@@ -30,8 +31,8 @@ protected:
 //
 TEST_F(MachineTest, DiskCreateVhdWriteRead)
 {
-    const std::string path = std::string(BUILD_DIR) + "/disk_create_test.vhd";
-    const unsigned size_sectors = 81920;  // 40 MB
+    const std::string path      = std::string(BUILD_DIR) + "/disk_create_test.vhd";
+    const unsigned size_sectors = 81920; // 40 MB
 
     Disk disk(path, memory, ImageFormat::VhdDynamic, size_sectors);
 
@@ -39,7 +40,7 @@ TEST_F(MachineTest, DiskCreateVhdWriteRead)
     EXPECT_TRUE(disk.is_writable());
 
     const unsigned buf_addr = 0x1000;
-    Byte *buf = memory.get_ptr(buf_addr);
+    Byte *buf               = memory.get_ptr(buf_addr);
 
     // Fill sector with pattern and write.
     memset(buf, 0x55, SECTOR_NBYTES);
@@ -65,15 +66,15 @@ TEST_F(MachineTest, DiskCreateVhdWriteRead)
 //
 TEST_F(MachineTest, DiskCreateRawWriteRead)
 {
-    const std::string path = std::string(BUILD_DIR) + "/disk_create_test_raw.img";
-    const unsigned size_sectors = 2880;  // 1.44 MB floppy
+    const std::string path      = std::string(BUILD_DIR) + "/disk_create_test_raw.img";
+    const unsigned size_sectors = 2880; // 1.44 MB floppy
 
     Disk disk(path, memory, ImageFormat::Raw, size_sectors);
 
     EXPECT_EQ(disk.get_size_sectors(), size_sectors);
 
     const unsigned buf_addr = 0x2000;
-    Byte *buf = memory.get_ptr(buf_addr);
+    Byte *buf               = memory.get_ptr(buf_addr);
 
     memset(buf, 0xAA, SECTOR_NBYTES);
     disk.memory_to_disk(0, buf_addr, SECTOR_NBYTES);
@@ -95,13 +96,13 @@ TEST_F(MachineTest, DiskCreateRawWriteRead)
 //
 TEST_F(DiskTest, DiskVhdBuildDynamic)
 {
-    const std::string path = temp_path("build_dynamic.vhd");
-    const unsigned size_sectors = 32768;  // 16 MB (for 15 MB offset)
+    const std::string path      = temp_path("build_dynamic.vhd");
+    const unsigned size_sectors = 32768; // 16 MB (for 15 MB offset)
 
     Disk disk(path, memory, ImageFormat::VhdDynamic, size_sectors);
 
     const unsigned buf_addr = 0x1000;
-    Byte *buf = memory.get_ptr(buf_addr);
+    Byte *buf               = memory.get_ptr(buf_addr);
 
     // Write pattern at sectors 0, 2048, 4096, 6144 (1MB boundaries) and sector 30720 (15MB).
     const unsigned sectors[] = { 0, 2048, 4096, 6144, 30720 };
@@ -128,8 +129,8 @@ TEST_F(DiskTest, DiskVhdBuildDynamic)
 //
 TEST_F(DiskTest, DiskVhdAttributes)
 {
-    const std::string path = temp_path("attributes.vhd");
-    const unsigned size_sectors = 81920;  // 40 MB
+    const std::string path      = temp_path("attributes.vhd");
+    const unsigned size_sectors = 81920; // 40 MB
 
     Disk disk(path, memory, ImageFormat::VhdDynamic, size_sectors);
 
@@ -145,10 +146,10 @@ TEST_F(DiskTest, DiskVhdAttributes)
 //
 TEST_F(DiskTest, DiskVhdReadWriteSmall)
 {
-    const std::string path = temp_path("readwrite_small.vhd");
+    const std::string path      = temp_path("readwrite_small.vhd");
     const unsigned size_sectors = 100;
-    const unsigned buf_addr = 0x1000;
-    Byte *buf = memory.get_ptr(buf_addr);
+    const unsigned buf_addr     = 0x1000;
+    Byte *buf                   = memory.get_ptr(buf_addr);
 
     {
         Disk disk(path, memory, ImageFormat::VhdDynamic, size_sectors);
@@ -183,10 +184,10 @@ TEST_F(DiskTest, DiskVhdReadWriteSmall)
 //
 TEST_F(DiskTest, DiskVhdReadWriteLarge)
 {
-    const std::string path = temp_path("readwrite_large.vhd");
-    const unsigned size_sectors = 8192;   // 4 MB disk
-    const unsigned write_sectors = 6144;  // 3 MB
-    const unsigned buf_addr = 0x1000;
+    const std::string path       = temp_path("readwrite_large.vhd");
+    const unsigned size_sectors  = 8192; // 4 MB disk
+    const unsigned write_sectors = 6144; // 3 MB
+    const unsigned buf_addr      = 0x1000;
 
     {
         Disk disk(path, memory, ImageFormat::VhdDynamic, size_sectors);
@@ -220,13 +221,13 @@ TEST_F(DiskTest, DiskVhdReadWriteLarge)
 //
 TEST_F(DiskTest, DiskVhdReadUnallocatedZeros)
 {
-    const std::string path = temp_path("unallocated_zeros.vhd");
+    const std::string path      = temp_path("unallocated_zeros.vhd");
     const unsigned size_sectors = 8192;
 
     Disk disk(path, memory, ImageFormat::VhdDynamic, size_sectors);
 
     const unsigned buf_addr = 0x1000;
-    Byte *buf = memory.get_ptr(buf_addr);
+    Byte *buf               = memory.get_ptr(buf_addr);
 
     // Read from middle of disk without ever writing there.
     memset(buf, 0xFF, SECTOR_NBYTES);
@@ -240,11 +241,12 @@ TEST_F(DiskTest, DiskVhdReadUnallocatedZeros)
 }
 
 //
-// DiskImageFileTest.FooterMissing: truncated file (footer at end missing), fallback to footer at start.
+// DiskImageFileTest.FooterMissing: truncated file (footer at end missing), fallback to footer at
+// start.
 //
 TEST_F(DiskTest, DiskVhdFooterMissing)
 {
-    const std::string path = temp_path("footer_missing.vhd");
+    const std::string path      = temp_path("footer_missing.vhd");
     const unsigned size_sectors = 100;
 
     {
@@ -278,8 +280,8 @@ TEST_F(DiskTest, DiskVhdFooterMissing)
 //
 TEST_F(DiskTest, DiskVhdReopenPersists)
 {
-    const std::string path = temp_path("reopen_persists.vhd");
-    const unsigned size_sectors = 1024;
+    const std::string path           = temp_path("reopen_persists.vhd");
+    const unsigned size_sectors      = 1024;
     const unsigned expected_capacity = size_sectors * SECTOR_NBYTES;
 
     {
@@ -310,7 +312,7 @@ TEST_F(DiskTest, DiskVhdReopenPersists)
 //
 TEST_F(DiskTest, DiskVhdFooterSyncOnClose)
 {
-    const std::string path = temp_path("footer_sync.vhd");
+    const std::string path      = temp_path("footer_sync.vhd");
     const unsigned size_sectors = 100;
 
     {
@@ -337,7 +339,7 @@ TEST_F(DiskTest, DiskVhdFooterSyncOnClose)
 //
 TEST_F(DiskTest, DiskVhdReadOnlyOpen)
 {
-    const std::string path = temp_path("readonly.vhd");
+    const std::string path      = temp_path("readonly.vhd");
     const unsigned size_sectors = 100;
 
     {
@@ -362,7 +364,7 @@ TEST_F(DiskTest, DiskVhdReadOnlyOpen)
 //
 TEST_F(DiskTest, DiskVhdSectorRangeError)
 {
-    const std::string path = temp_path("sector_range.vhd");
+    const std::string path      = temp_path("sector_range.vhd");
     const unsigned size_sectors = 100;
 
     Disk disk(path, memory, ImageFormat::VhdDynamic, size_sectors);
@@ -380,9 +382,9 @@ TEST_F(DiskTest, DiskVhdSectorRangeError)
 //
 TEST_F(DiskTest, DiskVhdWriteSectorFill)
 {
-    const std::string path = temp_path("sector_fill.vhd");
+    const std::string path      = temp_path("sector_fill.vhd");
     const unsigned size_sectors = 100;
-    const unsigned buf_addr = 0x1000;
+    const unsigned buf_addr     = 0x1000;
 
     {
         Disk disk(path, memory, ImageFormat::VhdDynamic, size_sectors);
@@ -393,7 +395,7 @@ TEST_F(DiskTest, DiskVhdWriteSectorFill)
 
     {
         Disk disk(path, memory, true);
-        disk.write_sector_fill(0, 1, 0x55);  // VHD always writes zeros
+        disk.write_sector_fill(0, 1, 0x55); // VHD always writes zeros
     }
 
     {
@@ -417,7 +419,7 @@ TEST_F(DiskTest, DiskVhdMultiBlockWrite)
     const std::string path = temp_path("multi_block.vhd");
     // Block size 2MB = 4096 sectors; write in block 0 and block 1.
     const unsigned size_sectors = 8192;
-    const unsigned buf_addr = 0x1000;
+    const unsigned buf_addr     = 0x1000;
 
     {
         Disk disk(path, memory, ImageFormat::VhdDynamic, size_sectors);

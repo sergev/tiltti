@@ -195,15 +195,15 @@ static_assert(sizeof(Bios_Data_Area) == 0x100, "BDA must be 256 bytes");
 // Layout matches SeaBIOS legacy/seabios/src/std/vga.h for guest compatibility.
 //
 struct Video_Param {
-    uint8_t  twidth;
-    uint8_t  theightm1;
-    uint8_t  cheight;
+    uint8_t twidth;
+    uint8_t theightm1;
+    uint8_t cheight;
     uint16_t slength;
-    uint8_t  sequ_regs[4];
-    uint8_t  miscreg;
-    uint8_t  crtc_regs[25];
-    uint8_t  actl_regs[20];
-    uint8_t  grdc_regs[9];
+    uint8_t sequ_regs[4];
+    uint8_t miscreg;
+    uint8_t crtc_regs[25];
+    uint8_t actl_regs[20];
+    uint8_t grdc_regs[9];
 } __attribute__((packed));
 
 struct Video_Save_Pointer {

@@ -24,8 +24,9 @@
 #ifndef TILTTI_DISK_H
 #define TILTTI_DISK_H
 
-#include <cstdint>
 #include <sys/types.h>
+
+#include <cstdint>
 #include <vector>
 
 #include "memory.h"
@@ -54,8 +55,8 @@ private:
     uint32_t vhd_block_size{};
     uint32_t vhd_sectors_per_block{};
     uint64_t vhd_bat_file_offset{};
-    uint64_t vhd_next_block_start{};  // File offset where next block will be written
-    bool vhd_blocks_allocated{};      // True if we allocated blocks (need footer on close)
+    uint64_t vhd_next_block_start{}; // File offset where next block will be written
+    bool vhd_blocks_allocated{};     // True if we allocated blocks (need footer on close)
 
 public:
     // Disk geometry.
@@ -107,7 +108,8 @@ private:
     void vhd_update_footer();
     void vhd_create_empty(off_t total_size_bytes);
 
-    // Set disk geometry from sector count. throw_on_unknown_floppy: true for open, false for create.
+    // Set disk geometry from sector count. throw_on_unknown_floppy: true for open, false for
+    // create.
     void set_geometry(unsigned size_sectors, bool throw_on_unknown_floppy = true);
 };
 

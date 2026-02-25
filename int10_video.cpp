@@ -970,9 +970,8 @@ void Machine::int10_vbe()
             auto &out = Machine::get_trace_stream();
             auto save = out.flags();
             out << "\tAH=4Fh VBE AL=00h Get controller info" << std::endl;
-            out << "\tES:DI=0x" << std::setw(4) << std::setfill('0') << std::hex << es
-                << ":0x" << std::setw(4) << di << " buffer=0x" << std::setw(8) << addr
-                << std::endl;
+            out << "\tES:DI=0x" << std::setw(4) << std::setfill('0') << std::hex << es << ":0x"
+                << std::setw(4) << di << " buffer=0x" << std::setw(8) << addr << std::endl;
             out.flags(save);
         }
 

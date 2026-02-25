@@ -166,7 +166,8 @@ TEST_F(MachineTest, drdos_v8_1)
     EXPECT_EQ(cursor_row(), 10);
     EXPECT_EQ(cursor_col(), 4);
     EXPECT_EQ(get_line(5), "DrDOS 8.1");
-    EXPECT_EQ(get_line(6), "Copyright (c) 2005 DrDOS, Inc. Lindon, Utah 84042. All rights reserved.");
+    EXPECT_EQ(get_line(6),
+              "Copyright (c) 2005 DrDOS, Inc. Lindon, Utah 84042. All rights reserved.");
     EXPECT_EQ(get_line(8), "LICENSED FOR NON-COMMERCIAL USE ONLY");
     EXPECT_EQ(get_line(10), "A:\\>");
 }

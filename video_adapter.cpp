@@ -55,7 +55,7 @@ static void snap_to_half_integer_scale(int w, int h, int *out_w, int *out_h)
     double scale   = std::min(scale_w, scale_h); // maintain aspect
     scale          = std::max(1.0, scale);       // min 1x
     int half_steps = static_cast<int>(std::round(scale * 2));
-    half_steps     = std::max(2, half_steps);    // 2 half-steps = 1x
+    half_steps     = std::max(2, half_steps); // 2 half-steps = 1x
     double snapped = half_steps / 2.0;
     *out_w         = static_cast<int>(Video_Adapter::SCREEN_WIDTH * snapped);
     *out_h         = static_cast<int>(Video_Adapter::SCREEN_HEIGHT * snapped);

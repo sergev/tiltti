@@ -629,12 +629,12 @@ void Machine::setup_floppy()
 //
 void Machine::build_video_save_table()
 {
-    constexpr unsigned nparam = 8;
-    constexpr uint16_t seg_bios_video = 0xF010;  // paragraph for 0xF0100
+    constexpr unsigned nparam         = 8;
+    constexpr uint16_t seg_bios_video = 0xF010; // paragraph for 0xF0100
 
     // Video Save Pointer Table at 0xF0110: videoparam -> param table, rest zero.
     const unsigned save_addr = BIOS_VIDEO_SAVE_TABLE;
-    memory.store16(save_addr + 0, 0x2C);  // videoparam.offset (0xF012C - 0xF0100)
+    memory.store16(save_addr + 0, 0x2C); // videoparam.offset (0xF012C - 0xF0100)
     memory.store16(save_addr + 2, seg_bios_video);
     for (unsigned i = 4; i < sizeof(Video_Save_Pointer); i++)
         memory.store8(save_addr + i, 0);
@@ -644,10 +644,10 @@ void Machine::build_video_save_table()
     std::memset(memory.get_ptr(param_addr), 0, nparam * sizeof(Video_Param));
 
     Video_Param *p0 = reinterpret_cast<Video_Param *>(memory.get_ptr(param_addr));
-    p0->twidth    = 80;
-    p0->theightm1 = 24;
-    p0->cheight   = 16;
-    p0->slength   = 4096;
+    p0->twidth      = 80;
+    p0->theightm1   = 24;
+    p0->cheight     = 16;
+    p0->slength     = 4096;
 
     // BDA 40h:A8: pointer to save table (linear 0xF0110 -> seg=0xF010, off=0x10).
     bda.video_savetable.offset = 0x10;
