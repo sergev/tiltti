@@ -418,11 +418,11 @@ void Processor::decode()
     rm  = opcode[plen + 1] & 0b111;
 
     if (mod == 0b01)
-        core.ip = (core.ip + 2) & 0xffff;
+        core.ip += 2;
     else if ((mod == 0b00 && rm == 0b110) || mod == 0b10)
-        core.ip = (core.ip + 3) & 0xffff;
+        core.ip += 3;
     else
-        core.ip = (core.ip + 1) & 0xffff;
+        core.ip += 1;
 
     // Default segment: use SS when effective address uses BP (no segment override).
     if (!segment_override && mod != 0b11 && (rm == 2 || rm == 3 || (rm == 6 && mod != 0)))
@@ -522,18 +522,18 @@ int Processor::sbb(int width, int dst, int src)
 
 int Processor::inc(int width, int dst)
 {
-    int res        = (dst + 1) & MASK[width];
+    unsigned res   = (dst + 1) & MASK[width];
     core.flags.f.a = ((res ^ dst ^ 1) & 0x10) != 0;
-    core.flags.f.o = res == static_cast<int>(SIGN[width]);
+    core.flags.f.o = res == SIGN[width];
     update_flags_zsp(width, res);
     return res;
 }
 
 int Processor::dec(int width, int dst)
 {
-    int res        = (dst - 1) & MASK[width];
+    unsigned res   = (dst - 1) & MASK[width];
     core.flags.f.a = ((res ^ dst ^ 1) & 0x10) != 0;
-    core.flags.f.o = res == static_cast<int>(SIGN[width]) - 1;
+    core.flags.f.o = res == SIGN[width] - 1;
     update_flags_zsp(width, res);
     return res;
 }
@@ -550,12 +550,13 @@ int Processor::signconv(int width, int x)
 {
     if (width == B)
         return static_cast<signed char>(x);
-    return static_cast<short>(x);
+    else
+        return static_cast<short>(x);
 }
 
 bool Processor::msb(int width, int x)
 {
-    return (static_cast<unsigned>(x) & SIGN[width]) == SIGN[width];
+    return (x & SIGN[width]) == SIGN[width];
 }
 
 //
@@ -630,13 +631,13 @@ void Processor::step()
         }
         opcode.push_back(prefix);
         plen++;
-        core.ip = (core.ip + 1) & 0xffff;
+        core.ip += 1;
     }
 done_prefix:
 
     // Prefetch 6 bytes at CS:IP for decode.
     for (int i = 0; i < 6; ++i) {
-        opcode.push_back(machine.mem_fetch_byte(pc86_linear_addr(core.cs, (core.ip + i) & 0xffff)));
+        opcode.push_back(machine.mem_fetch_byte(pc86_linear_addr(core.cs, core.ip + i)));
     }
     unpredictable_flags = 0;
 
@@ -646,7 +647,7 @@ done_prefix:
     op      = opcode[plen];
     d       = (op >> 1) & 1;
     w       = op & 1;
-    core.ip = (core.ip + 1) & 0xffff;
+    core.ip += 1;
 
     // For REP string instructions: full REP loop in one step (match legacy cycle_opcode).
     if (rep != 0 && (op == 0xa4 || op == 0xa5 || op == 0xa6 || op == 0xa7 || op == 0xaa ||
@@ -747,9 +748,9 @@ void Processor::exe_one()
     case 0x8e:
         decode();
         if (d == 0) {
-            setRM(W, mod, rm, static_cast<int>(getSegReg(reg)));
+            setRM(W, mod, rm, getSegReg(reg));
         } else {
-            setSegReg(reg, static_cast<Word>(getRM(W, mod, rm)));
+            setSegReg(reg, getRM(W, mod, rm));
         }
         break;
 
@@ -764,7 +765,7 @@ void Processor::exe_one()
     case 0x57:
         reg = op & 0b111;
         // 8086 PUSH SP pushes the value SP will have after the push (SP-2), not pre-decrement SP
-        src = (reg == 4) ? (static_cast<int>(core.sp) - 2) & 0xffff : getReg(W, reg);
+        src = (reg == 4) ? (core.sp - 2) : getReg(W, reg);
         push(src);
         break;
 
@@ -774,7 +775,7 @@ void Processor::exe_one()
     case 0x16:
     case 0x1e:
         reg = (op >> 3) & 0b111;
-        push(static_cast<int>(getSegReg(reg)));
+        push(getSegReg(reg));
         break;
 
     // POP general register
@@ -796,7 +797,7 @@ void Processor::exe_one()
     case 0x17:
     case 0x1f:
         reg = (op >> 3) & 0b111;
-        setSegReg(reg, static_cast<Word>(pop()));
+        setSegReg(reg, pop());
         break;
 
     // XCHG reg, reg/mem
@@ -885,7 +886,7 @@ void Processor::exe_one()
     // LEA
     case 0x8d:
         decode();
-        setReg(w, reg, (getEA(mod, rm) - (static_cast<unsigned>(os) << 4)) & 0xffff);
+        setReg(w, reg, getEA(mod, rm) - (os << 4));
         break;
 
     // LDS (always loads 16-bit offset into reg). 8086: EA+2 wraps at 64K.
@@ -1315,41 +1316,41 @@ void Processor::exe_one()
     case 0xa5:
         src = getMemAtSegOff(w, os, core.si);
         setMemAtSegOff(w, core.es, core.di, src);
-        core.si = (core.si + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
-        core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
+        core.si += (core.flags.f.d ? -1 : 1) * (1 + w);
+        core.di += (core.flags.f.d ? -1 : 1) * (1 + w);
         break;
     case 0xa6:
     case 0xa7:
         dst = getMemAtSegOff(w, core.es, core.di);
         src = getMemAtSegOff(w, os, core.si);
         sub(w, src, dst);
-        core.si = (core.si + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
-        core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
+        core.si += (core.flags.f.d ? -1 : 1) * (1 + w);
+        core.di += (core.flags.f.d ? -1 : 1) * (1 + w);
         break;
     case 0xae:
     case 0xaf:
         dst = getMemAtSegOff(w, core.es, core.di);
         src = getReg(w, AX);
         sub(w, src, dst);
-        core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
+        core.di += (core.flags.f.d ? -1 : 1) * (1 + w);
         break;
     case 0xac:
     case 0xad:
         src = getMemAtSegOff(w, os, core.si);
         setReg(w, AX, src);
-        core.si = (core.si + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
+        core.si += (core.flags.f.d ? -1 : 1) * (1 + w);
         break;
     case 0xaa:
     case 0xab:
         setMemAtSegOff(w, core.es, core.di, getReg(w, AX));
-        core.di = (core.di + (core.flags.f.d ? -1 : 1) * (1 + w)) & 0xffff;
+        core.di += (core.flags.f.d ? -1 : 1) * (1 + w);
         break;
 
     // --- CALL, RET, JMP: transfer and conditional jumps ---
     case 0xe8:
         dst = signconv(W, fetch(W));
-        push(static_cast<int>(core.ip));
-        core.ip = (core.ip + dst) & 0xffff;
+        push(core.ip);
+        core.ip += dst;
         break;
     case 0x9a:
         dst = fetch(W);
@@ -1363,12 +1364,12 @@ void Processor::exe_one()
     case 0xc0: // 8086 undocumented: same as C2 (RET imm16)
     case 0xc2:
         src     = fetch(W);
-        core.ip = static_cast<Word>(pop() & 0xffff);
-        core.sp = (core.sp + src) & 0xffff;
+        core.ip = pop();
+        core.sp += src;
         break;
     case 0xc1: // 8086 undocumented: same as C3 (RET near)
     case 0xc3:
-        core.ip = static_cast<Word>(pop() & 0xffff);
+        core.ip = pop();
         break;
     case 0xc9: // 8086 undocumented: same as CB (RETF)
     case 0xcb:
@@ -1386,11 +1387,11 @@ void Processor::exe_one()
         break;
     case 0xe9:
         dst     = signconv(W, fetch(W));
-        core.ip = (core.ip + dst) & 0xffff;
+        core.ip += dst;
         break;
     case 0xeb:
         dst     = signconv(B, fetch(B));
-        core.ip = (core.ip + dst) & 0xffff;
+        core.ip += dst;
         break;
     case 0xea: // RETF
         dst     = fetch(W);
@@ -1409,7 +1410,7 @@ void Processor::exe_one()
     case 0x70: // JO - Overflow
         dst = signconv(B, fetch(B));
         if (core.flags.f.o)
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     case 0x61: // Undocumented
@@ -1418,7 +1419,7 @@ void Processor::exe_one()
     case 0x71: // JNO - No overflow
         dst = signconv(B, fetch(B));
         if (!core.flags.f.o)
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     case 0x62: // Undocumented
@@ -1427,7 +1428,7 @@ void Processor::exe_one()
     case 0x72: // JB, JC, JNAE - Below / Carry
         dst = signconv(B, fetch(B));
         if (core.flags.f.c)
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     case 0x63: // Undocumented
@@ -1436,7 +1437,7 @@ void Processor::exe_one()
     case 0x73: // JNB, JNC, JAE - Above or equal / No carry
         dst = signconv(B, fetch(B));
         if (!core.flags.f.c)
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     case 0x64: // Undocumented
@@ -1445,7 +1446,7 @@ void Processor::exe_one()
     case 0x74: // JE, JZ - Equal / Zero
         dst = signconv(B, fetch(B));
         if (core.flags.f.z)
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     case 0x65: // Undocumented
@@ -1454,7 +1455,7 @@ void Processor::exe_one()
     case 0x75: // JNE, JNZ - Not equal / Not zero
         dst = signconv(B, fetch(B));
         if (!core.flags.f.z)
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     case 0x66: // Undocumented
@@ -1463,7 +1464,7 @@ void Processor::exe_one()
     case 0x76: // JBE, JNA - Below or equal
         dst = signconv(B, fetch(B));
         if (core.flags.f.c || core.flags.f.z)
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     case 0x67: // Undocumented
@@ -1472,7 +1473,7 @@ void Processor::exe_one()
     case 0x77: // JA, JNBE - Above
         dst = signconv(B, fetch(B));
         if (!(core.flags.f.c || core.flags.f.z))
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     case 0x68: // Undocumented
@@ -1481,7 +1482,7 @@ void Processor::exe_one()
     case 0x78: // JS - Sign
         dst = signconv(B, fetch(B));
         if (core.flags.f.s)
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     case 0x69: // Undocumented
@@ -1490,7 +1491,7 @@ void Processor::exe_one()
     case 0x79: // JNS - Not sign
         dst = signconv(B, fetch(B));
         if (!core.flags.f.s)
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     case 0x6a: // Undocumented
@@ -1499,7 +1500,7 @@ void Processor::exe_one()
     case 0x7a: // JP, JPE - Parity even
         dst = signconv(B, fetch(B));
         if (core.flags.f.p)
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     case 0x6b: // Undocumented
@@ -1508,7 +1509,7 @@ void Processor::exe_one()
     case 0x7b: // JNP, JPO - Parity odd
         dst = signconv(B, fetch(B));
         if (!core.flags.f.p)
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     case 0x6c: // Undocumented
@@ -1517,7 +1518,7 @@ void Processor::exe_one()
     case 0x7c: // JL, JNGE - Less (signed)
         dst = signconv(B, fetch(B));
         if (core.flags.f.s != core.flags.f.o)
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     case 0x6d: // Undocumented
@@ -1526,7 +1527,7 @@ void Processor::exe_one()
     case 0x7d: // JGE, JNL - Greater or equal (signed)
         dst = signconv(B, fetch(B));
         if (core.flags.f.s == core.flags.f.o)
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     case 0x6e: // Undocumented
@@ -1535,7 +1536,7 @@ void Processor::exe_one()
     case 0x7e: // JLE, JNG - Less or equal (signed)
         dst = signconv(B, fetch(B));
         if (core.flags.f.z || (core.flags.f.s != core.flags.f.o))
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     case 0x6f: // Undocumented
@@ -1544,7 +1545,7 @@ void Processor::exe_one()
     case 0x7f: // JG, JNLE - Greater (signed)
         dst = signconv(B, fetch(B));
         if (!core.flags.f.z && (core.flags.f.s == core.flags.f.o))
-            core.ip = (core.ip + dst) & 0xffff;
+            core.ip += dst;
         break;
 
     // LOOP, LOOPE, LOOPNE, JCXZ
@@ -1655,7 +1656,7 @@ void Processor::exe_one()
         src = fetch(B);
         if (op == 0x81)
             src |= fetch(B) << 8;
-        else if (op == 0x83 && (src & static_cast<int>(SIGN[B])) != 0)
+        else if (op == 0x83 && (src & SIGN[B]) != 0)
             src |= 0xff00;
         switch (reg) {
         case 0:
@@ -1747,7 +1748,7 @@ void Processor::exe_one()
         case 1: // ROR
             for (int cnt = 0; cnt < src; ++cnt) {
                 temp_cf = (dst & 1) != 0;
-                dst     = ((dst >> 1) | (temp_cf ? static_cast<int>(SIGN[w]) : 0)) & MASK[w];
+                dst     = ((dst >> 1) | (temp_cf ? SIGN[w] : 0)) & MASK[w];
             }
             core.flags.f.c = msb(w, dst);
             core.flags.f.o = msb(w, dst) != msb(w, dst << 1); // 8086: same for count>=1
@@ -1765,7 +1766,7 @@ void Processor::exe_one()
                 core.flags.f.o = msb(w, dst) != core.flags.f.c;
             for (int cnt = 0; cnt < src; ++cnt) {
                 temp_cf = (dst & 1) != 0;
-                dst     = ((dst >> 1) | (core.flags.f.c ? static_cast<int>(SIGN[w]) : 0)) & MASK[w];
+                dst     = ((dst >> 1) | (core.flags.f.c ? SIGN[w] : 0)) & MASK[w];
                 core.flags.f.c = temp_cf;
             }
             if (src != 1) {
@@ -1783,8 +1784,7 @@ void Processor::exe_one()
                 int last_bit = 0;
                 if (src == shl_thresh) {
                     int eff_shift = shl_thresh - 1;
-                    last_bit      = (static_cast<unsigned>(orig_dst) << eff_shift) &
-                               static_cast<unsigned>(MASK[w]) & static_cast<unsigned>(SIGN[w]);
+                    last_bit      = (static_cast<unsigned>(orig_dst) << eff_shift) & MASK[w] & SIGN[w];
                 }
                 core.flags.f.c = last_bit != 0;
                 core.flags.f.o = core.flags.f.c;
@@ -1793,10 +1793,10 @@ void Processor::exe_one()
                 update_flags_zsp(w, dst);
             } else {
                 for (int cnt = 0; cnt < src; ++cnt) {
-                    core.flags.f.c = (dst & static_cast<int>(SIGN[w])) != 0;
+                    core.flags.f.c = (dst & SIGN[w]) != 0;
                     dst            = (dst << 1) & MASK[w];
                 }
-                core.flags.f.o = ((dst & static_cast<int>(SIGN[w])) != 0) != core.flags.f.c;
+                core.flags.f.o = ((dst & SIGN[w]) != 0) != core.flags.f.c;
 
                 // AF undefined per Intel; batch5/batch6 expect different values - mark
                 // unpredictable
@@ -1809,7 +1809,7 @@ void Processor::exe_one()
         }
         case 6: // SETMO/SETMOC: set to all ones; when count 0 (D2/D3), no op
             if (op == 0xd0 || op == 0xd1 || src >= 1) {
-                dst            = static_cast<int>(MASK[w]);
+                dst            = MASK[w];
                 core.flags.f.c = 0;
                 core.flags.f.o = 0;
                 core.flags.f.a = 0;
@@ -1828,7 +1828,7 @@ void Processor::exe_one()
                 update_flags_zsp(w, dst);
             } else {
                 if (src == 1)
-                    core.flags.f.o = (dst & static_cast<int>(SIGN[w])) != 0;
+                    core.flags.f.o = (dst & SIGN[w]) != 0;
                 else if (src > 1)
                     core.flags.f.o = 0;
                 for (int cnt = 0; cnt < src; ++cnt) {
@@ -1846,12 +1846,12 @@ void Processor::exe_one()
             if (src == 1)
                 core.flags.f.o = 0;
             if (src > 0) {
-                int signbit     = (dst & static_cast<int>(SIGN[w]));
+                int signbit     = (dst & SIGN[w]);
                 int sign_thresh = (w == B) ? 8 : 16;
                 if (src >= sign_thresh) {
                     core.flags.f.c = signbit != 0;
                     core.flags.f.o = 0;
-                    dst            = signbit ? static_cast<int>(MASK[w]) : 0;
+                    dst            = signbit ? MASK[w] : 0;
                 } else {
                     for (int cnt = 0; cnt < src; ++cnt) {
                         core.flags.f.c = (dst & 1) != 0;
