@@ -39,6 +39,7 @@ add_library(simulator STATIC
     machine.cpp
     memory.cpp
     disk.cpp
+    vhd.cpp
     trace.cpp
     processor.cpp
     syscall.cpp
