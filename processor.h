@@ -134,6 +134,7 @@ private:
     void logic(int width, int res);
     static int signconv(int width, int x);
     static bool msb(int width, int x);
+    void intercept_bios_call();
 
     // Execute one opcode (used by step and REP loop).
     void exe_one();

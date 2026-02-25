@@ -559,6 +559,18 @@ bool Processor::msb(int width, int x)
 }
 
 //
+// Intercept syscalls.
+//
+void Processor::intercept_bios_call()
+{
+    if (machine.process_bios_call(core.cs, core.ip)) {
+        core.ip = pop();
+        core.cs = pop();
+        pop(); // get rid of extra flags
+    }
+}
+
+//
 // Execute one instruction. One call = one instruction (prefixes consumed, then one opcode
 // executed). Increment IP register. Emit exception in case of failure.
 //
@@ -1342,10 +1354,11 @@ void Processor::exe_one()
     case 0x9a:
         dst = fetch(W);
         src = fetch(W);
-        push(static_cast<int>(core.cs));
-        push(static_cast<int>(core.ip));
-        core.ip = static_cast<Word>(dst & 0xffff);
-        core.cs = static_cast<Word>(src & 0xffff);
+        push(core.cs);
+        push(core.ip);
+        core.ip = dst;
+        core.cs = src;
+        intercept_bios_call();
         break;
     case 0xc0: // 8086 undocumented: same as C2 (RET imm16)
     case 0xc2:
@@ -1359,15 +1372,17 @@ void Processor::exe_one()
         break;
     case 0xc9: // 8086 undocumented: same as CB (RETF)
     case 0xcb:
-        core.ip = static_cast<Word>(pop() & 0xffff);
-        core.cs = static_cast<Word>(pop() & 0xffff);
+        core.ip = pop();
+        core.cs = pop();
+        intercept_bios_call();
         break;
     case 0xc8: // 8086: same as CA (RETF imm16); ENTER is 186+
     case 0xca:
         src     = fetch(W);
-        core.ip = static_cast<Word>(pop() & 0xffff);
-        core.cs = static_cast<Word>(pop() & 0xffff);
-        core.sp = (core.sp + src) & 0xffff;
+        core.ip = pop();
+        core.cs = pop();
+        core.sp += src;
+        intercept_bios_call();
         break;
     case 0xe9:
         dst     = signconv(W, fetch(W));
@@ -1377,18 +1392,12 @@ void Processor::exe_one()
         dst     = signconv(B, fetch(B));
         core.ip = (core.ip + dst) & 0xffff;
         break;
-    case 0xea:
-        dst = fetch(W);
-        src = fetch(W);
-        if (machine.process_bios_call(src, dst)) {
-            // Intercept syscalls.
-            core.ip = pop();
-            core.cs = pop();
-            pop(); // get rid of extra flags
-            return;
-        }
+    case 0xea: // RETF
+        dst     = fetch(W);
+        src     = fetch(W);
         core.ip = dst;
         core.cs = src;
+        intercept_bios_call();
         break;
 
     //
@@ -1581,6 +1590,7 @@ void Processor::exe_one()
         core.ip = pop();
         core.cs = pop();
         set_flags(pop());
+        intercept_bios_call();
         break;
 
     // Flag ops
@@ -2083,16 +2093,12 @@ void Processor::exe_one()
             unsigned addr = getEA(mod, rm);
             unsigned off  = addr - (os << 4);
             dst           = getMemAtSegOff(W, os, off);
-            unsigned seg  = getMemAtSegOff(W, os, off + 2);
-            if (machine.process_bios_call(seg, dst)) {
-                // Intercept syscalls.
-                pop(); // get rid of extra flags
-                return;
-            }
+            src           = getMemAtSegOff(W, os, off + 2);
             push(core.cs);
             push(core.ip);
             core.ip = dst;
-            core.cs = seg;
+            core.cs = src;
+            intercept_bios_call();
             break;
         }
         case 4:
@@ -2101,17 +2107,9 @@ void Processor::exe_one()
         case 5: { // LJMP
             unsigned addr = getEA(mod, rm);
             unsigned off  = addr - (os << 4);
-            dst           = getMemAtSegOff(W, os, off);
-            unsigned seg  = getMemAtSegOff(W, os, off + 2);
-            if (machine.process_bios_call(seg, dst)) {
-                // Intercept syscalls.
-                core.ip = pop();
-                core.cs = pop();
-                pop(); // get rid of extra flags
-                return;
-            }
-            core.ip = dst;
-            core.cs = seg;
+            core.ip       = getMemAtSegOff(W, os, off);
+            core.cs       = getMemAtSegOff(W, os, off + 2);
+            intercept_bios_call();
             break;
         }
         case 6:
