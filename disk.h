@@ -52,6 +52,8 @@ private:
     uint32_t vhd_block_size{};
     uint32_t vhd_sectors_per_block{};
     uint64_t vhd_bat_file_offset{};
+    uint64_t vhd_next_block_start{};  // File offset where next block will be written
+    bool vhd_blocks_allocated{};      // True if we allocated blocks (need footer on close)
 
 public:
     // Disk geometry.
@@ -99,6 +101,7 @@ private:
     void vhd_write_sector_zeroes(unsigned lba, unsigned n_sectors);
     bool vhd_lba_to_file_offset(unsigned lba, uint64_t *file_offset) const;
     void vhd_ensure_block_allocated(unsigned block_idx);
+    void vhd_update_footer();
 };
 
 #endif // TILTTI_DISK_H

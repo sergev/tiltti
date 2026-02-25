@@ -154,16 +154,24 @@ Disk::Disk(const std::string &p, Memory &m, bool hard_disk) : memory(m), path(p)
 
 //
 // Attempt to detect and initialize dynamic VHD. Returns true if VHD was detected and initialized.
+// Follows DiscUtils: read footer from end first, fallback to offset 0 if invalid.
 //
 bool Disk::vhd_try_init(off_t file_size)
 {
     uint8_t footer[512];
-    if (lseek(file_descriptor, file_size - 512, SEEK_SET) < 0 ||
-        read(file_descriptor, footer, sizeof(footer)) != (ssize_t)sizeof(footer)) {
-        return false;
+    bool footer_valid = false;
+
+    if (lseek(file_descriptor, file_size - 512, SEEK_SET) >= 0 &&
+        read(file_descriptor, footer, sizeof(footer)) == (ssize_t)sizeof(footer) &&
+        memcmp(footer, "conectix", 8) == 0) {
+        footer_valid = true;
     }
-    if (memcmp(footer, "conectix", 8) != 0) {
-        return false;
+    if (!footer_valid) {
+        if (lseek(file_descriptor, 0, SEEK_SET) < 0 ||
+            read(file_descriptor, footer, sizeof(footer)) != (ssize_t)sizeof(footer) ||
+            memcmp(footer, "conectix", 8) != 0) {
+            return false;
+        }
     }
 
     // VHD footer found. Disk type at offset 0x3C (4 bytes BE).
@@ -171,11 +179,11 @@ bool Disk::vhd_try_init(off_t file_size)
     if (disk_type != 3) {
         throw std::runtime_error("Fixed/differencing VHD not supported; only dynamic VHD");
     }
-    is_vhd_dynamic = true;
-    size_sectors   = read_be64(footer + 0x28) / SECTOR_NBYTES;
+    is_vhd_dynamic     = true;
+    size_sectors       = read_be64(footer + 0x28) / SECTOR_NBYTES;
     const uint64_t data_offset = read_be64(footer + 0x10);
 
-    // Dynamic header at data_offset.
+    // Dynamic header at data_offset. QEMU uses BlockSize @ 0x18, DiscUtils @ 0x20.
     uint8_t dyn_header[1024];
     if (lseek(file_descriptor, data_offset, SEEK_SET) < 0 ||
         read(file_descriptor, dyn_header, sizeof(dyn_header)) != (ssize_t)sizeof(dyn_header) ||
@@ -198,6 +206,9 @@ bool Disk::vhd_try_init(off_t file_size)
         }
         vhd_bat[i] = read_be32(entry);
     }
+
+    // DiscUtils: next block goes at (file_size - 512), overwriting the footer.
+    vhd_next_block_start = file_size - 512;
     return true;
 }
 
@@ -216,6 +227,9 @@ Disk::Disk(const unsigned char data[], Memory &m, unsigned sz, unsigned ncyl, un
 Disk::~Disk()
 {
     if (!embedded_data) {
+        if (is_vhd_dynamic && write_permit) {
+            vhd_update_footer();
+        }
         close(file_descriptor);
     }
 }
@@ -423,25 +437,23 @@ static void write_be32(uint8_t *p, uint32_t val)
 
 //
 // VHD: allocate a new block and update BAT.
+// DiscUtils pattern: write block at vhd_next_block_start, then append footer.
 //
 void Disk::vhd_ensure_block_allocated(unsigned block_idx)
 {
     if (block_idx >= vhd_bat.size() || vhd_bat[block_idx] != 0xFFFFFFFF)
         return;
 
-    // Append position: before footer. Footer is last 512 bytes.
-    off_t pos = lseek(file_descriptor, 0, SEEK_END);
-    if (pos < 0)
-        throw std::runtime_error("VHD seek error");
-    pos -= 512; // overwrite footer, we'll re-append it
+    const uint64_t pos = vhd_next_block_start;
 
     // Write block: 512-byte bitmap (all 0xFF) + block_size zeros.
     uint8_t bitmap[SECTOR_NBYTES];
     memset(bitmap, 0xFF, sizeof(bitmap));
-    if (lseek(file_descriptor, pos, SEEK_SET) < 0 || write(file_descriptor, bitmap, sizeof(bitmap)) != (ssize_t)sizeof(bitmap))
+    if (lseek(file_descriptor, pos, SEEK_SET) < 0 ||
+        write(file_descriptor, bitmap, sizeof(bitmap)) != (ssize_t)sizeof(bitmap))
         throw std::runtime_error("VHD block allocation failed");
 
-    // Write block_size zeros in chunks to avoid large allocation.
+    // Write block_size zeros in chunks.
     uint8_t zeros[4096];
     memset(zeros, 0, sizeof(zeros));
     for (uint32_t remain = vhd_block_size; remain > 0;) {
@@ -450,6 +462,9 @@ void Disk::vhd_ensure_block_allocated(unsigned block_idx)
             throw std::runtime_error("VHD block allocation failed");
         remain -= chunk;
     }
+
+    vhd_next_block_start = pos + SECTOR_NBYTES + vhd_block_size;
+    vhd_blocks_allocated = true;
 
     const uint32_t new_sector_offset = pos / SECTOR_NBYTES;
     vhd_bat[block_idx]               = new_sector_offset;
@@ -461,20 +476,53 @@ void Disk::vhd_ensure_block_allocated(unsigned block_idx)
         write(file_descriptor, entry, 4) != 4)
         throw std::runtime_error("VHD BAT update failed");
 
-    // Read current footer, update checksum, append.
+    // Append footer at end (DiscUtils: seek to nextBlockStart, write footer).
     uint8_t footer[512];
-    if (lseek(file_descriptor, 0, SEEK_SET) < 0 || read(file_descriptor, footer, sizeof(footer)) != (ssize_t)sizeof(footer))
+    if (lseek(file_descriptor, 0, SEEK_SET) < 0 ||
+        read(file_descriptor, footer, sizeof(footer)) != (ssize_t)sizeof(footer))
         throw std::runtime_error("VHD footer read failed");
 
-    // Checksum: zero the field, sum all bytes, store 0xFFFFFFFF - sum.
     footer[0x40] = footer[0x41] = footer[0x42] = footer[0x43] = 0;
     uint32_t sum = 0;
     for (size_t i = 0; i < sizeof(footer); ++i)
         sum += footer[i];
     write_be32(footer + 0x40, 0xFFFFFFFF - sum);
 
-    if (write(file_descriptor, footer, sizeof(footer)) != (ssize_t)sizeof(footer))
+    if (lseek(file_descriptor, vhd_next_block_start, SEEK_SET) < 0 ||
+        write(file_descriptor, footer, sizeof(footer)) != (ssize_t)sizeof(footer))
         throw std::runtime_error("VHD footer write failed");
+
+    // Update footer copy at offset 0 (spec: both copies must match).
+    if (lseek(file_descriptor, 0, SEEK_SET) < 0 ||
+        write(file_descriptor, footer, sizeof(footer)) != (ssize_t)sizeof(footer))
+        throw std::runtime_error("VHD footer copy update failed");
+}
+
+//
+// VHD: write footer at end before close. Called from destructor.
+//
+void Disk::vhd_update_footer()
+{
+    if (!vhd_blocks_allocated)
+        return;
+
+    uint8_t footer[512];
+    if (lseek(file_descriptor, 0, SEEK_SET) < 0 ||
+        read(file_descriptor, footer, sizeof(footer)) != (ssize_t)sizeof(footer))
+        return;
+
+    footer[0x40] = footer[0x41] = footer[0x42] = footer[0x43] = 0;
+    uint32_t sum = 0;
+    for (size_t i = 0; i < sizeof(footer); ++i)
+        sum += footer[i];
+    write_be32(footer + 0x40, 0xFFFFFFFF - sum);
+
+    if (lseek(file_descriptor, vhd_next_block_start, SEEK_SET) >= 0 &&
+        write(file_descriptor, footer, sizeof(footer)) == (ssize_t)sizeof(footer)) {
+        lseek(file_descriptor, 0, SEEK_SET);
+        write(file_descriptor, footer, sizeof(footer));
+        fsync(file_descriptor);
+    }
 }
 
 //
