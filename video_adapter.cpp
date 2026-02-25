@@ -20,6 +20,7 @@
 
 #include <SDL.h>
 
+#include <cmath>
 #include <cstring>
 
 #include "vga_font_9x16.h"
@@ -45,6 +46,20 @@ constexpr unsigned PALETTE[16][3] = {
     { 255, 255, 85 },  // 14 bright yellow
     { 255, 255, 255 }  // 15 white
 };
+
+// Snap (w,h) to nearest half-integer scale; return snapped (w,h).
+static void snap_to_half_integer_scale(int w, int h, int *out_w, int *out_h)
+{
+    double scale_w = w / static_cast<double>(Video_Adapter::SCREEN_WIDTH);
+    double scale_h = h / static_cast<double>(Video_Adapter::SCREEN_HEIGHT);
+    double scale   = std::min(scale_w, scale_h); // maintain aspect
+    scale          = std::max(1.0, scale);       // min 1x
+    int half_steps = static_cast<int>(std::round(scale * 2));
+    half_steps     = std::max(2, half_steps);    // 2 half-steps = 1x
+    double snapped = half_steps / 2.0;
+    *out_w         = static_cast<int>(Video_Adapter::SCREEN_WIDTH * snapped);
+    *out_h         = static_cast<int>(Video_Adapter::SCREEN_HEIGHT * snapped);
+}
 
 } // namespace
 
@@ -252,6 +267,16 @@ void Video_Adapter::pump_events(Machine &machine, unsigned timeout)
             return;
         }
         if (event.type == SDL_WINDOWEVENT) {
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED ||
+                event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+                int w = event.window.data1;
+                int h = event.window.data2;
+                int snap_w, snap_h;
+                snap_to_half_integer_scale(w, h, &snap_w, &snap_h);
+                if (snap_w != w || snap_h != h) {
+                    SDL_SetWindowSize(static_cast<SDL_Window *>(window_), snap_w, snap_h);
+                }
+            }
             if (event.window.event == SDL_WINDOWEVENT_RESIZED ||
                 event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED ||
                 event.window.event == SDL_WINDOWEVENT_EXPOSED) {
