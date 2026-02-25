@@ -25,6 +25,7 @@
 #define TILTTI_DISK_H
 
 #include <cstdint>
+#include <vector>
 
 #include "memory.h"
 
@@ -43,6 +44,14 @@ private:
     // Embedded disk image, read only.
     const unsigned char *embedded_data{};
 
+    // VHD dynamic disk support (hard disks only).
+    bool is_hard_disk{};
+    bool is_vhd_dynamic{};
+    std::vector<uint32_t> vhd_bat;
+    uint32_t vhd_block_size{};
+    uint32_t vhd_sectors_per_block{};
+    uint64_t vhd_bat_file_offset{};
+
 public:
     // Disk geometry.
     unsigned num_cylinders;
@@ -50,7 +59,7 @@ public:
     unsigned num_sectors;
 
     // Constructor throws exception if the file cannot be opened.
-    Disk(const std::string &path, Memory &memory);
+    Disk(const std::string &path, Memory &memory, bool is_hard_disk = false);
     Disk(const unsigned char data[], Memory &memory, unsigned size_sectors, unsigned ncyl,
          unsigned nhead, unsigned nsect);
 
@@ -81,6 +90,9 @@ private:
     void file_to_memory(unsigned sector, unsigned addr, unsigned nwords);
     void memory_to_file(unsigned sector, unsigned addr, unsigned nwords);
     void embedded_to_memory(unsigned sector, unsigned addr, unsigned nwords);
+
+    bool lba_to_file_offset(unsigned lba, uint64_t *file_offset) const;
+    void ensure_block_allocated(unsigned block_idx);
 };
 
 #endif // TILTTI_DISK_H

@@ -16,5 +16,6 @@ outdir*/
 *.xd
 *.patched
 *.img
+*.vhd
 *.bin
 *.log

@@ -487,8 +487,9 @@ void Machine::disk_mount(unsigned disk_unit, const std::string &path)
         throw std::runtime_error("Disk unit " + std::to_string(disk_unit) + " is already mounted");
     }
 
-    // Open binary image as disk.
-    disks[disk_unit] = std::make_unique<Disk>(path, memory);
+    // Open binary image as disk. Hard disks (C:, D:) support VHD; floppies (A:, B:) are raw.
+    const bool is_hard_disk = (disk_unit >= DISK_C);
+    disks[disk_unit]        = std::make_unique<Disk>(path, memory, is_hard_disk);
 
     if (trace_enabled()) {
         auto const &disk = *disks[disk_unit].get();

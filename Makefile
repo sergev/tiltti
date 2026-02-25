@@ -77,6 +77,9 @@ images/b.img:
 images/c.img:
 	qemu-img create -f raw $@ 40M
 
+images/c.vhd:
+	qemu-img create -f vpc -o subformat=dynamic $@ 40M
+
 #
 # Run MS-DOS
 #
@@ -86,8 +89,8 @@ msdos1: $(PROG)
 msdos2: $(PROG)
 	$(PROG) images/msdos2.12-360k.img
 
-msdos3: $(PROG) images/b.img images/c.img
-	$(PROG) images/msdos3.31-1.44m.img -b images/b.img -c images/c.img --boot=a
+msdos3: $(PROG) images/b.img images/c.vhd
+	$(PROG) images/msdos3.31-1.44m.img -b images/b.img -c images/c.vhd --boot=a
 
 msdos6: $(PROG) images/b.img images/c.img
 	$(PROG) images/msdos6.22-1.44m.img -b images/b.img -c images/c.img --boot=a
