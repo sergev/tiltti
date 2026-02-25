@@ -76,48 +76,11 @@ Disk::Disk(const std::string &p, Memory &m, bool hard_disk) : memory(m), path(p)
     } else {
         // Hard disk: attempt VHD detection.
         if (file_size < 512) {
-            size_sectors = file_size / SECTOR_NBYTES;
+            throw std::runtime_error("Bad size of disk image " + path);
+        } else if (vhd_try_init(file_size)) {
+            // VHD initialized; size_sectors and vhd_* set by vhd_try_init
         } else {
-            uint8_t footer[512];
-            if (lseek(file_descriptor, file_size - 512, SEEK_SET) < 0 ||
-                read(file_descriptor, footer, sizeof(footer)) != (ssize_t)sizeof(footer)) {
-                size_sectors = file_size / SECTOR_NBYTES;
-            } else if (memcmp(footer, "conectix", 8) != 0) {
-                size_sectors = file_size / SECTOR_NBYTES;
-            } else {
-                // VHD footer found. Disk type at offset 0x3C (4 bytes BE).
-                const uint32_t disk_type = read_be32(footer + 0x3C);
-                if (disk_type != 3) {
-                    throw std::runtime_error("Fixed/differencing VHD not supported; only dynamic VHD");
-                }
-                is_vhd_dynamic = true;
-                size_sectors   = read_be64(footer + 0x28) / SECTOR_NBYTES;
-                const uint64_t data_offset = read_be64(footer + 0x10);
-
-                // Dynamic header at data_offset.
-                uint8_t dyn_header[1024];
-                if (lseek(file_descriptor, data_offset, SEEK_SET) < 0 ||
-                    read(file_descriptor, dyn_header, sizeof(dyn_header)) != (ssize_t)sizeof(dyn_header) ||
-                    memcmp(dyn_header, "cxsparse", 8) != 0) {
-                    throw std::runtime_error("Invalid dynamic VHD header");
-                }
-                vhd_bat_file_offset   = read_be64(dyn_header + 0x10);
-                vhd_block_size        = read_be32(dyn_header + 0x18);
-                const uint32_t max_entries = read_be32(dyn_header + 0x1C);
-                vhd_sectors_per_block = vhd_block_size / SECTOR_NBYTES;
-
-                vhd_bat.resize(max_entries);
-                if (lseek(file_descriptor, vhd_bat_file_offset, SEEK_SET) < 0) {
-                    throw std::runtime_error("Cannot seek to VHD BAT");
-                }
-                for (uint32_t i = 0; i < max_entries; ++i) {
-                    uint8_t entry[4];
-                    if (read(file_descriptor, entry, 4) != 4) {
-                        throw std::runtime_error("Cannot read VHD BAT");
-                    }
-                    vhd_bat[i] = read_be32(entry);
-                }
-            }
+            size_sectors = file_size / SECTOR_NBYTES;
         }
     }
 
@@ -190,6 +153,55 @@ Disk::Disk(const std::string &p, Memory &m, bool hard_disk) : memory(m), path(p)
 }
 
 //
+// Attempt to detect and initialize dynamic VHD. Returns true if VHD was detected and initialized.
+//
+bool Disk::vhd_try_init(off_t file_size)
+{
+    uint8_t footer[512];
+    if (lseek(file_descriptor, file_size - 512, SEEK_SET) < 0 ||
+        read(file_descriptor, footer, sizeof(footer)) != (ssize_t)sizeof(footer)) {
+        return false;
+    }
+    if (memcmp(footer, "conectix", 8) != 0) {
+        return false;
+    }
+
+    // VHD footer found. Disk type at offset 0x3C (4 bytes BE).
+    const uint32_t disk_type = read_be32(footer + 0x3C);
+    if (disk_type != 3) {
+        throw std::runtime_error("Fixed/differencing VHD not supported; only dynamic VHD");
+    }
+    is_vhd_dynamic = true;
+    size_sectors   = read_be64(footer + 0x28) / SECTOR_NBYTES;
+    const uint64_t data_offset = read_be64(footer + 0x10);
+
+    // Dynamic header at data_offset.
+    uint8_t dyn_header[1024];
+    if (lseek(file_descriptor, data_offset, SEEK_SET) < 0 ||
+        read(file_descriptor, dyn_header, sizeof(dyn_header)) != (ssize_t)sizeof(dyn_header) ||
+        memcmp(dyn_header, "cxsparse", 8) != 0) {
+        throw std::runtime_error("Invalid dynamic VHD header");
+    }
+    vhd_bat_file_offset   = read_be64(dyn_header + 0x10);
+    vhd_block_size        = read_be32(dyn_header + 0x18);
+    const uint32_t max_entries = read_be32(dyn_header + 0x1C);
+    vhd_sectors_per_block = vhd_block_size / SECTOR_NBYTES;
+
+    vhd_bat.resize(max_entries);
+    if (lseek(file_descriptor, vhd_bat_file_offset, SEEK_SET) < 0) {
+        throw std::runtime_error("Cannot seek to VHD BAT");
+    }
+    for (uint32_t i = 0; i < max_entries; ++i) {
+        uint8_t entry[4];
+        if (read(file_descriptor, entry, 4) != 4) {
+            throw std::runtime_error("Cannot read VHD BAT");
+        }
+        vhd_bat[i] = read_be32(entry);
+    }
+    return true;
+}
+
+//
 // Open embedded image as disk.
 //
 Disk::Disk(const unsigned char data[], Memory &m, unsigned sz, unsigned ncyl, unsigned nhead,
@@ -241,18 +253,7 @@ void Disk::file_to_memory(unsigned lba, unsigned addr, unsigned nbytes)
         throw std::runtime_error("Sector number exceeds file size");
 
     if (is_vhd_dynamic) {
-        Byte *dest = memory.get_ptr(addr);
-        for (unsigned off = 0; off < nbytes; off += SECTOR_NBYTES) {
-            uint64_t file_offset;
-            if (lba_to_file_offset(lba + off / SECTOR_NBYTES, &file_offset)) {
-                if (lseek(file_descriptor, file_offset, SEEK_SET) < 0)
-                    throw std::runtime_error("File seek error");
-                if (read(file_descriptor, dest + off, SECTOR_NBYTES) != (ssize_t)SECTOR_NBYTES)
-                    throw std::runtime_error("File read error");
-            } else {
-                memset(dest + off, 0, SECTOR_NBYTES);
-            }
-        }
+        vhd_file_to_memory(lba, addr, nbytes);
         return;
     }
 
@@ -268,6 +269,45 @@ void Disk::file_to_memory(unsigned lba, unsigned addr, unsigned nbytes)
 }
 
 //
+// VHD: read binary file to memory.
+//
+void Disk::vhd_file_to_memory(unsigned lba, unsigned addr, unsigned nbytes)
+{
+    Byte *dest = memory.get_ptr(addr);
+    for (unsigned off = 0; off < nbytes; off += SECTOR_NBYTES) {
+        uint64_t file_offset;
+        if (vhd_lba_to_file_offset(lba + off / SECTOR_NBYTES, &file_offset)) {
+            if (lseek(file_descriptor, file_offset, SEEK_SET) < 0)
+                throw std::runtime_error("File seek error");
+            if (read(file_descriptor, dest + off, SECTOR_NBYTES) != (ssize_t)SECTOR_NBYTES)
+                throw std::runtime_error("File read error");
+        } else {
+            memset(dest + off, 0, SECTOR_NBYTES);
+        }
+    }
+}
+
+//
+// VHD: write binary file from memory.
+//
+void Disk::vhd_memory_to_file(unsigned lba, unsigned addr, unsigned nbytes)
+{
+    const Byte *src = memory.get_ptr(addr);
+    for (unsigned off = 0; off < nbytes; off += SECTOR_NBYTES) {
+        const unsigned sector_lba = lba + off / SECTOR_NBYTES;
+        const unsigned block_idx  = sector_lba / vhd_sectors_per_block;
+        vhd_ensure_block_allocated(block_idx);
+        uint64_t file_offset;
+        if (!vhd_lba_to_file_offset(sector_lba, &file_offset))
+            throw std::runtime_error("VHD block allocation failed");
+        if (lseek(file_descriptor, file_offset, SEEK_SET) < 0)
+            throw std::runtime_error("File seek error");
+        if (write(file_descriptor, src + off, SECTOR_NBYTES) != (ssize_t)SECTOR_NBYTES)
+            throw std::runtime_error("File write error");
+    }
+}
+
+//
 // Write binary file: transfer data from memory.
 //
 void Disk::memory_to_file(unsigned lba, unsigned addr, unsigned nbytes)
@@ -279,19 +319,7 @@ void Disk::memory_to_file(unsigned lba, unsigned addr, unsigned nbytes)
         throw std::runtime_error("Sector number exceeds file size");
 
     if (is_vhd_dynamic) {
-        const Byte *src = memory.get_ptr(addr);
-        for (unsigned off = 0; off < nbytes; off += SECTOR_NBYTES) {
-            const unsigned sector_lba = lba + off / SECTOR_NBYTES;
-            const unsigned block_idx  = sector_lba / vhd_sectors_per_block;
-            ensure_block_allocated(block_idx);
-            uint64_t file_offset;
-            if (!lba_to_file_offset(sector_lba, &file_offset))
-                throw std::runtime_error("VHD block allocation failed");
-            if (lseek(file_descriptor, file_offset, SEEK_SET) < 0)
-                throw std::runtime_error("File seek error");
-            if (write(file_descriptor, src + off, SECTOR_NBYTES) != (ssize_t)SECTOR_NBYTES)
-                throw std::runtime_error("File write error");
-        }
+        vhd_memory_to_file(lba, addr, nbytes);
         return;
     }
 
@@ -322,23 +350,48 @@ void Disk::write_sector_fill(unsigned lba, unsigned n_sectors, uint8_t fill_byte
         throw std::runtime_error("Sector range exceeds disk");
     }
 
-    uint8_t buf[SECTOR_NBYTES];
-    const uint8_t byte_to_write = is_hard_disk ? 0 : fill_byte;
-    memset(buf, byte_to_write, sizeof(buf));
+    if (is_vhd_dynamic) {
+        // Always write zeroes to VHD.
+        vhd_write_sector_zeroes(lba, n_sectors);
+        return;
+    }
+
+    uint8_t buf[SECTOR_NBYTES]{};
+    if (!is_hard_disk) {
+        // Always write zeroes to hard disks.
+        memset(buf, fill_byte, sizeof(buf));
+    }
 
     for (unsigned i = 0; i < n_sectors; ++i) {
         const unsigned sector_lba = lba + i;
-        if (is_vhd_dynamic) {
-            uint64_t file_offset;
-            if (!lba_to_file_offset(sector_lba, &file_offset))
-                continue; // Skip unallocated block
-            if (lseek(file_descriptor, file_offset, SEEK_SET) < 0)
-                throw std::runtime_error("File seek error");
-        } else {
-            unsigned offset_bytes = sector_lba * SECTOR_NBYTES;
-            if (lseek(file_descriptor, offset_bytes, SEEK_SET) < 0)
-                throw std::runtime_error("File seek error");
-        }
+        unsigned offset_bytes     = sector_lba * SECTOR_NBYTES;
+
+        if (lseek(file_descriptor, offset_bytes, SEEK_SET) < 0)
+            throw std::runtime_error("File seek error");
+
+        if (write(file_descriptor, buf, SECTOR_NBYTES) != (ssize_t)SECTOR_NBYTES)
+            throw std::runtime_error("File write error");
+    }
+}
+
+//
+// VHD: write sectors filled with a single byte. Skips unallocated blocks.
+//
+void Disk::vhd_write_sector_zeroes(unsigned lba, unsigned n_sectors)
+{
+    // Always write zeroes to VHD.
+    uint8_t buf[SECTOR_NBYTES]{};
+
+    for (unsigned i = 0; i < n_sectors; ++i) {
+        const unsigned sector_lba = lba + i;
+        uint64_t file_offset;
+
+        if (!vhd_lba_to_file_offset(sector_lba, &file_offset))
+            continue; // Skip unallocated block
+
+        if (lseek(file_descriptor, file_offset, SEEK_SET) < 0)
+            throw std::runtime_error("File seek error");
+
         if (write(file_descriptor, buf, SECTOR_NBYTES) != (ssize_t)SECTOR_NBYTES)
             throw std::runtime_error("File write error");
     }
@@ -347,7 +400,7 @@ void Disk::write_sector_fill(unsigned lba, unsigned n_sectors, uint8_t fill_byte
 //
 // Map LBA to file offset for VHD. Returns true if block is allocated.
 //
-bool Disk::lba_to_file_offset(unsigned lba, uint64_t *file_offset) const
+bool Disk::vhd_lba_to_file_offset(unsigned lba, uint64_t *file_offset) const
 {
     const unsigned block_idx      = lba / vhd_sectors_per_block;
     const unsigned sector_in_block = lba % vhd_sectors_per_block;
@@ -369,9 +422,9 @@ static void write_be32(uint8_t *p, uint32_t val)
 }
 
 //
-// Allocate a new block in VHD and update BAT.
+// VHD: allocate a new block and update BAT.
 //
-void Disk::ensure_block_allocated(unsigned block_idx)
+void Disk::vhd_ensure_block_allocated(unsigned block_idx)
 {
     if (block_idx >= vhd_bat.size() || vhd_bat[block_idx] != 0xFFFFFFFF)
         return;

@@ -25,6 +25,7 @@
 #define TILTTI_DISK_H
 
 #include <cstdint>
+#include <sys/types.h>
 #include <vector>
 
 #include "memory.h"
@@ -91,8 +92,13 @@ private:
     void memory_to_file(unsigned sector, unsigned addr, unsigned nwords);
     void embedded_to_memory(unsigned sector, unsigned addr, unsigned nwords);
 
-    bool lba_to_file_offset(unsigned lba, uint64_t *file_offset) const;
-    void ensure_block_allocated(unsigned block_idx);
+    // VHD dynamic disk methods.
+    bool vhd_try_init(off_t file_size);
+    void vhd_file_to_memory(unsigned lba, unsigned addr, unsigned nbytes);
+    void vhd_memory_to_file(unsigned lba, unsigned addr, unsigned nbytes);
+    void vhd_write_sector_zeroes(unsigned lba, unsigned n_sectors);
+    bool vhd_lba_to_file_offset(unsigned lba, uint64_t *file_offset) const;
+    void vhd_ensure_block_allocated(unsigned block_idx);
 };
 
 #endif // TILTTI_DISK_H
