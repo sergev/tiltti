@@ -84,72 +84,7 @@ Disk::Disk(const std::string &p, Memory &m, bool hard_disk) : memory(m), path(p)
         }
     }
 
-    // Set geometry. Hard disks always use IDE geometry; floppies use size-based lookup.
-    const unsigned max_floppy_sectors = 80 * 2 * 36; // 2.88M
-    if (is_hard_disk) {
-        num_heads     = 16;
-        num_sectors   = 63;
-        num_cylinders = size_sectors / (num_heads * num_sectors);
-        if (num_cylinders == 0 && size_sectors > 0)
-            num_cylinders = 1;
-        if (num_cylinders > 1024)
-            num_cylinders = 1024;
-    } else if (size_sectors <= max_floppy_sectors) {
-        if (size_sectors > 800) {
-            num_cylinders = 80;
-        } else {
-            num_cylinders = 40;
-        }
-        if (size_sectors > 400) {
-            num_heads = 2;
-        } else {
-            num_heads = 1;
-        }
-        switch (size_sectors) {
-        case 80 * 2 * 18:
-            num_sectors = 18;
-            break;
-        case 80 * 2 * 20:
-            num_sectors = 20;
-            break;
-        case 80 * 2 * 9:
-            num_sectors = 9;
-            break;
-        case 80 * 2 * 10:
-            num_sectors = 10;
-            break;
-        case 80 * 2 * 36:
-            num_sectors = 36;
-            break;
-        case 80 * 2 * 39:
-            num_sectors = 39;
-            break;
-        case 80 * 2 * 15:
-            num_sectors = 15;
-            break;
-        case 40 * 2 * 9:
-            num_sectors = 9;
-            break;
-        case 40 * 2 * 8:
-            num_sectors = 8;
-            break;
-        case 40 * 1 * 8:
-            num_sectors = 8;
-            break;
-        case 40 * 1 * 9:
-            num_sectors = 9;
-            break;
-        default:
-            throw std::runtime_error("Unrecognized size of floppy image: " +
-                                     std::to_string(size_sectors / 2) + " kbytes");
-        }
-    } else {
-        num_heads     = 16;
-        num_sectors   = 63;
-        num_cylinders = size_sectors / (num_heads * num_sectors);
-        if (num_cylinders > 1024)
-            num_cylinders = 1024;
-    }
+    set_geometry(size_sectors, true);
 }
 
 //
@@ -214,6 +149,30 @@ bool Disk::vhd_try_init(off_t file_size)
 }
 
 //
+// Create fresh image from scratch. For unit tests.
+//
+Disk::Disk(const std::string &p, Memory &m, ImageFormat format, unsigned sz)
+    : memory(m), path(p), write_permit(true), size_sectors(sz), is_hard_disk(format == ImageFormat::VhdDynamic)
+{
+    file_descriptor = open(path.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0600);
+    if (file_descriptor < 0) {
+        throw std::runtime_error("Cannot create " + path);
+    }
+
+    if (format == ImageFormat::Raw) {
+        if (ftruncate(file_descriptor, (off_t)sz * SECTOR_NBYTES) < 0) {
+            close(file_descriptor);
+            throw std::runtime_error("Cannot truncate " + path);
+        }
+        is_vhd_dynamic = false;
+    } else {
+        vhd_create_empty((off_t)sz * SECTOR_NBYTES);
+    }
+
+    set_geometry(sz, false);
+}
+
+//
 // Open embedded image as disk.
 //
 Disk::Disk(const unsigned char data[], Memory &m, unsigned sz, unsigned ncyl, unsigned nhead,
@@ -222,6 +181,86 @@ Disk::Disk(const unsigned char data[], Memory &m, unsigned sz, unsigned ncyl, un
 
 {
     embedded_data = data;
+}
+
+//
+// Set disk geometry from sector count.
+// throw_on_unknown_floppy: true when opening existing file; false when creating (use IDE fallback).
+//
+void Disk::set_geometry(unsigned sz, bool throw_on_unknown_floppy)
+{
+    const unsigned max_floppy_sectors = 80 * 2 * 36; // 2.88M
+    if (is_hard_disk) {
+        num_heads     = 16;
+        num_sectors   = 63;
+        num_cylinders = sz / (num_heads * num_sectors);
+        if (num_cylinders == 0 && sz > 0)
+            num_cylinders = 1;
+        if (num_cylinders > 1024)
+            num_cylinders = 1024;
+    } else if (sz <= max_floppy_sectors) {
+        if (sz > 800) {
+            num_cylinders = 80;
+        } else {
+            num_cylinders = 40;
+        }
+        if (sz > 400) {
+            num_heads = 2;
+        } else {
+            num_heads = 1;
+        }
+        switch (sz) {
+        case 80 * 2 * 18:
+            num_sectors = 18;
+            break;
+        case 80 * 2 * 20:
+            num_sectors = 20;
+            break;
+        case 80 * 2 * 9:
+            num_sectors = 9;
+            break;
+        case 80 * 2 * 10:
+            num_sectors = 10;
+            break;
+        case 80 * 2 * 36:
+            num_sectors = 36;
+            break;
+        case 80 * 2 * 39:
+            num_sectors = 39;
+            break;
+        case 80 * 2 * 15:
+            num_sectors = 15;
+            break;
+        case 40 * 2 * 9:
+            num_sectors = 9;
+            break;
+        case 40 * 2 * 8:
+            num_sectors = 8;
+            break;
+        case 40 * 1 * 8:
+            num_sectors = 8;
+            break;
+        case 40 * 1 * 9:
+            num_sectors = 9;
+            break;
+        default:
+            if (throw_on_unknown_floppy) {
+                throw std::runtime_error("Unrecognized size of floppy image: " +
+                                         std::to_string(sz / 2) + " kbytes");
+            }
+            num_heads     = 16;
+            num_sectors   = 63;
+            num_cylinders = sz / (num_heads * num_sectors);
+            if (num_cylinders > 1024)
+                num_cylinders = 1024;
+        }
+    } else {
+        num_heads     = 16;
+        num_sectors   = 63;
+        num_cylinders = sz / (num_heads * num_sectors);
+        if (num_cylinders > 1024)
+            num_cylinders = 1024;
+    }
 }
 
 // Close file in destructor.
@@ -434,6 +473,87 @@ static void write_be32(uint8_t *p, uint32_t val)
     p[1] = (val >> 16) & 0xFF;
     p[2] = (val >> 8) & 0xFF;
     p[3] = val & 0xFF;
+}
+
+//
+// Write big-endian 64-bit value.
+//
+static void write_be64(uint8_t *p, uint64_t val)
+{
+    write_be32(p, (uint32_t)(val >> 32));
+    write_be32(p + 4, (uint32_t)val);
+}
+
+//
+// Create empty dynamic VHD layout (footer, dynamic header, BAT, footer copy).
+// Follows QEMU create_dynamic_disk: block_size 2MB, table_offset 1536.
+//
+void Disk::vhd_create_empty(off_t total_size_bytes)
+{
+    const uint32_t block_size     = 0x200000;
+    const uint64_t table_offset   = 1536;
+    const uint32_t num_bat_entries = (total_size_bytes + block_size - 1) / block_size;
+    const uint32_t bat_size       = (num_bat_entries * 4 + 511) & ~511;
+
+    is_vhd_dynamic     = true;
+    vhd_block_size     = block_size;
+    vhd_sectors_per_block = block_size / SECTOR_NBYTES;
+    vhd_bat_file_offset  = table_offset;
+    vhd_next_block_start = table_offset + bat_size;
+    vhd_bat.resize(num_bat_entries, 0xFFFFFFFF);
+
+    uint64_t cyls = total_size_bytes / (SECTOR_NBYTES * 16 * 63);
+    if (cyls > 65535)
+        cyls = 65535;
+    if (cyls == 0 && total_size_bytes > 0)
+        cyls = 1;
+
+    uint8_t footer[512];
+    memset(footer, 0, sizeof(footer));
+    memcpy(footer + 0x00, "conectix", 8);
+    write_be32(footer + 0x08, 0x02);
+    write_be32(footer + 0x0C, 0x00010000);
+    write_be64(footer + 0x10, 512);
+    write_be64(footer + 0x28, total_size_bytes);
+    write_be64(footer + 0x30, total_size_bytes);
+    footer[0x38] = (cyls >> 8) & 0xFF;
+    footer[0x39] = cyls & 0xFF;
+    footer[0x3A] = 16;
+    footer[0x3B] = 63;
+    write_be32(footer + 0x3C, 3);
+
+    footer[0x40] = footer[0x41] = footer[0x42] = footer[0x43] = 0;
+    uint32_t sum = 0;
+    for (size_t i = 0; i < sizeof(footer); ++i)
+        sum += footer[i];
+    write_be32(footer + 0x40, 0xFFFFFFFF - sum);
+
+    uint8_t dyn_header[1024];
+    memset(dyn_header, 0, sizeof(dyn_header));
+    memcpy(dyn_header + 0x00, "cxsparse", 8);
+    write_be64(dyn_header + 0x08, 0xFFFFFFFFFFFFFFFF);
+    write_be64(dyn_header + 0x10, table_offset);
+    write_be32(dyn_header + 0x18, 0x00010000);
+    write_be32(dyn_header + 0x1C, num_bat_entries);
+    write_be32(dyn_header + 0x20, block_size);
+
+    dyn_header[0x24] = dyn_header[0x25] = dyn_header[0x26] = dyn_header[0x27] = 0;
+    sum = 0;
+    for (size_t i = 0; i < sizeof(dyn_header); ++i)
+        sum += dyn_header[i];
+    write_be32(dyn_header + 0x24, 0xFFFFFFFF - sum);
+
+    std::vector<uint8_t> bat(bat_size, 0xFF);
+
+    if (lseek(file_descriptor, 0, SEEK_SET) < 0 ||
+        write(file_descriptor, footer, sizeof(footer)) != (ssize_t)sizeof(footer))
+        throw std::runtime_error("VHD create: footer write failed");
+    if (write(file_descriptor, dyn_header, sizeof(dyn_header)) != (ssize_t)sizeof(dyn_header))
+        throw std::runtime_error("VHD create: dynamic header write failed");
+    if (write(file_descriptor, bat.data(), bat_size) != (ssize_t)bat_size)
+        throw std::runtime_error("VHD create: BAT write failed");
+    if (write(file_descriptor, footer, sizeof(footer)) != (ssize_t)sizeof(footer))
+        throw std::runtime_error("VHD create: footer copy write failed");
 }
 
 //

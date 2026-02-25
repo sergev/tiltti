@@ -30,6 +30,8 @@
 
 #include "memory.h"
 
+enum class ImageFormat { Raw, VhdDynamic };
+
 class Disk {
 private:
     // Reference to the main memory.
@@ -63,6 +65,7 @@ public:
 
     // Constructor throws exception if the file cannot be opened.
     Disk(const std::string &path, Memory &memory, bool is_hard_disk = false);
+    Disk(const std::string &path, Memory &memory, ImageFormat format, unsigned size_sectors);
     Disk(const unsigned char data[], Memory &memory, unsigned size_sectors, unsigned ncyl,
          unsigned nhead, unsigned nsect);
 
@@ -102,6 +105,10 @@ private:
     bool vhd_lba_to_file_offset(unsigned lba, uint64_t *file_offset) const;
     void vhd_ensure_block_allocated(unsigned block_idx);
     void vhd_update_footer();
+    void vhd_create_empty(off_t total_size_bytes);
+
+    // Set disk geometry from sector count. throw_on_unknown_floppy: true for open, false for create.
+    void set_geometry(unsigned size_sectors, bool throw_on_unknown_floppy = true);
 };
 
 #endif // TILTTI_DISK_H
