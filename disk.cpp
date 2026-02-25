@@ -183,7 +183,8 @@ bool Disk::vhd_try_init(off_t file_size)
     size_sectors       = read_be64(footer + 0x28) / SECTOR_NBYTES;
     const uint64_t data_offset = read_be64(footer + 0x10);
 
-    // Dynamic header at data_offset. QEMU uses BlockSize @ 0x18, DiscUtils @ 0x20.
+    // Dynamic header at data_offset. Layout per spec: TableOffset@0x10, Version@0x18,
+    // MaxTableEntries@0x1C, BlockSize@0x20.
     uint8_t dyn_header[1024];
     if (lseek(file_descriptor, data_offset, SEEK_SET) < 0 ||
         read(file_descriptor, dyn_header, sizeof(dyn_header)) != (ssize_t)sizeof(dyn_header) ||
@@ -191,7 +192,7 @@ bool Disk::vhd_try_init(off_t file_size)
         throw std::runtime_error("Invalid dynamic VHD header");
     }
     vhd_bat_file_offset   = read_be64(dyn_header + 0x10);
-    vhd_block_size        = read_be32(dyn_header + 0x18);
+    vhd_block_size        = read_be32(dyn_header + 0x20);
     const uint32_t max_entries = read_be32(dyn_header + 0x1C);
     vhd_sectors_per_block = vhd_block_size / SECTOR_NBYTES;
 
