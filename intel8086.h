@@ -28,7 +28,7 @@
 #include <cstdint>
 #include <string>
 
-#include "pc86_arch.h"
+#include "pc_platform.h"
 #include "processor.h"
 
 class Machine;

@@ -24,7 +24,7 @@
 #ifndef TILTTI_PROCESSOR_H
 #define TILTTI_PROCESSOR_H
 
-#include "pc86_arch.h"
+#include "pc_platform.h"
 
 class Machine;
 

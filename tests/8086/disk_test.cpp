@@ -11,7 +11,7 @@
 
 #include "test8086.h"
 #include "memory.h"
-#include "pc86_arch.h"
+#include "pc_platform.h"
 
 //
 // Lightweight fixture for Disk-only tests (no full Machine).

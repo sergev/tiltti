@@ -27,7 +27,7 @@
 #include <stdexcept>
 
 #include "disk.h"
-#include "pc86_arch.h"
+#include "pc_platform.h"
 
 //
 // Read big-endian 32-bit value.

@@ -3,7 +3,7 @@
 //
 // Copyright (c) 2026 Serge Vakulenko
 //
-#include "pc86_arch.h"
+#include "pc_platform.h"
 
 #include <sstream>
 

@@ -28,7 +28,7 @@
 #include <ostream>
 #include <vector>
 
-#include "pc86_arch.h"
+#include "pc_platform.h"
 
 //
 // Bios Data Area (BDA). Layout follows segment 40h as in https://pcdosretro.gitlab.io/biosdata.txt.

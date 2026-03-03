@@ -26,7 +26,7 @@
 
 #include <array>
 
-#include "pc86_arch.h"
+#include "pc_platform.h"
 
 class Memory {
 private:

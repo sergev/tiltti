@@ -6,7 +6,7 @@
 
 #include <cstddef>
 
-#include "pc86_arch.h"
+#include "bios.h"
 
 //
 // BDA offset checks vs specification (segment 40h = physical 0x400+).

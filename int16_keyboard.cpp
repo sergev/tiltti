@@ -28,7 +28,7 @@
 
 #include "encoding.h"
 #include "machine.h"
-#include "pc86_arch.h"
+#include "pc_platform.h"
 
 //
 // Process Int 16h request: Keyboard.

@@ -31,7 +31,7 @@
 #include <iostream>
 
 #include "machine.h"
-#include "pc86_arch.h"
+#include "pc_platform.h"
 
 //
 // Open binary image as disk.

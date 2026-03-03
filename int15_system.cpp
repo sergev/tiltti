@@ -29,7 +29,7 @@
 
 #include "encoding.h"
 #include "machine.h"
-#include "pc86_arch.h"
+#include "pc_platform.h"
 
 //
 // Process Int 15h request: System Services.

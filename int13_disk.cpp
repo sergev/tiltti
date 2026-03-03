@@ -26,7 +26,7 @@
 #include <sstream>
 
 #include "machine.h"
-#include "pc86_arch.h"
+#include "pc_platform.h"
 
 //
 // Read DAP at DS:SI from memory.
