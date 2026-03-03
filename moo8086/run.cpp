@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 
+#include "intel8086.h"
 #include "machine.h"
 #include "test_case.h"
 
@@ -15,7 +16,7 @@ void TestCase::run() const
 {
     Memory memory;
     Machine machine{ memory, "8086" };
-    Processor &cpu{ machine.cpu };
+    Intel8086 &cpu{ static_cast<Intel8086 &>(machine.cpu) };
 
     // Set initial CPU state
     if (initial_ax.has_value())

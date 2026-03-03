@@ -61,6 +61,7 @@ std::string Test386::show_flags(unsigned expect)
     return result;
 }
 
+#if 0
 //
 // Get current test name, as specified in TEST() macro.
 //
@@ -75,3 +76,4 @@ std::string get_test_name()
 
     return name;
 }
+#endif

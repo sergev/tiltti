@@ -29,6 +29,7 @@
 #include <string>
 
 #include "machine.h"
+#include "intel8086.h"
 
 //
 // Fixture with preallocated machine.
@@ -39,7 +40,7 @@ class Test8086 : public ::testing::Test {
 protected:
     Memory memory;
     Machine machine{ memory, "8086" };
-    Processor &cpu{ machine.cpu };
+    Intel8086 &cpu{ static_cast<Intel8086 &>(machine.cpu) };
 
     // To be typed on keyboard.
     std::string input_buf;

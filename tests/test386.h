@@ -29,7 +29,7 @@
 #include <string>
 
 #include "machine.h"
-#include "memory.h"
+#include "intel386.h"
 
 //
 // Fixture with preallocated machine.
@@ -39,8 +39,8 @@
 class Test386 : public ::testing::Test {
 protected:
     Memory memory;
-    Machine machine{ memory };
-    Processor &cpu{ machine.cpu };
+    Machine machine{ memory, "386" };
+    Intel386 &cpu{ static_cast<Intel386 &>(machine.cpu) };
 
     void SetUp() override;
 

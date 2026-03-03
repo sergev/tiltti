@@ -60,6 +60,29 @@ set(TEST_SOURCES
     8086/pcdos_test.cpp
     8086/cpm_test.cpp
     8086/disk_test.cpp
+
+    test386.cpp
+    386/a_test.cpp
+    386/b_test.cpp
+    386/c_test.cpp
+    386/d_test.cpp
+    386/e_test.cpp
+    386/f_test.cpp
+    386/i_test.cpp
+    386/j_test.cpp
+    386/l_test.cpp
+    386/m_test.cpp
+    386/n_test.cpp
+    386/o_test.cpp
+    386/p_test.cpp
+    386/r_test.cpp
+    386/s_test.cpp
+    386/t_test.cpp
+    386/x_test.cpp
+    386/batch2.cpp
+    386/batch3.cpp
+    386/batch4.cpp
+    386/batch5.cpp
 )
 
 #
