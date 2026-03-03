@@ -29,6 +29,7 @@
 #include <string>
 
 #include "pc86_arch.h"
+#include "processor.h"
 
 class Machine;
 class Memory;
@@ -86,9 +87,9 @@ enum {
 };
 
 //
-// PC i86 processor.
+// Intel 8086 processor (concrete implementation of Processor).
 //
-class Intel8086 {
+class Intel8086 : public Processor {
 private:
     Machine &machine;        // Reference to the machine
     struct CoreState core{}; // Current state
@@ -147,96 +148,93 @@ public:
     void reset();
 
     // Simulate one instruction.
-    void step();
-
-    // Finalize the processor.
-    void finish();
+    void step() override;
 
     // Take interrupt.
-    void call_int(int type);
+    void call_int(int type) override;
 
     // Set register value.
-    void set_ip(unsigned val) { core.ip = val; }
+    void set_ip(unsigned val) override { core.ip = val; }
 
     // Get register value.
-    unsigned get_ip() const { return core.ip; }
+    unsigned get_ip() const override { return core.ip; }
 
     // Get first byte of opcode.
-    unsigned get_op() const { return op; }
+    unsigned get_op() const override { return op; }
 
     // General registers
-    Word get_ax() const { return core.ax; }
-    void set_ax(Word val) { core.ax = val; }
-    Word get_bx() const { return core.bx; }
-    void set_bx(Word val) { core.bx = val; }
-    Word get_cx() const { return core.cx; }
-    void set_cx(Word val) { core.cx = val; }
-    Word get_dx() const { return core.dx; }
-    void set_dx(Word val) { core.dx = val; }
+    Word get_ax() const override { return core.ax; }
+    void set_ax(Word val) override { core.ax = val; }
+    Word get_bx() const override { return core.bx; }
+    void set_bx(Word val) override { core.bx = val; }
+    Word get_cx() const override { return core.cx; }
+    void set_cx(Word val) override { core.cx = val; }
+    Word get_dx() const override { return core.dx; }
+    void set_dx(Word val) override { core.dx = val; }
 
     //
     // Byte halves of general registers
     //
-    Byte get_al() const { return core.ax; }
-    Byte get_ah() const { return core.ax >> 8; }
-    void set_al(Byte val) { core.ax = (core.ax & 0xff00) | val; }
-    void set_ah(Byte val) { core.ax = (core.ax & 0x00ff) | (val << 8); }
+    Byte get_al() const override { return core.ax; }
+    Byte get_ah() const override { return core.ax >> 8; }
+    void set_al(Byte val) override { core.ax = (core.ax & 0xff00) | val; }
+    void set_ah(Byte val) override { core.ax = (core.ax & 0x00ff) | (val << 8); }
 
-    Byte get_bl() const { return core.bx; }
-    Byte get_bh() const { return core.bx >> 8; }
-    void set_bl(Byte val) { core.bx = (core.bx & 0xff00) | val; }
-    void set_bh(Byte val) { core.bx = (core.bx & 0x00ff) | (val << 8); }
+    Byte get_bl() const override { return core.bx; }
+    Byte get_bh() const override { return core.bx >> 8; }
+    void set_bl(Byte val) override { core.bx = (core.bx & 0xff00) | val; }
+    void set_bh(Byte val) override { core.bx = (core.bx & 0x00ff) | (val << 8); }
 
-    Byte get_cl() const { return core.cx; }
-    Byte get_ch() const { return core.cx >> 8; }
-    void set_cl(Byte val) { core.cx = (core.cx & 0xff00) | val; }
-    void set_ch(Byte val) { core.cx = (core.cx & 0x00ff) | (val << 8); }
+    Byte get_cl() const override { return core.cx; }
+    Byte get_ch() const override { return core.cx >> 8; }
+    void set_cl(Byte val) override { core.cx = (core.cx & 0xff00) | val; }
+    void set_ch(Byte val) override { core.cx = (core.cx & 0x00ff) | (val << 8); }
 
-    Byte get_dl() const { return core.dx; }
-    Byte get_dh() const { return core.dx >> 8; }
-    void set_dl(Byte val) { core.dx = (core.dx & 0xff00) | val; }
-    void set_dh(Byte val) { core.dx = (core.dx & 0x00ff) | (val << 8); }
+    Byte get_dl() const override { return core.dx; }
+    Byte get_dh() const override { return core.dx >> 8; }
+    void set_dl(Byte val) override { core.dx = (core.dx & 0xff00) | val; }
+    void set_dh(Byte val) override { core.dx = (core.dx & 0x00ff) | (val << 8); }
 
     // Pointer/index registers
-    Word get_sp() const { return core.sp; }
-    void set_sp(Word val) { core.sp = val; }
-    Word get_bp() const { return core.bp; }
-    void set_bp(Word val) { core.bp = val; }
-    Word get_si() const { return core.si; }
-    void set_si(Word val) { core.si = val; }
-    Word get_di() const { return core.di; }
-    void set_di(Word val) { core.di = val; }
+    Word get_sp() const override { return core.sp; }
+    void set_sp(Word val) override { core.sp = val; }
+    Word get_bp() const override { return core.bp; }
+    void set_bp(Word val) override { core.bp = val; }
+    Word get_si() const override { return core.si; }
+    void set_si(Word val) override { core.si = val; }
+    Word get_di() const override { return core.di; }
+    void set_di(Word val) override { core.di = val; }
 
     // Segment registers
-    Word get_cs() const { return core.cs; }
-    void set_cs(Word val) { core.cs = val; }
-    Word get_ds() const { return core.ds; }
-    void set_ds(Word val) { core.ds = val; }
-    Word get_ss() const { return core.ss; }
-    void set_ss(Word val) { core.ss = val; }
-    Word get_es() const { return core.es; }
-    void set_es(Word val) { core.es = val; }
+    Word get_cs() const override { return core.cs; }
+    void set_cs(Word val) override { core.cs = val; }
+    Word get_ds() const override { return core.ds; }
+    void set_ds(Word val) override { core.ds = val; }
+    Word get_ss() const override { return core.ss; }
+    void set_ss(Word val) override { core.ss = val; }
+    Word get_es() const override { return core.es; }
+    void set_es(Word val) override { core.es = val; }
 
     // Flags (set_flags normalizes reserved bits to match POPF/8086)
-    Word get_flags() const { return core.flags.w; }
-    void set_flags(Word val);
+    Word get_flags() const override { return core.flags.w; }
+    void set_flags(Word val) override;
     void update_flags_zsp(int width, int res);
-    Word u_flags() { return unpredictable_flags; }
+    Word u_flags() override { return unpredictable_flags; }
 
-    void set_cf(bool bit) { core.flags.f.c = bit; } // CF, Carry Flag
-    void set_pf(bool bit) { core.flags.f.p = bit; } // PF, Parity Flag
-    void set_af(bool bit) { core.flags.f.a = bit; } // AF, Auxiliary Carry Flag
-    void set_zf(bool bit) { core.flags.f.z = bit; } // ZF, Zero Flag
-    void set_sf(bool bit) { core.flags.f.s = bit; } // SF, Sign Flag
-    void set_tf(bool bit) { core.flags.f.t = bit; } // TF, Trap Flag
-    void set_if(bool bit) { core.flags.f.i = bit; } // IF, Interrupt Flag
-    void set_df(bool bit) { core.flags.f.d = bit; } // DF, Direction Flag
-    void set_of(bool bit) { core.flags.f.o = bit; } // OF, Overflow Flag
+    void set_cf(bool bit) override { core.flags.f.c = bit; } // CF, Carry Flag
+    void set_pf(bool bit) override { core.flags.f.p = bit; } // PF, Parity Flag
+    void set_af(bool bit) override { core.flags.f.a = bit; } // AF, Auxiliary Carry Flag
+    void set_zf(bool bit) override { core.flags.f.z = bit; } // ZF, Zero Flag
+    void set_sf(bool bit) override { core.flags.f.s = bit; } // SF, Sign Flag
+    void set_tf(bool bit) override { core.flags.f.t = bit; } // TF, Trap Flag
+    void set_if(bool bit) override { core.flags.f.i = bit; } // IF, Interrupt Flag
+    void set_df(bool bit) override { core.flags.f.d = bit; } // DF, Direction Flag
+    void set_of(bool bit) override { core.flags.f.o = bit; } // OF, Overflow Flag
 
     // Print trace info.
-    void print_instruction();
-    void print_registers();
-    void print_syscall(int type);
+    void print_instruction() override;
+    void print_registers() override;
+    void print_syscall(int type) override;
 };
 
 #endif // TILTTI_INTEL8086_H

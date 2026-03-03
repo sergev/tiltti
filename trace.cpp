@@ -28,6 +28,7 @@
 #include <iostream>
 #include <sstream>
 
+#include "intel8086.h"
 #include "machine.h"
 
 //
@@ -197,7 +198,7 @@ void Machine::print_handler(unsigned addr)
 //
 // Print instruction address and opcode.
 //
-void Processor::print_instruction()
+void Intel8086::print_instruction()
 {
     auto &out       = Machine::get_trace_stream();
     auto save_flags = out.flags();
@@ -232,7 +233,7 @@ void Processor::print_instruction()
 //
 // Print changed CPU registers (core vs prev), then update prev.
 //
-void Processor::print_registers()
+void Intel8086::print_registers()
 {
     auto &out       = Machine::get_trace_stream();
     auto save_flags = out.flags();

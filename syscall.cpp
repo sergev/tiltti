@@ -23,6 +23,7 @@
 //
 #include <iostream>
 
+#include "intel8086.h"
 #include "machine.h"
 
 //
@@ -106,7 +107,7 @@ bool Machine::is_syscall(int type)
 //
 // Print details about INT request.
 //
-void Processor::print_syscall(int type)
+void Intel8086::print_syscall(int type)
 {
     switch (type) {
     case 0x00:

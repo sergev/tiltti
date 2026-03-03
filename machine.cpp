@@ -23,6 +23,8 @@
 //
 #include "machine.h"
 
+#include "intel8086.h"
+
 #include <sys/time.h>
 #include <unistd.h>
 
