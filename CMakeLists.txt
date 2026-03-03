@@ -35,7 +35,7 @@ endif()
 
 # Build library
 add_library(simulator STATIC
-    pc86_arch.cpp
+    pc_platform.cpp
     machine.cpp
     memory.cpp
     disk.cpp
