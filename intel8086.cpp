@@ -1,5 +1,5 @@
 //
-// i86 processor.
+// i8086 processor.
 //
 // Copyright (c) 2026 Serge Vakulenko
 //
@@ -47,7 +47,7 @@ static const uint8_t PARITY[256] = {
 //
 // Initialize the processor.
 //
-Processor::Processor(Machine &mach) : machine(mach)
+Intel8086::Intel8086(Machine &mach) : machine(mach)
 {
     reset();
 }
@@ -55,7 +55,7 @@ Processor::Processor(Machine &mach) : machine(mach)
 //
 // Reset routine: all registers and opcode to initial 8086 state.
 //
-void Processor::reset()
+void Intel8086::reset()
 {
     core    = {};
     core.ip = 0x0000;
@@ -79,7 +79,7 @@ void Processor::reset()
 //
 // Set FLAGS register.
 //
-void Processor::set_flags(Word val)
+void Intel8086::set_flags(Word val)
 {
     // Bits 1,3,5 reserved (1,0,0).
     static const unsigned FLAGS_WRITABLE = 0x0FD5; // bits 0,2,4,6-11 writable
@@ -88,7 +88,7 @@ void Processor::set_flags(Word val)
     core.flags.w = (val & FLAGS_WRITABLE) | FLAGS_ONES;
 }
 
-void Processor::update_flags_zsp(int width, int res)
+void Intel8086::update_flags_zsp(int width, int res)
 {
     // Zero flag.
     core.flags.f.z = res == 0;
@@ -107,7 +107,7 @@ void Processor::update_flags_zsp(int width, int res)
 //
 // Effective address from ModR/M and displacement; 8086 addressing modes.
 //
-unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
+unsigned Intel8086::getEA(unsigned mod_val, unsigned rm_val)
 {
     int disp;
     switch (mod_val) {
@@ -151,7 +151,7 @@ unsigned Processor::getEA(unsigned mod_val, unsigned rm_val)
 //
 // Fetch 1 or 2 bytes at CS:IP, advance IP.
 //
-int Processor::fetch(int width)
+int Intel8086::fetch(int width)
 {
     Word val = machine.mem_fetch_byte(pc86_linear_addr(core.cs, core.ip));
     if (width == W) {
@@ -164,7 +164,7 @@ int Processor::fetch(int width)
 //
 // Read byte or word at linear address.
 //
-int Processor::getMem(int width, unsigned addr)
+int Intel8086::getMem(int width, unsigned addr)
 {
     if (width == B)
         return machine.mem_load_byte(addr);
@@ -174,7 +174,7 @@ int Processor::getMem(int width, unsigned addr)
 //
 // Write byte or word at linear address.
 //
-void Processor::setMem(int width, unsigned addr, int val)
+void Intel8086::setMem(int width, unsigned addr, int val)
 {
     if (width == B)
         machine.mem_store_byte(addr, val);
@@ -185,7 +185,7 @@ void Processor::setMem(int width, unsigned addr, int val)
 //
 // Word access with 8086 segment offset wraparound (offset 0xFFFF -> second byte at seg:0).
 //
-int Processor::getMemAtSegOff(int width, Word seg, Word off)
+int Intel8086::getMemAtSegOff(int width, Word seg, Word off)
 {
     if (width == B) {
         return machine.mem_load_byte(pc86_linear_addr(seg, off));
@@ -198,7 +198,7 @@ int Processor::getMemAtSegOff(int width, Word seg, Word off)
     return machine.mem_load_word(pc86_linear_addr(seg, off));
 }
 
-void Processor::setMemAtSegOff(int width, Word seg, Word off, int val)
+void Intel8086::setMemAtSegOff(int width, Word seg, Word off, int val)
 {
     if (width == B) {
         machine.mem_store_byte(pc86_linear_addr(seg, off), val);
@@ -215,7 +215,7 @@ void Processor::setMemAtSegOff(int width, Word seg, Word off, int val)
 //
 // Get general or pointer register (reg encoding: 0=AX/AL, 1=CX/CL, ..., 4=SP, 5=BP, 6=SI, 7=DI).
 //
-int Processor::getReg(int width, unsigned r) const
+int Intel8086::getReg(int width, unsigned r) const
 {
     if (width == B) {
         switch (r) {
@@ -265,7 +265,7 @@ int Processor::getReg(int width, unsigned r) const
 //
 // Set general or pointer register.
 //
-void Processor::setReg(int width, unsigned r, int val)
+void Intel8086::setReg(int width, unsigned r, int val)
 {
     if (width == B) {
         switch (r) {
@@ -332,7 +332,7 @@ void Processor::setReg(int width, unsigned r, int val)
 // Get R/M operand (register or memory from mod/rm). Effective address from ModR/M and displacement.
 // 8086 segment wraparound: word at offset 0xFFFF has high byte at offset 0 in same segment.
 //
-int Processor::getRM(int width, unsigned mod_val, unsigned rm_val)
+int Intel8086::getRM(int width, unsigned mod_val, unsigned rm_val)
 {
     if (mod_val == 0b11)
         return getReg(width, rm_val);
@@ -349,7 +349,7 @@ int Processor::getRM(int width, unsigned mod_val, unsigned rm_val)
 // Set R/M operand.
 // 8086 segment wraparound: word at offset 0xFFFF has high byte at offset 0 in same segment.
 //
-void Processor::setRM(int width, unsigned mod_val, unsigned rm_val, int val)
+void Intel8086::setRM(int width, unsigned mod_val, unsigned rm_val, int val)
 {
     if (mod_val == 0b11)
         setReg(width, rm_val, val);
@@ -369,7 +369,7 @@ void Processor::setRM(int width, unsigned mod_val, unsigned rm_val, int val)
 //
 // Get segment register (encoding 0=ES, 1=CS, 2=SS, 3=DS).
 //
-Word Processor::getSegReg(unsigned r) const
+Word Intel8086::getSegReg(unsigned r) const
 {
     switch (r & 3) {
     case 0:
@@ -388,7 +388,7 @@ Word Processor::getSegReg(unsigned r) const
 //
 // Set segment register.
 //
-void Processor::setSegReg(unsigned r, Word val)
+void Intel8086::setSegReg(unsigned r, Word val)
 {
     switch (r & 3) {
     case 0:
@@ -411,7 +411,7 @@ void Processor::setSegReg(unsigned r, Word val)
 //
 // Decode ModR/M byte from opcode; advance IP by 1, 2, or 3.
 //
-void Processor::decode()
+void Intel8086::decode()
 {
     mod = (opcode[plen + 1] >> 6) & 0b11;
     reg = (opcode[plen + 1] >> 3) & 0b111;
@@ -432,7 +432,7 @@ void Processor::decode()
 //
 // Stack is SS:SP; 16-bit little-endian. Pop word.
 //
-int Processor::pop()
+int Intel8086::pop()
 {
     int val = getMemAtSegOff(W, core.ss, core.sp);
 
@@ -443,7 +443,7 @@ int Processor::pop()
 //
 // Push word onto stack.
 //
-void Processor::push(int val)
+void Intel8086::push(int val)
 {
     core.sp -= 2;
     setMemAtSegOff(W, core.ss, core.sp, val);
@@ -452,7 +452,7 @@ void Processor::push(int val)
 //
 // Software interrupt: push FLAGS, CS, IP; jump to vector.
 //
-void Processor::call_int(int type)
+void Intel8086::call_int(int type)
 {
     core.flags.w &= ~unpredictable_flags;
     if (machine.is_syscall(type)) {
@@ -478,7 +478,7 @@ void Processor::call_int(int type)
 //
 // ALU helpers (set CF, AF, OF, PF, ZF, SF).
 //
-int Processor::add(int width, int dst, int src)
+int Intel8086::add(int width, int dst, int src)
 {
     int res        = (dst + src) & MASK[width];
     core.flags.f.c = res < dst;
@@ -488,7 +488,7 @@ int Processor::add(int width, int dst, int src)
     return res;
 }
 
-int Processor::adc(int width, int dst, int src)
+int Intel8086::adc(int width, int dst, int src)
 {
     int carry      = core.flags.f.c;
     int res        = (dst + src + carry) & MASK[width];
@@ -499,7 +499,7 @@ int Processor::adc(int width, int dst, int src)
     return res;
 }
 
-int Processor::sub(int width, int dst, int src)
+int Intel8086::sub(int width, int dst, int src)
 {
     int res        = (dst - src) & MASK[width];
     core.flags.f.c = dst < src;
@@ -509,7 +509,7 @@ int Processor::sub(int width, int dst, int src)
     return res;
 }
 
-int Processor::sbb(int width, int dst, int src)
+int Intel8086::sbb(int width, int dst, int src)
 {
     int carry      = core.flags.f.c;
     int res        = (dst - src - carry) & MASK[width];
@@ -520,7 +520,7 @@ int Processor::sbb(int width, int dst, int src)
     return res;
 }
 
-int Processor::inc(int width, int dst)
+int Intel8086::inc(int width, int dst)
 {
     unsigned res   = (dst + 1) & MASK[width];
     core.flags.f.a = ((res ^ dst ^ 1) & 0x10) != 0;
@@ -529,7 +529,7 @@ int Processor::inc(int width, int dst)
     return res;
 }
 
-int Processor::dec(int width, int dst)
+int Intel8086::dec(int width, int dst)
 {
     unsigned res   = (dst - 1) & MASK[width];
     core.flags.f.a = ((res ^ dst ^ 1) & 0x10) != 0;
@@ -538,7 +538,7 @@ int Processor::dec(int width, int dst)
     return res;
 }
 
-void Processor::logic(int width, int res)
+void Intel8086::logic(int width, int res)
 {
     core.flags.f.c = 0;
     core.flags.f.o = 0;
@@ -546,7 +546,7 @@ void Processor::logic(int width, int res)
     update_flags_zsp(width, res);
 }
 
-int Processor::signconv(int width, int x)
+int Intel8086::signconv(int width, int x)
 {
     if (width == B)
         return static_cast<signed char>(x);
@@ -554,7 +554,7 @@ int Processor::signconv(int width, int x)
         return static_cast<short>(x);
 }
 
-bool Processor::msb(int width, int x)
+bool Intel8086::msb(int width, int x)
 {
     return (x & SIGN[width]) == SIGN[width];
 }
@@ -562,7 +562,7 @@ bool Processor::msb(int width, int x)
 //
 // Intercept syscalls.
 //
-void Processor::intercept_bios_call()
+void Intel8086::intercept_bios_call()
 {
     if (machine.process_bios_call(core.cs, core.ip)) {
         core.ip = pop();
@@ -592,7 +592,7 @@ void Processor::intercept_bios_call()
 //  * Else
 //      → Use DS
 //
-void Processor::step()
+void Intel8086::step()
 {
     // Consume segment override and REP prefix bytes; set default segment and repetition mode.
     os               = core.ds;
@@ -676,7 +676,7 @@ done_prefix:
 //
 // Decode op, d, w and optional ModR/M; then execute the matching 8086 instruction.
 //
-void Processor::exe_one()
+void Intel8086::exe_one()
 {
     int dst, src, res;
     const int AX = 0; // accumulator index for getReg/setReg

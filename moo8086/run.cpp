@@ -14,7 +14,7 @@
 void TestCase::run() const
 {
     Memory memory;
-    Machine machine{ memory };
+    Machine machine{ memory, "8086" };
     Processor &cpu{ machine.cpu };
 
     // Set initial CPU state

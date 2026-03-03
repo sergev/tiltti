@@ -38,7 +38,7 @@
 class Test8086 : public ::testing::Test {
 protected:
     Memory memory;
-    Machine machine{ memory };
+    Machine machine{ memory, "8086" };
     Processor &cpu{ machine.cpu };
 
     // To be typed on keyboard.

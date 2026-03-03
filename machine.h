@@ -98,11 +98,12 @@ private:
     static uint64_t simulated_instructions; // Count of instructions
 
 public:
-    // 32K words of virtual memory.
+    // Physical memory.
     Memory &memory;
 
-    // PC i86 processor.
-    Processor cpu;
+    // Processor: i8086 or i386.
+    std::unique_ptr<Processor> cpu_ptr;
+    Processor &cpu;
 
     Interrupt_Vector_Table &ivt;   // Interrupt vector table at 0x00000
     Bios_Data_Area &bda;           // Bios Data Area at 0x00400
@@ -114,7 +115,8 @@ public:
     unsigned last_syscall{};
     unsigned kbd_poll_count{};
 
-    explicit Machine(Memory &memory);
+    // Constructor.
+    Machine(Memory &memory, const std::string &cpu_model);
 
     // Destructor.
     ~Machine();

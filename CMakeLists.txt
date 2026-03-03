@@ -41,7 +41,7 @@ add_library(simulator STATIC
     disk.cpp
     vhd.cpp
     trace.cpp
-    processor.cpp
+    intel8086.cpp
     syscall.cpp
     encoding.cpp
     cp437.cpp

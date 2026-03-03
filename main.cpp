@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
     }
 
     // Create PC i86 machine.
-    Machine machine{ memory };
+    Machine machine{ memory, "8086" };
 
     // Connect machine to video adapter.
     auto event_callback = [&gui, &machine](unsigned timeout) {

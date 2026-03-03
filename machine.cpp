@@ -43,8 +43,10 @@ uint64_t Machine::simulated_instructions = 0;
 //
 // Initialize the machine (SDL-free; main() owns display and input).
 //
-Machine::Machine(Memory &m)
-    : memory(m), cpu(*this), ivt(*reinterpret_cast<Interrupt_Vector_Table *>(memory.get_ptr(0x0))),
+Machine::Machine(Memory &m, const std::string &cpu_model)
+    : memory(m), cpu_ptr(cpu_model == "8086" ? std::make_unique<Intel8086>(*this)
+                                             : nullptr /*TODO std::make_unique<Intel386>(*this)*/),
+      cpu(*cpu_ptr), ivt(*reinterpret_cast<Interrupt_Vector_Table *>(memory.get_ptr(0x0))),
       bda(*reinterpret_cast<Bios_Data_Area *>(memory.get_ptr(0x400))),
       ebda(*reinterpret_cast<Extended_Bios_Data_Area *>(memory.get_ptr(0x9fc00))),
       bios(memory.get_ptr(BIOS_ROM_ADDR)),
