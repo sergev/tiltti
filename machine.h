@@ -34,6 +34,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "bios.h"
 #include "disk.h"
 #include "processor.h"
 

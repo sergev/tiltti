@@ -29,6 +29,8 @@
 #include <iostream>
 #include <sstream>
 
+#include "bios.h"
+
 // Use namespace to hide the Basic ROM as static.
 namespace {
 const
