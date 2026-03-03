@@ -76,6 +76,11 @@ inline unsigned linear_addr20(Word seg, Word off)
     return ((seg << 4) + off) & 0xFFFFFu;
 }
 
+inline unsigned linear_addr21(Word seg, Word off)
+{
+    return (seg << 4) + off;
+}
+
 inline unsigned linear_addr32(Word seg, Dword off)
 {
     return (seg << 4) + off;

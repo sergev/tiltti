@@ -344,7 +344,7 @@ unsigned Intel386::getEA(unsigned mod_val, unsigned rm_val)
         break;
     }
     last_ea_offset = offset;
-    return linear_addr20(os, offset);
+    return linear_addr21(os, offset);
 }
 
 //
@@ -396,37 +396,37 @@ void Intel386::setMem(int width, unsigned addr, int val)
 int Intel386::getMemAtSegOff(int width, Word seg, Word off)
 {
     if (width == B) {
-        return machine.mem_load_byte(linear_addr20(seg, off));
+        return machine.mem_load_byte(linear_addr21(seg, off));
     }
     if (width == D) {
-        unsigned addr = linear_addr20(seg, off);
+        unsigned addr = linear_addr21(seg, off);
         return static_cast<int>(machine.mem_load_32(addr));
     }
     if (off == 0xffff) {
-        Byte lo = machine.mem_load_byte(linear_addr20(seg, static_cast<Word>(0xffff)));
-        Byte hi = machine.mem_load_byte(linear_addr20(seg, static_cast<Word>(0)));
+        Byte lo = machine.mem_load_byte(linear_addr21(seg, static_cast<Word>(0xffff)));
+        Byte hi = machine.mem_load_byte(linear_addr21(seg, static_cast<Word>(0)));
         return lo | (hi << 8);
     }
-    return machine.mem_load_word(linear_addr20(seg, off));
+    return machine.mem_load_word(linear_addr21(seg, off));
 }
 
 void Intel386::setMemAtSegOff(int width, Word seg, Word off, int val)
 {
     if (width == B) {
-        machine.mem_store_byte(linear_addr20(seg, off), val);
+        machine.mem_store_byte(linear_addr21(seg, off), val);
         return;
     }
     if (width == D) {
-        unsigned addr = linear_addr20(seg, off);
+        unsigned addr = linear_addr21(seg, off);
         machine.mem_store_32(addr, static_cast<Dword>(val));
         return;
     }
     if (off == 0xffff) {
-        machine.mem_store_byte(linear_addr20(seg, static_cast<Word>(0xffff)), val);
-        machine.mem_store_byte(linear_addr20(seg, static_cast<Word>(0)), val >> 8);
+        machine.mem_store_byte(linear_addr21(seg, static_cast<Word>(0xffff)), val);
+        machine.mem_store_byte(linear_addr21(seg, static_cast<Word>(0)), val >> 8);
         return;
     }
-    machine.mem_store_word(linear_addr20(seg, off), val);
+    machine.mem_store_word(linear_addr21(seg, off), val);
 }
 
 //
@@ -766,9 +766,9 @@ int Intel386::pop32()
         val = 0;
         for (int i = 0; i < 4; i++)
             val |= static_cast<int>(machine.mem_load_byte(
-                linear_addr20(core.ss, static_cast<Word>(sp + i)))) << (i * 8);
+                linear_addr21(core.ss, static_cast<Word>(sp + i)))) << (i * 8);
     } else {
-        val = getMem(D, linear_addr20(core.ss, sp));
+        val = getMem(D, linear_addr21(core.ss, sp));
     }
     set_sp(get_sp() + 4);
     return val;
@@ -782,10 +782,10 @@ void Intel386::push32(Dword val)
         // Wrap when crossing segment boundary (match pop32 behavior)
         for (int i = 0; i < 4; i++)
             machine.mem_store_byte(
-                linear_addr20(core.ss, static_cast<Word>(sp + i)),
+                linear_addr21(core.ss, static_cast<Word>(sp + i)),
                 static_cast<Byte>(val >> (i * 8)));
     } else {
-        unsigned addr = linear_addr20(core.ss, sp);
+        unsigned addr = linear_addr21(core.ss, sp);
         machine.mem_store_byte(addr, val);
         machine.mem_store_byte(addr + 1, val >> 8);
         machine.mem_store_byte(addr + 2, val >> 16);
@@ -1318,7 +1318,7 @@ void Intel386::exe_one()
             Dword disp32 = fetch(W) | (static_cast<Dword>(fetch(W)) << 16);
             addr         = linear_addr32(os, disp32);
         } else {
-            addr = linear_addr20(os, static_cast<Word>(fetch(W)));
+            addr = linear_addr21(os, static_cast<Word>(fetch(W)));
         }
         int eff_w = ((op == 0xa1 || op == 0xa3) && operand_32) ? D : (w ? W : B);
         if (d == 0) {
@@ -2248,7 +2248,7 @@ void Intel386::exe_one()
         Dword frame_temp = core.esp;
         for (int i = 1; i < level; ++i) {
             Dword ptr     = (operand_32 ? core.ebp : (core.ebp & 0xFFFF)) - sz * i;
-            unsigned addr = linear_addr20(core.ss, static_cast<Word>(ptr & 0xFFFF));
+            unsigned addr = linear_addr21(core.ss, static_cast<Word>(ptr & 0xFFFF));
             if (operand_32) {
                 push32(static_cast<Dword>(getMem(D, addr)));
             } else {
