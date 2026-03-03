@@ -35,61 +35,61 @@ class Machine;
 class Memory;
 
 //
-// Internal state of the processor.
-//
-//
-// Visible architectural state (for trace and reset).
-// Decode state (op, mod, reg, rm, ea, opcode) is internal to one instruction.
-//
-struct CoreState {
-    Word ax{}, bx{}, cx{}, dx{}; // general (AX = AH:AL, etc.)
-    Word sp{}, bp{}, si{}, di{}; // stack pointer, base, index
-    Word cs{}, ds{}, ss{}, es{}; // segment registers
-    Word ip{};                   // instruction pointer
-
-    // Bits:  15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0
-    //        -----------------------------------------------
-    // Flags: 1  1  1  1  OF DF IF TF SF ZF 0  AF 0 PF  1  CF
-    union {
-        Word w{};
-        struct {
-            unsigned c : 1;      // bit 0  - CF, Carry Flag
-            unsigned _bit1 : 1;  //
-            unsigned p : 1;      // bit 2  - PF, Parity Flag
-            unsigned _bit3 : 1;  //
-            unsigned a : 1;      // bit 4  - AF, Auxiliary Carry Flag
-            unsigned _bit5 : 1;  //
-            unsigned z : 1;      // bit 6  - ZF, Zero Flag
-            unsigned s : 1;      // bit 7  - SF, Sign Flag
-            unsigned t : 1;      // bit 8  - TF, Trap Flag
-            unsigned i : 1;      // bit 9  - IF, Interrupt Flag
-            unsigned d : 1;      // bit 10 - DF, Direction Flag
-            unsigned o : 1;      // bit 11 - OF, Overflow Flag
-            unsigned _bit12 : 1; //
-            unsigned _bit13 : 1; //
-            unsigned _bit14 : 1; //
-            unsigned _bit15 : 1; //
-        } f;
-    } flags;
-};
-
-// Bitmasks for flags.
-enum {
-    CF_MASK = 1 << 0,  // Carry Flag
-    PF_MASK = 1 << 2,  // Parity Flag
-    AF_MASK = 1 << 4,  // Auxiliary Carry Flag
-    ZF_MASK = 1 << 6,  // Zero Flag
-    SF_MASK = 1 << 7,  // Sign Flag
-    TF_MASK = 1 << 8,  // Trap Flag
-    IF_MASK = 1 << 9,  // Interrupt Flag
-    DF_MASK = 1 << 10, // Direction Flag
-    OF_MASK = 1 << 11, // Overflow Flag
-};
-
-//
 // Intel 8086 processor (concrete implementation of Processor).
 //
 class Intel8086 : public Processor {
+    //
+    // Internal state of the processor.
+    //
+    //
+    // Visible architectural state (for trace and reset).
+    // Decode state (op, mod, reg, rm, ea, opcode) is internal to one instruction.
+    //
+    struct CoreState {
+        Word ax{}, bx{}, cx{}, dx{}; // general (AX = AH:AL, etc.)
+        Word sp{}, bp{}, si{}, di{}; // stack pointer, base, index
+        Word cs{}, ds{}, ss{}, es{}; // segment registers
+        Word ip{};                   // instruction pointer
+
+        // Bits:  15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0
+        //        -----------------------------------------------
+        // Flags: 1  1  1  1  OF DF IF TF SF ZF 0  AF 0 PF  1  CF
+        union {
+            Word w{};
+            struct {
+                unsigned c : 1;      // bit 0  - CF, Carry Flag
+                unsigned _bit1 : 1;  //
+                unsigned p : 1;      // bit 2  - PF, Parity Flag
+                unsigned _bit3 : 1;  //
+                unsigned a : 1;      // bit 4  - AF, Auxiliary Carry Flag
+                unsigned _bit5 : 1;  //
+                unsigned z : 1;      // bit 6  - ZF, Zero Flag
+                unsigned s : 1;      // bit 7  - SF, Sign Flag
+                unsigned t : 1;      // bit 8  - TF, Trap Flag
+                unsigned i : 1;      // bit 9  - IF, Interrupt Flag
+                unsigned d : 1;      // bit 10 - DF, Direction Flag
+                unsigned o : 1;      // bit 11 - OF, Overflow Flag
+                unsigned _bit12 : 1; //
+                unsigned _bit13 : 1; //
+                unsigned _bit14 : 1; //
+                unsigned _bit15 : 1; //
+            } f;
+        } flags;
+    };
+
+    // Bitmasks for flags.
+    enum {
+        CF_MASK = 1 << 0,  // Carry Flag
+        PF_MASK = 1 << 2,  // Parity Flag
+        AF_MASK = 1 << 4,  // Auxiliary Carry Flag
+        ZF_MASK = 1 << 6,  // Zero Flag
+        SF_MASK = 1 << 7,  // Sign Flag
+        TF_MASK = 1 << 8,  // Trap Flag
+        IF_MASK = 1 << 9,  // Interrupt Flag
+        DF_MASK = 1 << 10, // Direction Flag
+        OF_MASK = 1 << 11, // Overflow Flag
+    };
+
 private:
     Machine &machine;        // Reference to the machine
     struct CoreState core{}; // Current state

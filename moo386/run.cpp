@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 
+#include "intel386.h"
 #include "machine.h"
 #include "memory.h"
 #include "test_case.h"
@@ -15,8 +16,8 @@
 void TestCase::run() const
 {
     Memory memory;
-    Machine machine{ memory };
-    Processor &cpu{ machine.cpu };
+    Machine machine{ memory, "386" };
+    Intel386 &cpu{ static_cast<Intel386 &>(machine.cpu) };
 
     //Machine::enable_trace("r");
 
@@ -60,7 +61,7 @@ void TestCase::run() const
     if (has_initial_reg(REG::DR7))
         cpu.set_dr7(*get_initial_reg(REG::DR7));
     if (has_initial_reg(REG::EFLAGS))
-        cpu.set_flags(*get_initial_reg(REG::EFLAGS));
+        cpu.set_eflags(*get_initial_reg(REG::EFLAGS));
 
     //machine.trace_registers();
 

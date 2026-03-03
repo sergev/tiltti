@@ -24,6 +24,7 @@
 #include "machine.h"
 
 #include "intel8086.h"
+#include "intel386.h"
 
 #include <sys/time.h>
 #include <unistd.h>
@@ -46,8 +47,8 @@ uint64_t Machine::simulated_instructions = 0;
 // Initialize the machine (SDL-free; main() owns display and input).
 //
 Machine::Machine(Memory &m, const std::string &cpu_model)
-    : memory(m), cpu_ptr(cpu_model == "8086" ? std::make_unique<Intel8086>(*this)
-                                             : nullptr /*TODO std::make_unique<Intel386>(*this)*/),
+    : memory(m), cpu_ptr(cpu_model == "8086" ? std::unique_ptr<Processor>(std::make_unique<Intel8086>(*this))
+                                             : std::unique_ptr<Processor>(std::make_unique<Intel386>(*this))),
       cpu(*cpu_ptr), ivt(*reinterpret_cast<Interrupt_Vector_Table *>(memory.get_ptr(0x0))),
       bda(*reinterpret_cast<Bios_Data_Area *>(memory.get_ptr(0x400))),
       ebda(*reinterpret_cast<Extended_Bios_Data_Area *>(memory.get_ptr(0x9fc00))),
@@ -357,6 +358,42 @@ Word Machine::mem_load_word(unsigned addr)
 }
 
 //
+// Read 32-bit dword from memory (little-endian).
+//
+uint32_t Machine::mem_load_32(unsigned addr)
+{
+    if (addr + 3 >= MEMORY_NBYTES) {
+        throw std::runtime_error("Load out of range");
+    }
+    Dword val = memory.load32(addr);
+    if (debug_all) {
+        print_word_access(addr, val, "Dword Read");
+    }
+    return val;
+}
+
+//
+// Write 32-bit dword to memory (little-endian).
+//
+void Machine::mem_store_32(unsigned addr, uint32_t val)
+{
+    if (addr + 3 >= MEMORY_NBYTES) {
+        throw std::runtime_error("Store out of range");
+    }
+    memory.store32(addr, val);
+    if (debug_all) {
+        print_word_access(addr, val, "Dword Write");
+    }
+    if (addr < 0x400 && (addr & 3) == 2 && trace_enabled()) {
+        print_handler(addr);
+    }
+    if (addr >= 0xb0000 && addr <= 0xbffff) {
+        video_dirty = true;
+        // print_word_access(addr, val, "Dword Write");
+    }
+}
+
+//
 // Send one byte to port.
 //
 void Machine::port_out_byte(unsigned port, Byte val)
@@ -411,6 +448,29 @@ Word Machine::port_in_word(unsigned port)
     const Word val = 0xffff;
     if (debug_all || debug_ports) {
         print_word_access(port, val, "Word Inport");
+    }
+    return val;
+}
+
+//
+// Send 32-bit dword to port.
+//
+void Machine::port_out_32(unsigned port, uint32_t val)
+{
+    if (debug_all || debug_ports) {
+        trace_stream << "Dword Outport " << std::hex << port << " = " << val << std::dec << "\n";
+    }
+}
+
+//
+// Receive 32-bit dword from port.
+//
+uint32_t Machine::port_in_32(unsigned port)
+{
+    // Unimplemented ports return 0xFFFFFFFF (floating bus).
+    const uint32_t val = 0xffffffffu;
+    if (debug_all || debug_ports) {
+        trace_stream << "Dword Inport " << std::hex << port << " = " << val << std::dec << "\n";
     }
     return val;
 }

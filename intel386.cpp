@@ -21,6 +21,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
+#include "intel386.h"
+
 #include <capstone.h>
 #include <iomanip>
 #include <iostream>
@@ -80,7 +82,7 @@ void Intel386::reset()
     core.es  = 0x0000;
     core.fs  = 0x0000;
     core.gs  = 0x0000;
-    set_flags(0);
+    set_eflags(0);
     opcode           = {};
     plen             = 0;
     rep              = 0;

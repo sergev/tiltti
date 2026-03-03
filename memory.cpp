@@ -23,6 +23,8 @@
 //
 #include "memory.h"
 
+#include <stdlib.h>
+
 #include <cstring>
 #include <fstream>
 #include <iomanip>
@@ -42,8 +44,20 @@ const
 //
 Memory::Memory()
 {
+    // Use calloc() here, not the `new' operator, or malloc().
+    // Calloc is more efficient as it supports lazy allocation,
+    // relying on the copy-on-write feature of the virtual memory.
+    mem = static_cast<Byte *>(calloc(MEMORY_NBYTES, 1));
+    if (mem == nullptr)
+        throw std::runtime_error("Cannot allocate " + std::to_string(MEMORY_NBYTES) +
+                                 " bytes of memory");
     // Initialize Basic ROM.
     memcpy(&mem[BASIC_ROM_ADDR], basic_rom, basic_rom_len);
+}
+
+Memory::~Memory()
+{
+    free(mem);
 }
 
 //

@@ -34,9 +34,10 @@
 static const unsigned SECTOR_NBYTES = 512;
 
 //
-// Memory size 1 Mbyte.
+// Memory size 16 Mbytes.
 //
-static const unsigned MEMORY_NBYTES = 1024 * 1024;
+static const unsigned MEMORY_NBYTES = 16 * 1024 * 1024;
+
 
 //
 // Total 4 hard+floppy disks.
@@ -52,9 +53,13 @@ enum {
 //
 // 8-bit unsigned byte.
 // 16-bit memory word.
+// 32-bit doubleword.
+// 64-bit quadword.
 //
-using Byte = uint8_t;
-using Word = uint16_t;
+using Byte  = uint8_t;
+using Word  = uint16_t;
+using Dword = uint32_t;
+using Qword = uint64_t;
 
 //
 // Array of bytes.
@@ -69,6 +74,11 @@ using Words = std::vector<Word>;
 inline unsigned linear_addr20(Word seg, Word off)
 {
     return ((seg << 4) + off) & 0xFFFFFu;
+}
+
+inline unsigned linear_addr32(Word seg, Dword off)
+{
+    return (seg << 4) + off;
 }
 
 //

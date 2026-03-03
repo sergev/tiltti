@@ -168,12 +168,16 @@ public:
     void mem_store_byte(unsigned addr, Byte val);
     Word mem_load_word(unsigned addr);
     void mem_store_word(unsigned addr, Word val);
+    uint32_t mem_load_32(unsigned addr);
+    void mem_store_32(unsigned addr, uint32_t val);
 
     // Port I/O.
     static Byte port_in_byte(unsigned port);
     static void port_out_byte(unsigned port, Byte val);
     static Word port_in_word(unsigned port);
     static void port_out_word(unsigned port, Word val);
+    static void port_out_32(unsigned port, uint32_t val);
+    static uint32_t port_in_32(unsigned port);
 
     // Disk i/o.
     static bool dl_to_disk_unit(unsigned dl, unsigned &disk_unit);

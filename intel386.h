@@ -1,5 +1,5 @@
 //
-// PC i86 processor unit.
+// Intel 386 processor unit.
 //
 // Copyright (c) 2026 Serge Vakulenko
 //
@@ -29,69 +29,70 @@
 #include <string>
 
 #include "pc_platform.h"
+#include "processor.h"
 
 class Machine;
 class Memory;
 
 //
-// Visible architectural state of the processor.
+// Intel 386 processor.
 //
-struct CoreState {
-    Dword eax{}, ebx{}, ecx{}, edx{};        // general (AX = low 16 of EAX, etc.)
-    Dword esp{}, ebp{}, esi{}, edi{};        // stack pointer, base, index
-    Word cs{}, ds{}, ss{}, es{}, fs{}, gs{}; // segment registers
-    Dword eip{};                             // instruction pointer
+class Intel386 : public Processor {
+    //
+    // Visible architectural state of the processor.
+    //
+    struct CoreState {
+        Dword eax{}, ebx{}, ecx{}, edx{};        // general (AX = low 16 of EAX, etc.)
+        Dword esp{}, ebp{}, esi{}, edi{};        // stack pointer, base, index
+        Word cs{}, ds{}, ss{}, es{}, fs{}, gs{}; // segment registers
+        Dword eip{};                             // instruction pointer
 
-    // Bits:  17 16 15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0
-    //        -----------------------------------------------------
-    // Flags: VM RF 0  NT IO-PL OF DF IF TF SF ZF 0  AF 0 PF  1  CF
-    union {
-        Dword w{};
-        struct {                 // bits 1,3,5,15,18-31 reserved
-            unsigned cf : 1;     // bit 0  - Carry Flag
-            unsigned _bit1 : 1;  //
-            unsigned pf : 1;     // bit 2  - Parity Flag
-            unsigned _bit3 : 1;  //
-            unsigned af : 1;     // bit 4  - Auxiliary Carry Flag
-            unsigned _bit5 : 1;  //
-            unsigned zf : 1;     // bit 6  - Zero Flag
-            unsigned sf : 1;     // bit 7  - Sign Flag
-            unsigned tf : 1;     // bit 8  - Trap Flag
-            unsigned ifl : 1;    // bit 9  - Interrupt FLag
-            unsigned df : 1;     // bit 10 - Direction Flag
-            unsigned of : 1;     // bit 11 - Overflow Flag
-            unsigned iopl : 2;   // bits 12,13 - I/O Privilege Level
-            unsigned nt : 1;     // bit 14 - Nested Task flag
-            unsigned _bit15 : 1; //
-            unsigned rf : 1;     // bit 16 - Resume Flag
-            unsigned vm : 1;     // bit 17 - Virtual 8086 Mode
-            unsigned _bits18to31 : 14;
-        } f;
-    } flags;
+        // Bits:  17 16 15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0
+        //        -----------------------------------------------------
+        // Flags: VM RF 0  NT IO-PL OF DF IF TF SF ZF 0  AF 0 PF  1  CF
+        union {
+            Dword w{};
+            struct {                 // bits 1,3,5,15,18-31 reserved
+                unsigned cf : 1;     // bit 0  - Carry Flag
+                unsigned _bit1 : 1;  //
+                unsigned pf : 1;     // bit 2  - Parity Flag
+                unsigned _bit3 : 1;  //
+                unsigned af : 1;     // bit 4  - Auxiliary Carry Flag
+                unsigned _bit5 : 1;  //
+                unsigned zf : 1;     // bit 6  - Zero Flag
+                unsigned sf : 1;     // bit 7  - Sign Flag
+                unsigned tf : 1;     // bit 8  - Trap Flag
+                unsigned ifl : 1;    // bit 9  - Interrupt FLag
+                unsigned df : 1;     // bit 10 - Direction Flag
+                unsigned of : 1;     // bit 11 - Overflow Flag
+                unsigned iopl : 2;   // bits 12,13 - I/O Privilege Level
+                unsigned nt : 1;     // bit 14 - Nested Task flag
+                unsigned _bit15 : 1; //
+                unsigned rf : 1;     // bit 16 - Resume Flag
+                unsigned vm : 1;     // bit 17 - Virtual 8086 Mode
+                unsigned _bits18to31 : 14;
+            } f;
+        } flags;
 
-    Dword cr0{}, cr3{}, dr6{}, dr7{}; // control and debug registers
-};
+        Dword cr0{}, cr3{}, dr6{}, dr7{}; // control and debug registers
+    };
 
-// Bitmasks for flags.
-enum {
-    CF_MASK = 1 << 0,  // Carry Flag
-    PF_MASK = 1 << 2,  // Parity Flag
-    AF_MASK = 1 << 4,  // Auxiliary Carry Flag
-    ZF_MASK = 1 << 6,  // Zero Flag
-    SF_MASK = 1 << 7,  // Sign Flag
-    TF_MASK = 1 << 8,  // Trap Flag
-    IF_MASK = 1 << 9,  // Interrupt Flag
-    DF_MASK = 1 << 10, // Direction Flag
-    OF_MASK = 1 << 11, // Overflow Flag
-};
+    // Bitmasks for flags.
+    enum {
+        CF_MASK = 1 << 0,  // Carry Flag
+        PF_MASK = 1 << 2,  // Parity Flag
+        AF_MASK = 1 << 4,  // Auxiliary Carry Flag
+        ZF_MASK = 1 << 6,  // Zero Flag
+        SF_MASK = 1 << 7,  // Sign Flag
+        TF_MASK = 1 << 8,  // Trap Flag
+        IF_MASK = 1 << 9,  // Interrupt Flag
+        DF_MASK = 1 << 10, // Direction Flag
+        OF_MASK = 1 << 11, // Overflow Flag
+    };
 
-// BT-family instruction action (test-only, complement, reset, set)
-enum class BitTestAction { test, complement, reset, set };
+    // BT-family instruction action (test-only, complement, reset, set)
+    enum class BitTestAction { test, complement, reset, set };
 
-//
-// PC i86 processor.
-//
-class Intel386 {
 private:
     Machine &machine;        // Reference to the machine
     struct CoreState core{}; // Current state
@@ -163,24 +164,24 @@ public:
     void reset();
 
     // Simulate one instruction.
-    void step();
+    void step() override;
 
     // Finalize the processor.
     void finish();
 
     // Take interrupt.
-    void call_int(int type);
+    void call_int(int type) override;
 
     // Set instruction pointer.
-    void set_ip(Word val) { core.eip = (core.eip & 0xFFFF0000u) | val; }
+    void set_ip(unsigned val) override { core.eip = (core.eip & 0xFFFF0000u) | (val & 0xFFFF); }
     void set_eip(Dword val) { core.eip = val; }
 
     // Get instruction pointer.
-    unsigned get_ip() const { return static_cast<Word>(core.eip); }
+    unsigned get_ip() const override { return static_cast<Word>(core.eip); }
     Dword get_eip() const { return core.eip; }
 
     // Get first byte of opcode.
-    unsigned get_op() const { return op; }
+    unsigned get_op() const override { return op; }
     bool is_halted() const { return op == 0xf4; }
 
     // General registers (32-bit)
@@ -193,37 +194,37 @@ public:
     Dword get_edx() const { return core.edx; }
     void set_edx(Dword val) { core.edx = val; }
 
-    Word get_ax() const { return static_cast<Word>(core.eax); }
-    void set_ax(Word val) { core.eax = (core.eax & 0xFFFF0000u) | val; }
-    Word get_bx() const { return static_cast<Word>(core.ebx); }
-    void set_bx(Word val) { core.ebx = (core.ebx & 0xFFFF0000u) | val; }
-    Word get_cx() const { return static_cast<Word>(core.ecx); }
-    void set_cx(Word val) { core.ecx = (core.ecx & 0xFFFF0000u) | val; }
-    Word get_dx() const { return static_cast<Word>(core.edx); }
-    void set_dx(Word val) { core.edx = (core.edx & 0xFFFF0000u) | val; }
+    Word get_ax() const override { return static_cast<Word>(core.eax); }
+    void set_ax(Word val) override { core.eax = (core.eax & 0xFFFF0000u) | val; }
+    Word get_bx() const override { return static_cast<Word>(core.ebx); }
+    void set_bx(Word val) override { core.ebx = (core.ebx & 0xFFFF0000u) | val; }
+    Word get_cx() const override { return static_cast<Word>(core.ecx); }
+    void set_cx(Word val) override { core.ecx = (core.ecx & 0xFFFF0000u) | val; }
+    Word get_dx() const override { return static_cast<Word>(core.edx); }
+    void set_dx(Word val) override { core.edx = (core.edx & 0xFFFF0000u) | val; }
 
     //
     // Byte halves of general registers
     //
-    Byte get_al() const { return static_cast<Byte>(core.eax); }
-    Byte get_ah() const { return static_cast<Byte>(core.eax >> 8); }
-    void set_al(Byte val) { core.eax = (core.eax & 0xFFFFFF00u) | val; }
-    void set_ah(Byte val) { core.eax = (core.eax & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8); }
+    Byte get_al() const override { return static_cast<Byte>(core.eax); }
+    Byte get_ah() const override { return static_cast<Byte>(core.eax >> 8); }
+    void set_al(Byte val) override { core.eax = (core.eax & 0xFFFFFF00u) | val; }
+    void set_ah(Byte val) override { core.eax = (core.eax & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8); }
 
-    Byte get_bl() const { return static_cast<Byte>(core.ebx); }
-    Byte get_bh() const { return static_cast<Byte>(core.ebx >> 8); }
-    void set_bl(Byte val) { core.ebx = (core.ebx & 0xFFFFFF00u) | val; }
-    void set_bh(Byte val) { core.ebx = (core.ebx & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8); }
+    Byte get_bl() const override { return static_cast<Byte>(core.ebx); }
+    Byte get_bh() const override { return static_cast<Byte>(core.ebx >> 8); }
+    void set_bl(Byte val) override { core.ebx = (core.ebx & 0xFFFFFF00u) | val; }
+    void set_bh(Byte val) override { core.ebx = (core.ebx & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8); }
 
-    Byte get_cl() const { return static_cast<Byte>(core.ecx); }
-    Byte get_ch() const { return static_cast<Byte>(core.ecx >> 8); }
-    void set_cl(Byte val) { core.ecx = (core.ecx & 0xFFFFFF00u) | val; }
-    void set_ch(Byte val) { core.ecx = (core.ecx & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8); }
+    Byte get_cl() const override { return static_cast<Byte>(core.ecx); }
+    Byte get_ch() const override { return static_cast<Byte>(core.ecx >> 8); }
+    void set_cl(Byte val) override { core.ecx = (core.ecx & 0xFFFFFF00u) | val; }
+    void set_ch(Byte val) override { core.ecx = (core.ecx & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8); }
 
-    Byte get_dl() const { return static_cast<Byte>(core.edx); }
-    Byte get_dh() const { return static_cast<Byte>(core.edx >> 8); }
-    void set_dl(Byte val) { core.edx = (core.edx & 0xFFFFFF00u) | val; }
-    void set_dh(Byte val) { core.edx = (core.edx & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8); }
+    Byte get_dl() const override { return static_cast<Byte>(core.edx); }
+    Byte get_dh() const override { return static_cast<Byte>(core.edx >> 8); }
+    void set_dl(Byte val) override { core.edx = (core.edx & 0xFFFFFF00u) | val; }
+    void set_dh(Byte val) override { core.edx = (core.edx & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8); }
 
     // Pointer/index registers (32-bit)
     Dword get_esp() const { return core.esp; }
@@ -235,46 +236,46 @@ public:
     Dword get_edi() const { return core.edi; }
     void set_edi(Dword val) { core.edi = val; }
 
-    Word get_sp() const { return static_cast<Word>(core.esp); }
-    void set_sp(Word val) { core.esp = (core.esp & 0xFFFF0000u) | val; }
-    Word get_bp() const { return static_cast<Word>(core.ebp); }
-    void set_bp(Word val) { core.ebp = (core.ebp & 0xFFFF0000u) | val; }
-    Word get_si() const { return static_cast<Word>(core.esi); }
-    void set_si(Word val) { core.esi = (core.esi & 0xFFFF0000u) | val; }
-    Word get_di() const { return static_cast<Word>(core.edi); }
-    void set_di(Word val) { core.edi = (core.edi & 0xFFFF0000u) | val; }
+    Word get_sp() const override { return static_cast<Word>(core.esp); }
+    void set_sp(Word val) override { core.esp = (core.esp & 0xFFFF0000u) | val; }
+    Word get_bp() const override { return static_cast<Word>(core.ebp); }
+    void set_bp(Word val) override { core.ebp = (core.ebp & 0xFFFF0000u) | val; }
+    Word get_si() const override { return static_cast<Word>(core.esi); }
+    void set_si(Word val) override { core.esi = (core.esi & 0xFFFF0000u) | val; }
+    Word get_di() const override { return static_cast<Word>(core.edi); }
+    void set_di(Word val) override { core.edi = (core.edi & 0xFFFF0000u) | val; }
 
     // Segment registers
-    Word get_cs() const { return core.cs; }
-    void set_cs(Word val) { core.cs = val; }
-    Word get_ds() const { return core.ds; }
-    void set_ds(Word val) { core.ds = val; }
-    Word get_ss() const { return core.ss; }
-    void set_ss(Word val) { core.ss = val; }
-    Word get_es() const { return core.es; }
-    void set_es(Word val) { core.es = val; }
+    Word get_cs() const override { return core.cs; }
+    void set_cs(Word val) override { core.cs = val; }
+    Word get_ds() const override { return core.ds; }
+    void set_ds(Word val) override { core.ds = val; }
+    Word get_ss() const override { return core.ss; }
+    void set_ss(Word val) override { core.ss = val; }
+    Word get_es() const override { return core.es; }
+    void set_es(Word val) override { core.es = val; }
     Word get_fs() const { return core.fs; }
     void set_fs(Word val) { core.fs = val; }
     Word get_gs() const { return core.gs; }
     void set_gs(Word val) { core.gs = val; }
 
     // Flags (set_flags normalizes reserved bits per 386)
-    Word get_flags() const { return static_cast<Word>(core.flags.w); }
+    Word get_flags() const override { return static_cast<Word>(core.flags.w); }
     Dword get_eflags() const { return core.flags.w; }
-    void set_flags(Word val);
+    void set_flags(Word val) override;
     void set_eflags(Dword val);
     void update_flags_zsp(int width, int res);
-    Dword u_flags() { return last_unpredictable_flags; }
+    Word u_flags() override { return static_cast<Word>(last_unpredictable_flags); }
 
-    void set_cf(bool bit) { core.flags.f.cf = bit; }  // CF, Carry Flag
-    void set_pf(bool bit) { core.flags.f.pf = bit; }  // PF, Parity Flag
-    void set_af(bool bit) { core.flags.f.af = bit; }  // AF, Auxiliary Carry Flag
-    void set_zf(bool bit) { core.flags.f.zf = bit; }  // ZF, Zero Flag
-    void set_sf(bool bit) { core.flags.f.sf = bit; }  // SF, Sign Flag
-    void set_tf(bool bit) { core.flags.f.tf = bit; }  // TF, Trap Flag
-    void set_if(bool bit) { core.flags.f.ifl = bit; } // IF, Interrupt Flag
-    void set_df(bool bit) { core.flags.f.df = bit; }  // DF, Direction Flag
-    void set_of(bool bit) { core.flags.f.of = bit; }  // OF, Overflow Flag
+    void set_cf(bool bit) override { core.flags.f.cf = bit; }  // CF, Carry Flag
+    void set_pf(bool bit) override { core.flags.f.pf = bit; }  // PF, Parity Flag
+    void set_af(bool bit) override { core.flags.f.af = bit; }  // AF, Auxiliary Carry Flag
+    void set_zf(bool bit) override { core.flags.f.zf = bit; }  // ZF, Zero Flag
+    void set_sf(bool bit) override { core.flags.f.sf = bit; }  // SF, Sign Flag
+    void set_tf(bool bit) override { core.flags.f.tf = bit; }  // TF, Trap Flag
+    void set_if(bool bit) override { core.flags.f.ifl = bit; } // IF, Interrupt Flag
+    void set_df(bool bit) override { core.flags.f.df = bit; }  // DF, Direction Flag
+    void set_of(bool bit) override { core.flags.f.of = bit; }  // OF, Overflow Flag
 
     // Control and debug registers
     Dword get_cr0() const { return core.cr0; }
@@ -287,8 +288,8 @@ public:
     void set_dr7(Dword val) { core.dr7 = val; }
 
     // Print trace info.
-    void print_instruction();
-    void print_registers();
+    void print_instruction() override;
+    void print_registers() override;
 };
 
 #endif // TILTTI_INTEL386_H

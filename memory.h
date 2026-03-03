@@ -31,11 +31,11 @@
 class Memory {
 private:
     // Memory contents.
-    std::array<Byte, MEMORY_NBYTES> mem{};
+    Byte *mem;
 
 public:
     explicit Memory();
-    virtual ~Memory() = default;
+    virtual ~Memory();
 
     // Load/store byte from/to memory.
     Byte load8(unsigned addr) { return mem[addr]; }

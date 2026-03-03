@@ -42,6 +42,7 @@ add_library(simulator STATIC
     vhd.cpp
     trace.cpp
     intel8086.cpp
+    intel386.cpp
     syscall.cpp
     encoding.cpp
     cp437.cpp
@@ -91,6 +92,9 @@ set_source_files_properties(main.cpp PROPERTIES COMPILE_FLAGS
 set_source_files_properties(intel8086.cpp PROPERTIES COMPILE_FLAGS
     ${CAPSTONE_STATIC_CFLAGS}
 )
+set_source_files_properties(intel386.cpp PROPERTIES COMPILE_FLAGS
+    ${CAPSTONE_STATIC_CFLAGS}
+)
 
 install(TARGETS
     ${PROJECT_NAME}
@@ -98,4 +102,5 @@ install(TARGETS
 )
 
 add_subdirectory(moo8086)
+add_subdirectory(moo386)
 add_subdirectory(tests)
