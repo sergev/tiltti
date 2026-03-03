@@ -53,7 +53,7 @@ moo86:  all outdir
 MOO86   ?= $(PWD)/../8086/v1_binary
 run-moo86:
 	for moo in $(MOO86)/*.gz; do \
-	    ../build/moo_booth/moo-booth -run $$moo; \
+	    ../build/moo8086/moo-booth -run $$moo; \
         done
 
 outdir:
@@ -68,7 +68,7 @@ moo88:  all outdir
 MOO88   ?= $(PWD)/../8088/v2_binary
 run-moo88:
 	for moo in $(MOO88)/*.gz; do \
-	    ../build/moo_booth/moo-booth -run $$moo; \
+	    ../build/moo8086/moo-booth -run $$moo; \
         done
 
 images/b.img:

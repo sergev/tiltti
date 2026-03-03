@@ -19,3 +19,4 @@ outdir*/
 *.vhd
 *.bin
 *.log
+*~

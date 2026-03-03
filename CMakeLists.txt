@@ -97,5 +97,5 @@ install(TARGETS
     DESTINATION bin
 )
 
-add_subdirectory(moo_booth)
+add_subdirectory(moo8086)
 add_subdirectory(tests)
