@@ -65,7 +65,7 @@ void Intel8086::reset()
     core.ds = 0x0000;
     core.ss = 0x0000;
     core.es = 0x0000;
-    set_flags(0);
+    set_flags_(0);
     opcode           = {};
     plen             = 0;
     rep              = 0;
@@ -81,7 +81,7 @@ void Intel8086::reset()
 //
 // Set FLAGS register.
 //
-void Intel8086::set_flags(Word val)
+void Intel8086::set_flags_(Word val)
 {
     // Bits 1,3,5 reserved (1,0,0).
     static const unsigned FLAGS_WRITABLE = 0x0FD5; // bits 0,2,4,6-11 writable
@@ -918,7 +918,7 @@ void Intel8086::exe_one()
 
     // SAHF
     case 0x9e:
-        set_flags((core.flags.w & 0xff00) | get_ah());
+        set_flags_((core.flags.w & 0xff00) | get_ah());
         break;
 
     // PUSHF / POPF
@@ -926,7 +926,7 @@ void Intel8086::exe_one()
         push(core.flags.w);
         break;
     case 0x9d:
-        set_flags(pop());
+        set_flags_(pop());
         break;
 
     // ADD reg/mem, reg and ADD reg, reg/mem
@@ -1592,7 +1592,7 @@ void Intel8086::exe_one()
     case 0xcf:
         core.ip = pop();
         core.cs = pop();
-        set_flags(pop());
+        set_flags_(pop());
         intercept_bios_call();
         break;
 

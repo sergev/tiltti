@@ -220,6 +220,8 @@ public:
             cpu.print_registers();
     }
 
+    void print_syscall(int type);
+
     void print_exception_ah(const char *message);
     static void print_exception(const char *message);
     static void print_byte_access(unsigned addr, Byte val, const char *opname);

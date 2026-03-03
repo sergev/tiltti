@@ -136,6 +136,7 @@ private:
     static int signconv(int width, int x);
     static bool msb(int width, int x);
     void intercept_bios_call();
+    void set_flags_(Word val); // private version of set_flags()
 
     // Execute one opcode (used by step and REP loop).
     void exe_one();
@@ -217,7 +218,7 @@ public:
 
     // Flags (set_flags normalizes reserved bits to match POPF/8086)
     Word get_flags() const override { return core.flags.w; }
-    void set_flags(Word val) override;
+    void set_flags(Word val) override { set_flags_(val); }
     void update_flags_zsp(int width, int res);
     Word u_flags() override { return unpredictable_flags; }
 
@@ -234,7 +235,6 @@ public:
     // Print trace info.
     void print_instruction() override;
     void print_registers() override;
-    void print_syscall(int type) override;
 };
 
 #endif // TILTTI_INTEL8086_H

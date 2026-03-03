@@ -115,7 +115,6 @@ public:
     // Print trace info
     virtual void print_instruction() = 0;
     virtual void print_registers() = 0;
-    virtual void print_syscall(int type) = 0;
 
 protected:
     Processor() = default;

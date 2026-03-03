@@ -23,7 +23,6 @@
 //
 #include <iostream>
 
-#include "intel8086.h"
 #include "machine.h"
 
 //
@@ -107,70 +106,70 @@ bool Machine::is_syscall(int type)
 //
 // Print details about INT request.
 //
-void Intel8086::print_syscall(int type)
+void Machine::print_syscall(int type)
 {
     switch (type) {
     case 0x00:
-        machine.print_exception("Int 0h Divide Error");
+        print_exception("Int 0h Divide Error");
         return;
     case 0x01:
-        machine.print_exception("Int 1h Single Step");
+        print_exception("Int 1h Single Step");
         return;
     case 0x02:
-        machine.print_exception("Int 2h NMI");
+        print_exception("Int 2h NMI");
         return;
     case 0x03:
-        machine.print_exception("Int 3h Breakpoint");
+        print_exception("Int 3h Breakpoint");
         return;
     case 0x04:
-        machine.print_exception("Int 4h Overflow");
+        print_exception("Int 4h Overflow");
         return;
     case 0x05:
-        machine.print_exception("Int 5h Print Screen Request");
+        print_exception("Int 5h Print Screen Request");
         return;
     case 0x10:
-        machine.print_exception_ah("Int 10h Video Request");
+        print_exception_ah("Int 10h Video Request");
         return;
     case 0x11:
-        machine.print_exception("Int 11h Equipment List Request");
+        print_exception("Int 11h Equipment List Request");
         return;
     case 0x12:
-        machine.print_exception("Int 12h Memory Size Request");
+        print_exception("Int 12h Memory Size Request");
         return;
     case 0x13:
-        machine.print_exception_ah("Int 13h Disk Request");
+        print_exception_ah("Int 13h Disk Request");
         return;
     case 0x14:
-        machine.print_exception_ah("Int 14h Serial Request");
+        print_exception_ah("Int 14h Serial Request");
         return;
     case 0x15:
-        machine.print_exception_ah("Int 15h System Services Request");
+        print_exception_ah("Int 15h System Services Request");
         return;
     case 0x16:
-        if (get_ah() == 0x01) {
+        if (cpu.get_ah() == 0x01) {
             // Check keyboard status.
-            Machine::get_trace_stream() << '.' << std::flush;
+            get_trace_stream() << '.' << std::flush;
         } else {
-            machine.print_exception_ah("Int 16h Keyboard Request");
+            print_exception_ah("Int 16h Keyboard Request");
         }
         return;
     case 0x17:
-        machine.print_exception_ah("Int 17h Printer Request");
+        print_exception_ah("Int 17h Printer Request");
         return;
     case 0x18:
-        machine.print_exception("Int 18h ROM BASIC Request");
+        print_exception("Int 18h ROM BASIC Request");
         return;
     case 0x19:
-        machine.print_exception("Int 19h Boot Request");
+        print_exception("Int 19h Boot Request");
         return;
     case 0x1A:
-        machine.print_exception_ah("Int 1Ah RTC Timer Request");
+        print_exception_ah("Int 1Ah RTC Timer Request");
         return;
     default:
         break;
     }
     std::string message = "CPU exception #" + std::to_string(type);
-    machine.print_exception(message.c_str());
+    print_exception(message.c_str());
 }
 
 //
@@ -179,7 +178,7 @@ void Intel8086::print_syscall(int type)
 void Machine::process_syscall(int type)
 {
     if (debug_all || debug_syscalls) {
-        cpu.print_syscall(type);
+        print_syscall(type);
     }
 
     // Remember last syscall for tests.
