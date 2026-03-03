@@ -21,14 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include <capstone.h>
-
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <sstream>
 
-#include "intel8086.h"
 #include "machine.h"
 
 //
@@ -42,9 +38,6 @@ bool Machine::debug_ports;    // trace i/o ports
 // Emit trace to this stream.
 //
 std::ofstream Machine::trace_stream;
-
-// Capstone handle.
-static csh disasm;
 
 //
 // Enable trace with given modes.
@@ -76,11 +69,6 @@ void Machine::enable_trace(const char *trace_mode)
             default:
                 throw std::runtime_error("Wrong trace option: " + std::string(1, ch));
             }
-        }
-
-        // Initialize Capstone for i86 16-bit mode.
-        if (cs_open(CS_ARCH_X86, CS_MODE_16, &disasm) != CS_ERR_OK) {
-            throw std::runtime_error("Failed to initialize Capstone");
         }
     }
 }
@@ -192,99 +180,5 @@ void Machine::print_handler(unsigned addr)
     out << pc86_linear_addr(seg, off) << std::endl;
 
     // Restore.
-    out.flags(save_flags);
-}
-
-//
-// Print instruction address and opcode.
-//
-void Intel8086::print_instruction()
-{
-    auto &out       = Machine::get_trace_stream();
-    auto save_flags = out.flags();
-    auto pc         = (core.cs << 4) + core.ip;
-
-    out << std::hex << std::setfill('0') << std::setw(5) << pc << " :";
-
-    // Disassemble one instruction.
-    cs_insn *insn;
-    size_t count = cs_disasm(disasm, opcode.data(), opcode.size(), 0x0, 1, &insn);
-    if (count > 0) {
-        size_t i;
-        for (i = 0; i < insn->size; ++i) {
-            out << ' ' << std::setw(2) << std::setfill('0') << (unsigned)insn->bytes[i];
-        }
-        for (; i < 6; ++i) {
-            out << "   ";
-        }
-        out << "  " << insn[0].mnemonic << ' ' << insn[0].op_str;
-        cs_free(insn, count);
-    } else {
-        // Cannot disassembler, just print bytes.
-        for (size_t i = 0; i < opcode.size(); ++i) {
-            out << ' ' << std::setw(2) << std::setfill('0') << (unsigned)opcode[i];
-        }
-    }
-    out << std::endl;
-
-    out.flags(save_flags);
-}
-
-//
-// Print changed CPU registers (core vs prev), then update prev.
-//
-void Intel8086::print_registers()
-{
-    auto &out       = Machine::get_trace_stream();
-    auto save_flags = out.flags();
-
-    if (core.ax != prev.ax)
-        out << "\tAX = " << std::hex << std::setfill('0') << std::setw(4) << core.ax << std::endl;
-    if (core.bx != prev.bx)
-        out << "\tBX = " << std::hex << std::setfill('0') << std::setw(4) << core.bx << std::endl;
-    if (core.cx != prev.cx)
-        out << "\tCX = " << std::hex << std::setfill('0') << std::setw(4) << core.cx << std::endl;
-    if (core.dx != prev.dx)
-        out << "\tDX = " << std::hex << std::setfill('0') << std::setw(4) << core.dx << std::endl;
-    if (core.sp != prev.sp)
-        out << "\tSP = " << std::hex << std::setfill('0') << std::setw(4) << core.sp << std::endl;
-    if (core.bp != prev.bp)
-        out << "\tBP = " << std::hex << std::setfill('0') << std::setw(4) << core.bp << std::endl;
-    if (core.si != prev.si)
-        out << "\tSI = " << std::hex << std::setfill('0') << std::setw(4) << core.si << std::endl;
-    if (core.di != prev.di)
-        out << "\tDI = " << std::hex << std::setfill('0') << std::setw(4) << core.di << std::endl;
-    if (core.cs != prev.cs)
-        out << "\tCS = " << std::hex << std::setfill('0') << std::setw(4) << core.cs << std::endl;
-    if (core.ds != prev.ds)
-        out << "\tDS = " << std::hex << std::setfill('0') << std::setw(4) << core.ds << std::endl;
-    if (core.ss != prev.ss)
-        out << "\tSS = " << std::hex << std::setfill('0') << std::setw(4) << core.ss << std::endl;
-    if (core.es != prev.es)
-        out << "\tES = " << std::hex << std::setfill('0') << std::setw(4) << core.es << std::endl;
-    if (core.flags.w != prev.flags.w) {
-        out << "\tFlags = " << std::hex << std::setfill('0') << std::setw(4) << core.flags.w;
-        if (core.flags.w & 0x800)
-            out << " OF";
-        if (core.flags.w & 0x400)
-            out << " DF";
-        if (core.flags.w & 0x200)
-            out << " IF";
-        if (core.flags.w & 0x100)
-            out << " TF";
-        if (core.flags.w & 0x80)
-            out << " SF";
-        if (core.flags.w & 0x40)
-            out << " ZF";
-        if (core.flags.w & 0x10)
-            out << " AF";
-        if (core.flags.w & 0x4)
-            out << " PF";
-        if (core.flags.w & 0x1)
-            out << " CF";
-        out << std::endl;
-    }
-
-    prev = core;
     out.flags(save_flags);
 }

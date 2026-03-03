@@ -88,7 +88,7 @@ execute_process(
 set_source_files_properties(main.cpp PROPERTIES COMPILE_FLAGS
     -DVERSION_STRING=\\"${CMAKE_PROJECT_VERSION}.${GIT_REVCOUNT}-${GIT_HASH}\\"
 )
-set_source_files_properties(trace.cpp PROPERTIES COMPILE_FLAGS
+set_source_files_properties(intel8086.cpp PROPERTIES COMPILE_FLAGS
     ${CAPSTONE_STATIC_CFLAGS}
 )
 
