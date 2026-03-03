@@ -246,7 +246,7 @@ void Machine::int13_read_sectors()
     unsigned head     = cpu.get_dh();                                // 8 bits, 0-based
     unsigned nsectors = cpu.get_al();
     unsigned drive    = cpu.get_dl();
-    unsigned addr     = pc86_linear_addr(cpu.get_es(), cpu.get_bx());
+    unsigned addr     = linear_addr20(cpu.get_es(), cpu.get_bx());
 
     if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
@@ -294,7 +294,7 @@ void Machine::int13_write_sectors()
     unsigned head     = cpu.get_dh();                                // 8 bits, 0-based
     unsigned nsectors = cpu.get_al();
     unsigned drive    = cpu.get_dl();
-    unsigned addr     = pc86_linear_addr(cpu.get_es(), cpu.get_bx());
+    unsigned addr     = linear_addr20(cpu.get_es(), cpu.get_bx());
 
     if (debug_all || debug_syscalls) {
         auto &out = Machine::get_trace_stream();
@@ -737,7 +737,7 @@ void Machine::int13_edd_installation_check()
 void Machine::int13_extended_read()
 {
     unsigned drive    = cpu.get_dl();
-    unsigned dap_addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
+    unsigned dap_addr = linear_addr20(cpu.get_ds(), cpu.get_si());
     unsigned count;
     Word buf_seg, buf_off;
     uint64_t lba;
@@ -774,7 +774,7 @@ void Machine::int13_extended_read()
         count = 128;
     if (lba + count > size_sectors)
         count = static_cast<unsigned>(size_sectors - lba);
-    unsigned buf_linear = pc86_linear_addr(buf_seg, buf_off);
+    unsigned buf_linear = linear_addr20(buf_seg, buf_off);
     if ((buf_linear + count * SECTOR_NBYTES - 1) >> 16 != buf_linear >> 16) {
         disk_ret(drive, DISK_RET_EBOUNDARY);
         return;
@@ -793,7 +793,7 @@ void Machine::int13_extended_read()
 void Machine::int13_extended_write()
 {
     unsigned drive    = cpu.get_dl();
-    unsigned dap_addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
+    unsigned dap_addr = linear_addr20(cpu.get_ds(), cpu.get_si());
     unsigned count;
     Word buf_seg, buf_off;
     uint64_t lba;
@@ -833,7 +833,7 @@ void Machine::int13_extended_write()
         count = 128;
     if (lba + count > size_sectors)
         count = static_cast<unsigned>(size_sectors - lba);
-    unsigned buf_linear = pc86_linear_addr(buf_seg, buf_off);
+    unsigned buf_linear = linear_addr20(buf_seg, buf_off);
     if ((buf_linear + count * SECTOR_NBYTES - 1) >> 16 != buf_linear >> 16) {
         disk_ret(drive, DISK_RET_EBOUNDARY);
         return;
@@ -852,7 +852,7 @@ void Machine::int13_extended_write()
 void Machine::int13_extended_verify()
 {
     unsigned drive    = cpu.get_dl();
-    unsigned dap_addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
+    unsigned dap_addr = linear_addr20(cpu.get_ds(), cpu.get_si());
     unsigned count;
     Word buf_seg, buf_off;
     uint64_t lba;
@@ -937,7 +937,7 @@ void Machine::int13_eject_media()
 void Machine::int13_extended_seek()
 {
     unsigned drive    = cpu.get_dl();
-    unsigned dap_addr = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
+    unsigned dap_addr = linear_addr20(cpu.get_ds(), cpu.get_si());
     unsigned count;
     Word buf_seg, buf_off;
     uint64_t lba;
@@ -992,7 +992,7 @@ void Machine::int13_get_edd_parameters()
         return;
     }
     const auto &d = *disks[disk_unit].get();
-    unsigned buf  = pc86_linear_addr(cpu.get_ds(), cpu.get_si());
+    unsigned buf  = linear_addr20(cpu.get_ds(), cpu.get_si());
     // EDD 1.1 / 3.0 minimal parameter block (30 bytes).
     memory.store16(buf + 0, 0x1E); // size
     memory.store16(buf + 2, 0x40); // info: DMA boundary alignment

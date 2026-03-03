@@ -38,7 +38,7 @@ bool Machine::is_syscall(int type)
     // Check interrupt vector.
     Word offset   = memory.load16(type * 4);
     Word seg      = memory.load16(type * 4 + 2);
-    unsigned addr = pc86_linear_addr(seg, offset);
+    unsigned addr = linear_addr20(seg, offset);
     if (addr >= 0x500 && addr < 0xa0000) {
         // Handler is located in user memory.
 #if 0

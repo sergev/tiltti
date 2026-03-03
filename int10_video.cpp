@@ -727,7 +727,7 @@ void Machine::int10_char_generator()
         unsigned nchars = cpu.get_cx();
         if (nchars > 256)
             nchars = 256;
-        const unsigned src_addr = pc86_linear_addr(cpu.get_es(), cpu.get_bp());
+        const unsigned src_addr = linear_addr20(cpu.get_es(), cpu.get_bp());
 
         if (font_buf_ != nullptr && font_buf_size_ >= 256 * 16 * 2u) {
             for (unsigned c = 0; c < nchars; c++) {
@@ -807,7 +807,7 @@ void Machine::int10_write_string()
 
     unsigned page_offset = bda.video_pagesize * page;
     int stride           = bda.video_cols * 2;
-    unsigned str_addr    = pc86_linear_addr(cpu.get_es(), cpu.get_bp());
+    unsigned str_addr    = linear_addr20(cpu.get_es(), cpu.get_bp());
 
     for (unsigned i = 0; i < count; i++) {
         uint8_t ch;
@@ -886,7 +886,7 @@ void Machine::int10_display_combination_code()
 //
 void Machine::int10_video_bios_functionality()
 {
-    const unsigned addr          = pc86_linear_addr(cpu.get_es(), cpu.get_di());
+    const unsigned addr          = linear_addr20(cpu.get_es(), cpu.get_di());
     constexpr unsigned info_size = 64; // sizeof(video_func_info)
 
     std::memset(memory.get_ptr(addr), 0, info_size);
@@ -938,7 +938,7 @@ void Machine::int10_save_restore_video_state()
         return;
     }
 
-    const unsigned addr = pc86_linear_addr(cpu.get_es(), cpu.get_bx());
+    const unsigned addr = linear_addr20(cpu.get_es(), cpu.get_bx());
 
     if (al == 1) {
         std::memcpy(memory.get_ptr(addr), memory.get_ptr(0x449), 28);
@@ -962,7 +962,7 @@ void Machine::int10_vbe()
 
     switch (cpu.get_al()) {
     case 0x00: {
-        const unsigned addr = pc86_linear_addr(cpu.get_es(), cpu.get_di());
+        const unsigned addr = linear_addr20(cpu.get_es(), cpu.get_di());
         const uint16_t es   = cpu.get_es();
         const uint16_t di   = cpu.get_di();
 

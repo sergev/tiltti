@@ -704,7 +704,7 @@ void Machine::invoke_vector(unsigned vector)
     // Check interrupt handler.
     Word offset   = memory.load16(vector * 4);
     Word seg      = memory.load16(vector * 4 + 2);
-    unsigned addr = pc86_linear_addr(seg, offset);
+    unsigned addr = linear_addr20(seg, offset);
     if (addr < 0x500 || addr >= 0xa0000) {
         // Handler must be located in user memory.
         return;

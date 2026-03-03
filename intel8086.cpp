@@ -232,27 +232,27 @@ unsigned Intel8086::getEA(unsigned mod_val, unsigned rm_val)
 
     switch (rm_val) {
     case 0b000:
-        return pc86_linear_addr(os, core.bx + core.si + disp);
+        return linear_addr20(os, core.bx + core.si + disp);
     case 0b001:
-        return pc86_linear_addr(os, core.bx + core.di + disp);
+        return linear_addr20(os, core.bx + core.di + disp);
     case 0b010:
-        return pc86_linear_addr(os, core.bp + core.si + disp);
+        return linear_addr20(os, core.bp + core.si + disp);
     case 0b011:
-        return pc86_linear_addr(os, core.bp + core.di + disp);
+        return linear_addr20(os, core.bp + core.di + disp);
     case 0b100:
-        return pc86_linear_addr(os, core.si + disp);
+        return linear_addr20(os, core.si + disp);
     case 0b101:
-        return pc86_linear_addr(os, core.di + disp);
+        return linear_addr20(os, core.di + disp);
     case 0b110:
         if (mod_val == 0)
-            return pc86_linear_addr(os, opcode[plen + 2] | (opcode[plen + 3] << 8));
+            return linear_addr20(os, opcode[plen + 2] | (opcode[plen + 3] << 8));
         else
-            return pc86_linear_addr(os, core.bp + disp);
+            return linear_addr20(os, core.bp + disp);
     case 0b111:
-        return pc86_linear_addr(os, core.bx + disp);
+        return linear_addr20(os, core.bx + disp);
     default:
         // Cannot happen
-        return pc86_linear_addr(os, 0);
+        return linear_addr20(os, 0);
     }
 }
 
@@ -261,9 +261,9 @@ unsigned Intel8086::getEA(unsigned mod_val, unsigned rm_val)
 //
 int Intel8086::fetch(int width)
 {
-    Word val = machine.mem_fetch_byte(pc86_linear_addr(core.cs, core.ip));
+    Word val = machine.mem_fetch_byte(linear_addr20(core.cs, core.ip));
     if (width == W) {
-        val |= machine.mem_fetch_byte(pc86_linear_addr(core.cs, core.ip + 1)) << 8;
+        val |= machine.mem_fetch_byte(linear_addr20(core.cs, core.ip + 1)) << 8;
     }
     core.ip += 1 + width;
     return val;
@@ -296,28 +296,28 @@ void Intel8086::setMem(int width, unsigned addr, int val)
 int Intel8086::getMemAtSegOff(int width, Word seg, Word off)
 {
     if (width == B) {
-        return machine.mem_load_byte(pc86_linear_addr(seg, off));
+        return machine.mem_load_byte(linear_addr20(seg, off));
     }
     if (off == 0xffff) {
-        Byte lo = machine.mem_load_byte(pc86_linear_addr(seg, 0xffff));
-        Byte hi = machine.mem_load_byte(pc86_linear_addr(seg, 0));
+        Byte lo = machine.mem_load_byte(linear_addr20(seg, 0xffff));
+        Byte hi = machine.mem_load_byte(linear_addr20(seg, 0));
         return lo | (hi << 8);
     }
-    return machine.mem_load_word(pc86_linear_addr(seg, off));
+    return machine.mem_load_word(linear_addr20(seg, off));
 }
 
 void Intel8086::setMemAtSegOff(int width, Word seg, Word off, int val)
 {
     if (width == B) {
-        machine.mem_store_byte(pc86_linear_addr(seg, off), val);
+        machine.mem_store_byte(linear_addr20(seg, off), val);
         return;
     }
     if (off == 0xffff) {
-        machine.mem_store_byte(pc86_linear_addr(seg, 0xffff), val);
-        machine.mem_store_byte(pc86_linear_addr(seg, 0), val >> 8);
+        machine.mem_store_byte(linear_addr20(seg, 0xffff), val);
+        machine.mem_store_byte(linear_addr20(seg, 0), val >> 8);
         return;
     }
-    machine.mem_store_word(pc86_linear_addr(seg, off), val);
+    machine.mem_store_word(linear_addr20(seg, off), val);
 }
 
 //
@@ -709,7 +709,7 @@ void Intel8086::step()
     opcode           = {};
     plen             = 0;
     for (;;) {
-        unsigned addr = pc86_linear_addr(core.cs, core.ip);
+        unsigned addr = linear_addr20(core.cs, core.ip);
         Byte prefix   = machine.mem_fetch_byte(addr);
         switch (prefix) {
         case 0x26: // ES:
@@ -745,7 +745,7 @@ done_prefix:
 
     // Prefetch 6 bytes at CS:IP for decode.
     for (int i = 0; i < 6; ++i) {
-        opcode.push_back(machine.mem_fetch_byte(pc86_linear_addr(core.cs, core.ip + i)));
+        opcode.push_back(machine.mem_fetch_byte(linear_addr20(core.cs, core.ip + i)));
     }
     unpredictable_flags = 0;
 
@@ -948,7 +948,7 @@ void Intel8086::exe_one()
 
     // XLAT
     case 0xd7:
-        set_al(getMem(B, pc86_linear_addr(os, core.bx + get_al())));
+        set_al(getMem(B, linear_addr20(os, core.bx + get_al())));
         break;
 
     // IN accum, port (immed and DX)

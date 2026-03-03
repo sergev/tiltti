@@ -66,7 +66,7 @@ using Words = std::vector<Word>;
 //
 // Real-mode linear address from segment:offset.
 //
-inline unsigned pc86_linear_addr(Word seg, Word off)
+inline unsigned linear_addr20(Word seg, Word off)
 {
     return ((seg << 4) + off) & 0xFFFFFu;
 }

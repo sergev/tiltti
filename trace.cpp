@@ -177,7 +177,7 @@ void Machine::print_handler(unsigned addr)
     unsigned off = memory.load16(addr);
     unsigned seg = memory.load16(addr + 2);
     out << "------- " << "Handler Int" << std::hex << (addr >> 2) << " = ";
-    out << pc86_linear_addr(seg, off) << std::endl;
+    out << linear_addr20(seg, off) << std::endl;
 
     // Restore.
     out.flags(save_flags);
