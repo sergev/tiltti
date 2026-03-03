@@ -42,6 +42,8 @@ static const struct option long_options[] = {
     { "ports",          required_argument,  nullptr,    'p' },
     { "syscalls",       required_argument,  nullptr,    's' },
     { "boot",           required_argument,  nullptr,    'B' },
+    { "386",            no_argument,        nullptr,    256 },
+    { "8086",           no_argument,        nullptr,    257 },
     {},
     // clang-format on
 };
@@ -65,6 +67,8 @@ static void print_usage(std::ostream &out, const char *prog_name)
     out << "    --boot=a|b|c|d          Boot from specified drive (default: C if present, else A, "
            "else B)"
         << std::endl;
+    out << "    --386                   Use 386 processor variant" << std::endl;
+    out << "    --8086                  Use 8086 processor variant (default)" << std::endl;
     out << "    -V, --version           Print the version number and exit" << std::endl;
     out << "    -h, --help              Display available options" << std::endl;
     out << "Trace modes:" << std::endl;
@@ -93,6 +97,7 @@ int main(int argc, char *argv[])
     std::string disk_file_c;
     std::string disk_file_d;
     std::string boot_drive;
+    std::string cpu_variant;  // empty = not yet specified
 
     // Parse command line options.
     for (;;) {
@@ -172,11 +177,33 @@ int main(int argc, char *argv[])
             Machine::get_trace_stream() << "PC i86 Simulator Version: " << VERSION_STRING << "\n";
             continue;
 
+        case 256:
+            if (!cpu_variant.empty()) {
+                std::cerr << "Cannot specify both --386 and --8086\n";
+                print_usage(std::cerr, prog_name);
+                ::exit(EXIT_FAILURE);
+            }
+            cpu_variant = "386";
+            continue;
+
+        case 257:
+            if (!cpu_variant.empty()) {
+                std::cerr << "Cannot specify both --386 and --8086\n";
+                print_usage(std::cerr, prog_name);
+                ::exit(EXIT_FAILURE);
+            }
+            cpu_variant = "8086";
+            continue;
+
         default:
             print_usage(std::cerr, prog_name);
             exit(EXIT_FAILURE);
         }
         break;
+    }
+
+    if (cpu_variant.empty()) {
+        cpu_variant = "8086";
     }
 
     // When no disks given at all (no positional, no -a/-b/-c/-d), show usage.
@@ -198,7 +225,7 @@ int main(int argc, char *argv[])
     }
 
     // Create PC i86 machine.
-    Machine machine{ memory, "8086" };
+    Machine machine{ memory, cpu_variant };
 
     // Connect machine to video adapter.
     auto event_callback = [&gui, &machine](unsigned timeout) {

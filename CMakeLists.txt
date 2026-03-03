@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.12)
 
 # Set name of project (as PROJECT_NAME) and C/C++ standards
-project(tiltti VERSION 0.1 DESCRIPTION "PC i86 Simulator")
+project(tiltti VERSION 0.2 DESCRIPTION "PC i86 Simulator")
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 add_compile_options(-Wall -Werror -Wshadow)
