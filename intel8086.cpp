@@ -29,9 +29,6 @@
 
 #include "machine.h"
 
-// Capstone handle.
-static csh disasm;
-
 //
 // 8086 size codes (B=byte, W=word).
 //
@@ -59,11 +56,6 @@ static const uint8_t PARITY[256] = {
 Intel8086::Intel8086(Machine &mach) : machine(mach)
 {
     reset();
-
-    // Initialize Capstone for i86 16-bit mode.
-    if (cs_open(CS_ARCH_X86, CS_MODE_16, &disasm) != CS_ERR_OK) {
-        throw std::runtime_error("Failed to initialize Capstone");
-    }
 }
 
 //
@@ -87,7 +79,6 @@ void Intel8086::reset()
 
     // Show initial state.
     machine.trace_exception("Reset");
-    machine.trace_registers();
 }
 
 //
@@ -98,6 +89,12 @@ void Intel8086::print_instruction()
     auto &out       = Machine::get_trace_stream();
     auto save_flags = out.flags();
     auto pc         = (core.cs << 4) + core.ip;
+    static csh disasm;
+
+    // Initialize Capstone for i86 16-bit mode.
+    if (!disasm && cs_open(CS_ARCH_X86, CS_MODE_16, &disasm) != CS_ERR_OK) {
+        throw std::runtime_error("Failed to initialize Capstone");
+    }
 
     out << std::hex << std::setfill('0') << std::setw(5) << pc << " :";
 

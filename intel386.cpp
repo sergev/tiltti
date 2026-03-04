@@ -29,9 +29,6 @@
 
 #include "machine.h"
 
-// Capstone handle.
-static csh disasm;
-
 //
 // 386 size codes (B=byte, W=word, D=dword).
 //
@@ -62,11 +59,6 @@ struct SegmentFault {};
 Intel386::Intel386(Machine &mach) : machine(mach)
 {
     reset();
-
-    // Initialize Capstone for i86 16-bit mode.
-    if (cs_open(CS_ARCH_X86, CS_MODE_16, &disasm) != CS_ERR_OK) {
-        throw std::runtime_error("Failed to initialize Capstone");
-    }
 }
 
 //
@@ -92,7 +84,6 @@ void Intel386::reset()
 
     // Show initial state.
     machine.trace_exception("Reset");
-    machine.trace_registers();
 }
 
 //
@@ -103,6 +94,12 @@ void Intel386::print_instruction()
     auto &out       = Machine::get_trace_stream();
     auto save_flags = out.flags();
     auto pc         = (core.cs << 4) + core.eip;
+    static csh disasm;
+
+    // Initialize Capstone for i86 16-bit mode.
+    if (!disasm && cs_open(CS_ARCH_X86, CS_MODE_16, &disasm) != CS_ERR_OK) {
+        throw std::runtime_error("Failed to initialize Capstone");
+    }
 
     out << std::hex << std::setfill('0') << std::setw(5) << pc << " :";
 
