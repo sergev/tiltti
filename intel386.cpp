@@ -931,7 +931,7 @@ void Intel386::do_bit_test(BitTestAction action)
         int bytes = (eff_w == D) ? 4 : 2;
         if (address_32) {
             Dword adj_offset = last_ea_offset + byte_offset;
-            if (adj_offset > 0x10000 - bytes)
+            if (adj_offset > 0x10000u - bytes)
                 raise_segment_fault();
             addr += byte_offset;
             base = getMem(eff_w, addr);
@@ -1568,7 +1568,7 @@ void Intel386::exe_one()
         decode();
         unsigned addr = getEA(mod, rm);
         int far_size = operand_32 ? 6 : 4;
-        if (last_ea_offset > 0x10000 - far_size)
+        if (last_ea_offset > 0x10000u - far_size)
             raise_segment_fault();
         if (operand_32) {
             int off32 = getMem(D, addr);
@@ -1589,7 +1589,7 @@ void Intel386::exe_one()
         decode();
         unsigned addr = getEA(mod, rm);
         int far_size = operand_32 ? 6 : 4;
-        if (last_ea_offset > 0x10000 - far_size)
+        if (last_ea_offset > 0x10000u - far_size)
             raise_segment_fault();
         if (operand_32) {
             int off32 = getMem(D, addr);
@@ -1611,7 +1611,7 @@ void Intel386::exe_one()
         decode();
         unsigned addr = getEA(mod, rm);
         int far_size = operand_32 ? 6 : 4;
-        if (last_ea_offset > 0x10000 - far_size)
+        if (last_ea_offset > 0x10000u - far_size)
             raise_segment_fault();
         Word seg;
         if (operand_32) {

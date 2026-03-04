@@ -131,7 +131,7 @@ std::string Test8086::get_line(unsigned row)
 {
     std::stringstream buf;
     auto p     = machine.get_video_refresh_params();
-    auto *line = &p.text_buf[row * 160];
+    auto *line = p.text_buf + (row * 160);
 
     // Convert characters to UTF8 encoding.
     for (int i = 0; i < 160; i += 2) {

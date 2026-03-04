@@ -359,7 +359,9 @@ void Disk::vhd_update_footer()
     if (lseek(file_descriptor, vhd_next_block_start, SEEK_SET) >= 0 &&
         write(file_descriptor, footer, sizeof(footer)) == (ssize_t)sizeof(footer)) {
         lseek(file_descriptor, 0, SEEK_SET);
-        write(file_descriptor, footer, sizeof(footer));
+        if (write(file_descriptor, footer, sizeof(footer)) != sizeof(footer)) {
+            // Ignore.
+        }
         fsync(file_descriptor);
     }
 }
