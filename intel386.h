@@ -150,11 +150,13 @@ private:
     void do_bit_test_imm();
     static int signconv(int width, int x);
     static bool msb(int width, int x);
+    bool is_rep_instruction() const;
     void intercept_bios_call();
     [[noreturn]] void raise_segment_fault();
 
     // Execute one opcode (used by step and REP loop).
     void exe_one();
+    void exe_rep();
 
 public:
     // Constructor.

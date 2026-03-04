@@ -164,7 +164,7 @@ void Intel386::print_registers()
     if (core.gs != prev.gs)
         out << "\tGS = " << std::hex << std::setfill('0') << std::setw(4) << core.gs << std::endl;
     if (core.flags.w != prev.flags.w) {
-        out << "\tEFLAGS = " << std::hex << std::setfill('0') << std::setw(8) << core.flags.w;
+        out << "\tEFlags = " << std::hex << std::setfill('0') << std::setw(8) << core.flags.w;
         if (core.flags.w & 0x800)
             out << " OF";
         if (core.flags.w & 0x400)
@@ -805,10 +805,11 @@ void Intel386::call_int(int type)
     // Fetch interrupt vector.
     Word offset = getMem(W, type * 4);
     Word seg    = getMem(W, type * 4 + 2);
+#if 0
     if (machine.trace_enabled()) {
         machine.print_syscall(type);
     }
-
+#endif
     // Take interrupt: push FLAGS first (with IF/TF as-is), then clear them.
     push(core.flags.w);
     core.flags.f.ifl = 0;
@@ -1049,6 +1050,35 @@ void Intel386::intercept_bios_call()
 }
 
 //
+// Is it a REP string instruction?
+//
+bool Intel386::is_rep_instruction() const
+{
+    if (!rep) {
+        return false;
+    }
+    switch (op) {
+    case 0x6c:
+    case 0x6d:
+    case 0x6e:
+    case 0x6f:
+    case 0xa4:
+    case 0xa5:
+    case 0xa6:
+    case 0xa7:
+    case 0xaa:
+    case 0xab:
+    case 0xac:
+    case 0xad:
+    case 0xae:
+    case 0xaf:
+        return true;
+    default:
+        return false;
+    }
+}
+
+//
 // Execute one instruction. One call = one instruction (prefixes consumed, then one opcode
 // executed). Increment IP register. Emit exception in case of failure.
 //
@@ -1158,23 +1188,8 @@ done_prefix:
     }
 
     try {
-        // For REP string instructions: full REP loop in one step (match legacy cycle_opcode).
-        if (rep != 0 && (op == 0x6c || op == 0x6d || op == 0x6e || op == 0x6f || op == 0xa4 ||
-                         op == 0xa5 || op == 0xa6 || op == 0xa7 || op == 0xaa || op == 0xab ||
-                         op == 0xac || op == 0xad || op == 0xae || op == 0xaf)) {
-            // REPE/REPZ (rep==1) and REPNE/REPNZ (rep==2) only check ZF for CMPS/SCAS (A6,A7,AE,AF).
-            // For MOVS/LODS/STOS, repeat until CX==0 regardless of ZF.
-            bool check_zf = (op == 0xa6 || op == 0xa7 || op == 0xae || op == 0xaf); // CMPS/SCAS only
-            do {
-                if (core.ecx == 0) // CX
-                    break;
-                if (rep)
-                    core.ecx -= 1;
-                exe_one();
-                if (rep && check_zf &&
-                    ((rep == 1 && !core.flags.f.zf) || (rep == 2 && core.flags.f.zf)))
-                    break;
-            } while (rep != 0);
+        if (is_rep_instruction()) {
+            exe_rep();
         } else {
             exe_one();
         }
@@ -1187,6 +1202,35 @@ done_prefix:
 
     // Show changed registers.
     machine.trace_registers();
+}
+
+//
+// Execute REP string instruction: full REP loop in one step.
+//
+void Intel386::exe_rep()
+{
+    // REPE/REPZ (rep==1) and REPNE/REPNZ (rep==2) only check ZF for CMPS/SCAS (A6,A7,AE,AF).
+    // For MOVS/LODS/STOS, repeat until CX==0 regardless of ZF.
+    bool check_zf = (op == 0xa6 || op == 0xa7 || op == 0xae || op == 0xaf); // CMPS/SCAS only
+
+    for (;;) {
+        if (operand_32) {
+            // In 32-bit mode use full ECX register.
+            if (core.ecx == 0)
+                break;
+        } else {
+            // In 16-bit mode use only lower part of ECX register.
+            if (get_cx() == 0)
+                break;
+        }
+
+        core.ecx -= 1;
+        exe_one();
+
+        if (check_zf && core.flags.f.zf != (rep & 1)) {
+            break;
+        }
+    }
 }
 
 //

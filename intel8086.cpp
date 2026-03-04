@@ -677,6 +677,31 @@ void Intel8086::intercept_bios_call()
 }
 
 //
+// Is it a REP string instruction?
+//
+bool Intel8086::is_rep_instruction() const
+{
+    if (!rep) {
+        return false;
+    }
+    switch (op) {
+    case 0xa4:
+    case 0xa5:
+    case 0xa6:
+    case 0xa7:
+    case 0xaa:
+    case 0xab:
+    case 0xac:
+    case 0xad:
+    case 0xae:
+    case 0xaf:
+        return true;
+    default:
+        return false;
+    }
+}
+
+//
 // Execute one instruction. One call = one instruction (prefixes consumed, then one opcode
 // executed). Increment IP register. Emit exception in case of failure.
 //
@@ -754,21 +779,8 @@ done_prefix:
     w  = op & 1;
     core.ip += 1;
 
-    // For REP string instructions: full REP loop in one step (match legacy cycle_opcode).
-    if (rep != 0 && (op == 0xa4 || op == 0xa5 || op == 0xa6 || op == 0xa7 || op == 0xaa ||
-                     op == 0xab || op == 0xac || op == 0xad || op == 0xae || op == 0xaf)) {
-        // REPE/REPZ (rep==1) and REPNE/REPNZ (rep==2) only check ZF for CMPS/SCAS (A6,A7,AE,AF).
-        // For MOVS/LODS/STOS, repeat until CX==0 regardless of ZF.
-        bool check_zf = (op == 0xa6 || op == 0xa7 || op == 0xae || op == 0xaf);
-        do {
-            if (core.cx == 0) // CX
-                break;
-            if (rep)
-                core.cx -= 1;
-            exe_one();
-            if (rep && check_zf && ((rep == 1 && !core.flags.f.z) || (rep == 2 && core.flags.f.z)))
-                break;
-        } while (rep != 0);
+    if (is_rep_instruction()) {
+        exe_rep();
     } else {
         exe_one();
     }
@@ -776,6 +788,25 @@ done_prefix:
 
     // Show changed registers.
     machine.trace_registers();
+}
+
+//
+// Execute REP string instruction: full REP loop in one step.
+//
+void Intel8086::exe_rep()
+{
+    // REPE/REPZ (rep==1) and REPNE/REPNZ (rep==2) only check ZF for CMPS/SCAS (A6,A7,AE,AF).
+    // For MOVS/LODS/STOS, repeat until CX==0 regardless of ZF.
+    bool check_zf = (op == 0xa6 || op == 0xa7 || op == 0xae || op == 0xaf); // CMPS/SCAS only
+
+    while (core.cx != 0) {
+        core.cx -= 1;
+        exe_one();
+
+        if (check_zf && core.flags.f.z != (rep & 1)) {
+            break;
+        }
+    }
 }
 
 //

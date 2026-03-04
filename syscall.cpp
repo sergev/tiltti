@@ -143,7 +143,12 @@ void Machine::print_syscall(int type)
         print_exception_ah("Int 14h Serial Request");
         return;
     case 0x15:
-        print_exception_ah("Int 15h System Services Request");
+        if (cpu.get_ah() == 0x41) {
+            // Wait on external event.
+            get_trace_stream() << '.' << std::flush;
+        } else {
+            print_exception_ah("Int 15h System Services Request");
+        }
         return;
     case 0x16:
         if (cpu.get_ah() == 0x01) {

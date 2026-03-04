@@ -137,9 +137,11 @@ private:
     static bool msb(int width, int x);
     void intercept_bios_call();
     void set_flags_(Word val); // private version of set_flags()
+    bool is_rep_instruction() const;
 
     // Execute one opcode (used by step and REP loop).
     void exe_one();
+    void exe_rep();
 
 public:
     // Constructor.
