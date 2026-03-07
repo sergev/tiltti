@@ -3,7 +3,7 @@
 //
 // jcxz FD40h
 //
-TEST_F(Test386, jcxz_FD40h)
+TEST_F(Test386, jcxz_FD40h_batch5)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -87,7 +87,7 @@ TEST_F(Test386, jcxz_FD40h)
 //
 // jmp 0DB6h
 //
-TEST_F(Test386, jmp_0DB6h)
+TEST_F(Test386, jmp_0DB6h_batch5)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -163,7 +163,7 @@ TEST_F(Test386, jmp_0DB6h)
 //
 // o32 jcxz 0000FD41h
 //
-TEST_F(Test386, o32_jcxz_0000FD41h)
+TEST_F(Test386, o32_jcxz_0000FD41h_batch5)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -247,7 +247,7 @@ TEST_F(Test386, o32_jcxz_0000FD41h)
 //
 // repne lodsb
 //
-TEST_F(Test386, repne_lodsb)
+TEST_F(Test386, repne_lodsb_batch5)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -353,7 +353,7 @@ TEST_F(Test386, repne_lodsb)
 //
 // retd 695h
 //
-TEST_F(Test386, retd_695h)
+TEST_F(Test386, retd_695h_batch5)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -445,7 +445,7 @@ TEST_F(Test386, retd_695h)
 //
 // retfd 5D59h
 //
-TEST_F(Test386, retfd_5D59h)
+TEST_F(Test386, retfd_5D59h_batch5)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);

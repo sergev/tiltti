@@ -3,7 +3,7 @@
 //
 // call FFE0h
 //
-TEST_F(Test386, call_FFE0h)
+TEST_F(Test386, call_FFE0h_batch3)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -83,7 +83,7 @@ TEST_F(Test386, call_FFE0h)
 //
 // rcr word [ds:edx],cl
 //
-TEST_F(Test386, rcr_word_ds_edx_cl)
+TEST_F(Test386, rcr_word_ds_edx_cl_batch3)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -161,7 +161,7 @@ TEST_F(Test386, rcr_word_ds_edx_cl)
 //
 // shrd [ss:ebp+1DFDh],ax,cl
 //
-TEST_F(Test386, shrd_ss_ebp_1DFDh_ax_cl)
+TEST_F(Test386, shrd_ss_ebp_1DFDh_ax_cl_batch3)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -245,7 +245,7 @@ TEST_F(Test386, shrd_ss_ebp_1DFDh_ax_cl)
 //
 // shrd [ss:ebp+1DFDh],eax,cl
 //
-TEST_F(Test386, shrd_ss_ebp_1DFDh_eax_cl)
+TEST_F(Test386, shrd_ss_ebp_1DFDh_eax_cl_batch3)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);

@@ -34,7 +34,7 @@ static std::string name_to_filename(const std::string &name)
 
 //
 // Writes a GTest C++ source file named after the test (sanitized name + .cpp) to the current
-// working directory. Uses fixture.h, MachineTest, cpu, machine, memory. Throws if the file
+// working directory. Uses fixture.h, Test8086, cpu, machine, memory. Throws if the file
 // cannot be opened.
 //
 void TestCase::emit_gtest() const
@@ -50,7 +50,7 @@ void TestCase::emit_gtest() const
 
     ofs << "#include \"fixture.h\"\n\n";
     ofs << "//\n// " << name_ << "\n//\n";
-    ofs << "TEST_F(MachineTest, " << base << ")\n";
+    ofs << "TEST_F(Test8086, " << base << ")\n";
     ofs << "{\n";
     ofs << "    // Initial CPU State\n";
 
