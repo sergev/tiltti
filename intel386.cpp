@@ -264,6 +264,7 @@ unsigned Intel386::getEA(unsigned mod_val, unsigned rm_val)
             }
             // 386 quirk: when index=4 (none) and base is not ESP/EBP (or EBP with mod!=0), use [base*scale+disp]
             // (real 386 encodes [ESI*8+disp] as SIB 0xE6)
+            // 386 quirk: when index=4 (none) and base=4 (ESP), scale applies to base: [ESP*scale+disp]
             Dword index_val;
             if (index == 4 && base != 4 && (base != 5 || mod_val != 0)) {
                 index_val = static_cast<Dword>(getReg(D, base));
@@ -271,9 +272,15 @@ unsigned Intel386::getEA(unsigned mod_val, unsigned rm_val)
             } else {
                 index_val = (index == 4) ? 0 : static_cast<Dword>(getReg(D, index));
             }
-            Dword addr = base_val + index_val * scale + disp;
+            Dword addr;
+            if (index == 4 && base == 4) {
+                addr = base_val * scale + disp;
+            } else {
+                addr = base_val + index_val * scale + disp;
+            }
+            // Raw offset for fault checks (last_ea_offset); real mode access uses wrapped offset
             last_ea_offset = addr;
-            return linear_addr32(os, static_cast<Dword>(addr));
+            return linear_addr21(os, addr);
         }
         // mod=0, r/m=5: [disp32] only, no base register (not [EBP])
         Dword rv = (rm_val == 5 && mod_val == 0) ? 0 : static_cast<Dword>(getReg(D, rm_val));
@@ -287,7 +294,7 @@ unsigned Intel386::getEA(unsigned mod_val, unsigned rm_val)
                    (opcode[plen + off + 2] << 16) | (opcode[plen + off + 3] << 24);
         }
         last_ea_offset = rv + disp;
-        return linear_addr32(os, last_ea_offset);
+        return linear_addr21(os, last_ea_offset);
     }
 
     // 16-bit addressing modes (8086)
@@ -805,7 +812,7 @@ void Intel386::call_int(int type)
     // Fetch interrupt vector.
     Word offset = getMem(W, type * 4);
     Word seg    = getMem(W, type * 4 + 2);
-#if 0
+#if 1
     if (machine.trace_enabled()) {
         machine.print_syscall(type);
     }
@@ -2261,12 +2268,20 @@ void Intel386::exe_one()
         set_sp(static_cast<Word>((get_sp() + src) & 0xFFFF));
         break;
     }
-    case 0xc3:
-        if (operand_32)
-            core.eip = pop32();
-        else
+    case 0xc3: {
+        if (operand_32) {
+            Dword ret_eip = pop32();
+            if (ret_eip > 0xFFFF) {
+                set_sp(get_sp() - 4);   // undo the pop
+                os_is_ss = false;
+                raise_segment_fault();
+            }
+            core.eip = ret_eip;
+        } else {
             core.eip = pop();
+        }
         break;
+    }
     case 0xc9: { // LEAVE (386): mov esp,ebp; pop ebp
         if (operand_32) {
             // 32-bit leave with 16-bit stack (real mode): use only low 16 bits of EBP for SP
@@ -2320,6 +2335,7 @@ void Intel386::exe_one()
         if (operand_32) {
             core.ebp = frame_temp;
             core.esp -= alloc;
+            core.esp &= 0xFFFFu;   // real mode: stack pointer is 16-bit
         } else {
             set_bp(static_cast<Word>(frame_temp & 0xFFFF));
             set_sp(static_cast<Word>((core.esp - alloc) & 0xFFFF));
@@ -3054,24 +3070,48 @@ void Intel386::exe_one()
         break;
     }
 
-    // LOOP, LOOPE, LOOPNE, JCXZ
+    // LOOP, LOOPE, LOOPNE, JCXZ — counter is CX in 16-bit address size, ECX in 32-bit
     case 0xe2:
         dst = signconv(B, fetch(B));
-        core.ecx -= 1;
-        if (core.ecx != 0)
-            core.eip += dst;
+        if (address_32) {
+            core.ecx -= 1;
+            if (core.ecx != 0)
+                core.eip += dst;
+        } else {
+            core.ecx = (static_cast<Dword>(get_cx()) - 1) & 0xFFFFu;
+            if (get_cx() != 0) {
+                core.eip += dst;
+                core.eip &= 0xFFFFu;
+            }
+        }
         break;
     case 0xe1:
         dst = signconv(B, fetch(B));
-        core.ecx -= 1;
-        if (core.ecx != 0 && core.flags.f.zf)
-            core.eip += dst;
+        if (address_32) {
+            core.ecx -= 1;
+            if (core.ecx != 0 && core.flags.f.zf)
+                core.eip += dst;
+        } else {
+            core.ecx = (static_cast<Dword>(get_cx()) - 1) & 0xFFFFu;
+            if (get_cx() != 0 && core.flags.f.zf) {
+                core.eip += dst;
+                core.eip &= 0xFFFFu;
+            }
+        }
         break;
     case 0xe0:
         dst = signconv(B, fetch(B));
-        core.ecx -= 1;
-        if (core.ecx != 0 && !core.flags.f.zf)
-            core.eip += dst;
+        if (address_32) {
+            core.ecx -= 1;
+            if (core.ecx != 0 && !core.flags.f.zf)
+                core.eip += dst;
+        } else {
+            core.ecx = (static_cast<Dword>(get_cx()) - 1) & 0xFFFFu;
+            if (get_cx() != 0 && !core.flags.f.zf) {
+                core.eip += dst;
+                core.eip &= 0xFFFFu;
+            }
+        }
         break;
     case 0xe3: {
         dst = signconv(B, fetch(B));
