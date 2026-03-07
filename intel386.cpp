@@ -2156,21 +2156,31 @@ void Intel386::exe_one()
         // CMPS: temp = SRC1 - SRC2, SRC1=[DS:SI/override], SRC2=[ES:DI]
         int eff_w = (w && operand_32) ? D : (w ? W : B);
         int delta = (eff_w == B) ? 1 : (eff_w == W ? 2 : 4);
+        int stride = (core.flags.f.df ? -1 : 1) * delta;
         int src1  = getMemAtSegOff(eff_w, os, static_cast<Word>(core.esi));
         int src2  = getMemAtSegOff(eff_w, core.es, static_cast<Word>(core.edi));
         sub(eff_w, src1, src2);
-        core.esi += (core.flags.f.df ? -1 : 1) * delta;
-        core.edi += (core.flags.f.df ? -1 : 1) * delta;
+        if (address_32) {
+            core.esi += stride;
+            core.edi += stride;
+        } else {
+            set_si(get_si() + stride);
+            set_di(get_di() + stride);
+        }
         break;
     }
     case 0xae:
     case 0xaf: {
         int eff_w = (w && operand_32) ? D : (w ? W : B);
         int delta = (eff_w == B) ? 1 : (eff_w == W ? 2 : 4);
+        int stride = (core.flags.f.df ? -1 : 1) * delta;
         dst       = getMemAtSegOff(eff_w, core.es, static_cast<Word>(core.edi));
         src       = getReg(eff_w, AX);
         sub(eff_w, src, dst);
-        core.edi += (core.flags.f.df ? -1 : 1) * delta;
+        if (address_32)
+            core.edi += stride;
+        else
+            set_di(get_di() + stride);
         break;
     }
     case 0xac:
@@ -2195,8 +2205,12 @@ void Intel386::exe_one()
     case 0xab: {
         int eff_w = (w && operand_32) ? D : (w ? W : B);
         int delta = (eff_w == B) ? 1 : (eff_w == W ? 2 : 4);
+        int stride = (core.flags.f.df ? -1 : 1) * delta;
         setMemAtSegOff(eff_w, core.es, static_cast<Word>(core.edi), getReg(eff_w, AX));
-        core.edi += (core.flags.f.df ? -1 : 1) * delta;
+        if (address_32)
+            core.edi += stride;
+        else
+            set_di(get_di() + stride);
         break;
     }
 
@@ -2581,12 +2595,16 @@ void Intel386::exe_one()
         unsigned dst_addr = linear_addr32(core.es, ptr);
         int val           = machine.port_in_byte(static_cast<unsigned>(core.edx & 0xFFFF));
         setMem(B, dst_addr, val);
-        core.edi += (core.flags.f.df ? -1 : 1);
+        if (address_32)
+            core.edi += (core.flags.f.df ? -1 : 1);
+        else
+            set_di(get_di() + (core.flags.f.df ? -1 : 1));
         break;
     }
     case 0x6d: { // INSW/INSD - Input string word/dword from port
         int eff_w         = operand_32 ? D : W;
         int delta         = (eff_w == D) ? 4 : 2;
+        int stride        = (core.flags.f.df ? -1 : 1) * delta;
         Dword ptr         = address_32 ? core.edi : static_cast<Dword>(static_cast<Word>(core.edi));
         unsigned dst_addr = linear_addr32(core.es, ptr);
         int val =
@@ -2594,7 +2612,10 @@ void Intel386::exe_one()
                 ? static_cast<int>(machine.port_in_32(static_cast<unsigned>(core.edx & 0xFFFF)))
                 : machine.port_in_word(static_cast<unsigned>(core.edx & 0xFFFF));
         setMem(eff_w, dst_addr, val);
-        core.edi += (core.flags.f.df ? -1 : 1) * delta;
+        if (address_32)
+            core.edi += stride;
+        else
+            set_di(get_di() + stride);
         break;
     }
     case 0x7c: // JL, JNGE - Less (signed)
@@ -2615,12 +2636,16 @@ void Intel386::exe_one()
         int val           = getMem(B, src_addr);
         unsigned port     = static_cast<unsigned>(core.edx & 0xFFFF);
         machine.port_out_byte(port, static_cast<Byte>(val));
-        core.esi += (core.flags.f.df ? -1 : 1);
+        if (address_32)
+            core.esi += (core.flags.f.df ? -1 : 1);
+        else
+            set_si(get_si() + (core.flags.f.df ? -1 : 1));
         break;
     }
     case 0x6f: { // OUTSW/OUTSD - Output string to port
         int eff_w         = operand_32 ? D : W;
         int delta         = (eff_w == D) ? 4 : 2;
+        int stride        = (core.flags.f.df ? -1 : 1) * delta;
         Dword ptr         = address_32 ? core.esi : static_cast<Dword>(static_cast<Word>(core.esi));
         unsigned src_addr = linear_addr32(os, ptr);
         int val           = getMem(eff_w, src_addr);
@@ -2629,7 +2654,10 @@ void Intel386::exe_one()
             machine.port_out_32(port, static_cast<Dword>(val));
         else
             machine.port_out_word(port, static_cast<Word>(val));
-        core.esi += (core.flags.f.df ? -1 : 1) * delta;
+        if (address_32)
+            core.esi += stride;
+        else
+            set_si(get_si() + stride);
         break;
     }
     case 0x7e: // JLE, JNG - Less or equal (signed)
