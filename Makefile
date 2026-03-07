@@ -71,6 +71,18 @@ run-moo88:
 	    ../build/moo8086/moo8086 -run $$moo; \
         done
 
+#
+# Run 386 test suite.
+#
+moo386:  all outdir
+	$(MAKE) -Coutdir -f ../Makefile run-moo386
+
+MOO386   ?= $(PWD)/../80386/v1_ex_real_mode
+run-moo386:
+	for moo in $(MOO386)/*.gz; do \
+	    ../build/moo386/moo386 -run -limit=5 $$moo; \
+        done
+
 images/b.img:
 	qemu-img create -f raw $@ 1440k
 
