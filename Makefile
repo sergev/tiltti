@@ -80,7 +80,7 @@ moo386:  all outdir
 MOO386   ?= $(PWD)/../80386/v1_ex_real_mode
 run-moo386:
 	for moo in $(MOO386)/*.gz; do \
-	    ../build/moo386/moo386 -run -limit=5 $$moo; \
+	    ../build/moo386/moo386 -run -limit=6 $$moo; \
         done
 
 images/b.img:
