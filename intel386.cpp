@@ -365,6 +365,8 @@ unsigned Intel386::getEA(unsigned mod_val, unsigned rm_val)
 //
 int Intel386::fetch(int width)
 {
+    int bytes = (width == D) ? 4 : (width == W) ? 2 : 1;
+    check_cs_fetch_limit(core.eip + bytes);
     unsigned addr = linear_addr32(core.cs, core.eip);
     int val       = machine.mem_fetch_byte(addr);
     if (width == W) {
@@ -848,6 +850,20 @@ void Intel386::raise_segment_fault()
 }
 
 //
+// Real-mode code segment limit: if fetch would read past offset 0xFFFF, take #GP.
+//
+void Intel386::check_cs_fetch_limit(Dword fetch_end_exclusive)
+{
+    if (!(core.cr0 & 1)) { // real mode
+        if (fetch_end_exclusive > 0x10000u) {
+            core.eip = fault_eip;
+            call_int(13);
+            throw SegmentFault{};
+        }
+    }
+}
+
+//
 // ALU helpers (set CF, AF, OF, PF, ZF, SF).
 //
 int Intel386::add(int width, int dst, int src)
@@ -1130,96 +1146,98 @@ void Intel386::step()
 {
     fault_eip = core.eip;
 
-    // Consume segment override and REP prefix bytes; set default segment and repetition mode.
-    os               = core.ds;
-    os_is_ss         = false;
-    segment_override = false;
-    operand_32       = false;
-    address_32       = false;
-    lock_prefix      = false;
-    rep              = 0;
-    opcode           = {};
-    plen             = 0;
-    ea               = -1; // reset effective-address cache
-    for (;;) {
-        unsigned addr = linear_addr32(core.cs, core.eip);
-        Byte prefix   = machine.mem_fetch_byte(addr);
-        switch (prefix) {
-        case 0x26: // ES:
-            segment_override = true;
-            os_is_ss         = false;
-            os               = core.es;
-            break;
-        case 0x2e: // CS:
-            segment_override = true;
-            os_is_ss         = false;
-            os               = core.cs;
-            break;
-        case 0x36: // SS:
-            segment_override = true;
-            os_is_ss         = true;
-            os               = core.ss;
-            break;
-        case 0x3e: // DS:
-            segment_override = true;
-            os_is_ss         = false;
-            os               = core.ds;
-            break;
-        case 0x64: // FS:
-            segment_override = true;
-            os_is_ss         = false;
-            os               = core.fs;
-            break;
-        case 0x65: // GS:
-            segment_override = true;
-            os_is_ss         = false;
-            os               = core.gs;
-            break;
-        case 0x66: // Operand-size override
-            operand_32 = true;
-            break;
-        case 0x67: // Address-size override
-            address_32 = true;
-            break;
-        case 0xf0: // LOCK
-            lock_prefix = true;
-            break;
-        case 0xf2: // REPNE, REPNZ
-            rep = 2;
-            break;
-        case 0xf3: // REP, REPE, REPZ
-            rep = 1;
-            break;
-        default:
-            goto done_prefix;
-        }
-        opcode.push_back(prefix);
-        plen++;
-        core.eip += 1;
-    }
-done_prefix:
-
-    // Prefetch 10 bytes at CS:IP for decode (handles ModR/M + SIB + disp32 for 67h).
-    for (int i = 0; i < 10; ++i) {
-        opcode.push_back(machine.mem_fetch_byte(linear_addr32(core.cs, core.eip + i)));
-    }
-    unpredictable_flags = 0;
-
-    // Show instruction: address, opcode and mnemonics.
-    machine.trace_instruction();
-
-    op = opcode[plen];
-    d  = (op >> 1) & 1;
-    w  = op & 1;
-    core.eip += 1;
-
-    // 386 two-byte opcodes (0F xx)
-    if (op == 0x0f) {
-        op = 0x100 | opcode[++plen];
-        core.eip += 1;
-    }
-
     try {
+        // Consume segment override and REP prefix bytes; set default segment and repetition mode.
+        os               = core.ds;
+        os_is_ss         = false;
+        segment_override = false;
+        operand_32       = false;
+        address_32       = false;
+        lock_prefix      = false;
+        rep              = 0;
+        opcode           = {};
+        plen             = 0;
+        ea               = -1; // reset effective-address cache
+        for (;;) {
+            check_cs_fetch_limit(core.eip + 1);
+            unsigned addr = linear_addr32(core.cs, core.eip);
+            Byte prefix   = machine.mem_fetch_byte(addr);
+            switch (prefix) {
+            case 0x26: // ES:
+                segment_override = true;
+                os_is_ss         = false;
+                os               = core.es;
+                break;
+            case 0x2e: // CS:
+                segment_override = true;
+                os_is_ss         = false;
+                os               = core.cs;
+                break;
+            case 0x36: // SS:
+                segment_override = true;
+                os_is_ss         = true;
+                os               = core.ss;
+                break;
+            case 0x3e: // DS:
+                segment_override = true;
+                os_is_ss         = false;
+                os               = core.ds;
+                break;
+            case 0x64: // FS:
+                segment_override = true;
+                os_is_ss         = false;
+                os               = core.fs;
+                break;
+            case 0x65: // GS:
+                segment_override = true;
+                os_is_ss         = false;
+                os               = core.gs;
+                break;
+            case 0x66: // Operand-size override
+                operand_32 = true;
+                break;
+            case 0x67: // Address-size override
+                address_32 = true;
+                break;
+            case 0xf0: // LOCK
+                lock_prefix = true;
+                break;
+            case 0xf2: // REPNE, REPNZ
+                rep = 2;
+                break;
+            case 0xf3: // REP, REPE, REPZ
+                rep = 1;
+                break;
+            default:
+                goto done_prefix;
+            }
+            opcode.push_back(prefix);
+            plen++;
+            core.eip += 1;
+        }
+    done_prefix:
+
+        // Prefetch 10 bytes at CS:IP for decode (handles ModR/M + SIB + disp32 for 67h).
+        for (int i = 0; i < 10; ++i) {
+            check_cs_fetch_limit(core.eip + i + 1);
+            opcode.push_back(machine.mem_fetch_byte(linear_addr32(core.cs, core.eip + i)));
+        }
+        unpredictable_flags = 0;
+
+        // Show instruction: address, opcode and mnemonics.
+        machine.trace_instruction();
+
+        op = opcode[plen];
+        d  = (op >> 1) & 1;
+        w  = op & 1;
+        core.eip += 1;
+
+        // 386 two-byte opcodes (0F xx)
+        if (op == 0x0f) {
+            op = 0x100 | opcode[++plen];
+            core.eip += 1;
+        }
+
         if (is_rep_instruction()) {
             exe_rep();
         } else {
@@ -3510,6 +3528,12 @@ void Intel386::exe_one()
             // Real 386 ROL: when count % size == 0 but CL masked != 0, CF = LSB of result
             if ((op == 0xd2 || op == 0xd3) && reg == 0 && (get_cl() & 0x1F) != 0)
                 core.flags.f.cf = (dst & 1) != 0;
+            // Real 386 ROR: when count % size == 0 but CL masked != 0, CF = MSB(result), OF = MSB XOR MSB(result<<1)
+            if ((op == 0xd2 || op == 0xd3) && reg == 1 && (get_cl() & 0x1F) != 0) {
+                dst &= MASK[eff_w];
+                core.flags.f.cf = msb(eff_w, dst);
+                core.flags.f.of = msb(eff_w, dst) != msb(eff_w, (dst << 1) & MASK[eff_w]);
+            }
             break;
         }
         bool temp_cf;
@@ -3829,14 +3853,12 @@ void Intel386::exe_one()
                 unsigned rem  = ldst % divw;
                 if (quo > 0xFFFF) {
                     // Real 386 modifies flags before #DE; match hardware (sub shapes FLAGS,
-                    // preserve CF/PF/AF).
-                    auto save_cf = core.flags.f.cf;
-                    auto save_pf = core.flags.f.pf;
-                    auto save_af = core.flags.f.af;
+                    // then CF/PF/AF/ZF per real 386 batch33 trace).
                     sub(W, static_cast<int>(core.edx & 0xFFFF), static_cast<int>(divw));
-                    core.flags.f.cf          = save_cf;
-                    core.flags.f.pf          = save_pf;
-                    core.flags.f.af          = save_af;
+                    core.flags.f.cf = 1;
+                    core.flags.f.pf = 0;
+                    core.flags.f.af = 1;
+                    core.flags.f.zf = 0;
                     last_unpredictable_flags = unpredictable_flags;
                     unpredictable_flags      = 0;
                     core.eip                 = fault_eip;

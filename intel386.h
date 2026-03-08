@@ -153,6 +153,8 @@ private:
     bool is_rep_instruction() const;
     void intercept_bios_call();
     [[noreturn]] void raise_segment_fault();
+    // Real-mode CS limit: if about to fetch past offset 0xFFFF, raise #GP (int 13).
+    void check_cs_fetch_limit(Dword fetch_end_exclusive);
 
     // Execute one opcode (used by step and REP loop).
     void exe_one();
