@@ -1589,40 +1589,9 @@ void Intel386::exe_one()
         }
         Dword offset;
         if (address_32) {
-            // 32-bit addressing: compute effective address directly (LEA does not use segment
-            // base).
-            int off = 2;   // bytes after ModR/M
-            if (rm == 4) { // SIB
-                Byte sib  = opcode[plen + off];
-                int scale = 1 << (sib >> 6);
-                int index = (sib >> 3) & 7;
-                int base  = sib & 7;
-                off++;
-                Dword base_val = (base == 5 && mod == 0) ? 0 : static_cast<Dword>(getReg(D, base));
-                int disp       = 0;
-                if (base == 5 && mod == 0)
-                    disp = opcode[plen + off] | (opcode[plen + off + 1] << 8) |
-                           (opcode[plen + off + 2] << 16) | (opcode[plen + off + 3] << 24);
-                else if (mod == 1)
-                    disp = (int8_t)opcode[plen + off];
-                else if (mod == 2)
-                    disp = opcode[plen + off] | (opcode[plen + off + 1] << 8) |
-                           (opcode[plen + off + 2] << 16) | (opcode[plen + off + 3] << 24);
-                Dword index_val = (index == 4) ? 0 : static_cast<Dword>(getReg(D, index));
-                offset          = base_val + index_val * scale + disp;
-            } else {
-                Dword rv = static_cast<Dword>(getReg(D, rm));
-                int disp = 0;
-                if (rm == 5 && mod == 0)
-                    disp = opcode[plen + off] | (opcode[plen + off + 1] << 8) |
-                           (opcode[plen + off + 2] << 16) | (opcode[plen + off + 3] << 24);
-                else if (mod == 1)
-                    disp = (int8_t)opcode[plen + off];
-                else if (mod == 2)
-                    disp = opcode[plen + off] | (opcode[plen + off + 1] << 8) |
-                           (opcode[plen + off + 2] << 16) | (opcode[plen + off + 3] << 24);
-                offset = rv + disp;
-            }
+            // Reuse getEA so mod=0 rm=5 [disp32] and SIB are identical to memory operands.
+            (void)getEA(mod, rm);
+            offset = last_ea_offset;
         } else {
             unsigned linear = getEA(mod, rm);
             offset          = linear - (static_cast<Dword>(os) << 4);
@@ -2471,8 +2440,9 @@ void Intel386::exe_one()
                 intercept_bios_call();
             }
         } else {
+            // 16-bit stack: fault #SS only when first word crosses segment (SP==0xFFFF); second word may wrap.
             Word sp = get_sp();
-            if (sp > 0x10000 - 4) {
+            if (sp > 0xFFFE) {
                 os_is_ss = true;
                 raise_segment_fault();
             }
@@ -2540,6 +2510,11 @@ void Intel386::exe_one()
 
     case 0x61: { // POPA/POPAD
         if (operand_32) {
+            // 16-bit stack: real 386 faults #SS if 32-byte frame would wrap (before any pops).
+            if (!address_32 && get_sp() > 0x10000 - 32) {
+                os_is_ss = true;
+                raise_segment_fault();
+            }
             core.edi     = pop32();
             core.esi     = pop32();
             core.ebp     = pop32();
@@ -3031,10 +3006,9 @@ void Intel386::exe_one()
         int srcval = getRM(eff_w, mod, rm);
         if (srcval == 0) {
             core.flags.f.zf = 1;
-            core.flags.f.of = 0;
-            core.flags.f.sf = 0;
-            core.flags.f.af = 0;
-            core.flags.f.cf = 0;
+            core.flags.f.pf = 1; // real 386 when src=0 (captured in tests)
+            core.flags.f.of = core.flags.f.sf = core.flags.f.af = core.flags.f.cf = 0;
+            unpredictable_flags = OF_MASK | SF_MASK | AF_MASK | CF_MASK; // PF not unpredictable
             // dest undefined when src=0
         } else {
             int i = 0;
@@ -3056,10 +3030,9 @@ void Intel386::exe_one()
         int nbits  = (eff_w == D) ? 32 : 16;
         if (srcval == 0) {
             core.flags.f.zf = 1;
-            core.flags.f.of = 0;
-            core.flags.f.sf = 0;
-            core.flags.f.af = 0;
-            core.flags.f.cf = 0;
+            core.flags.f.pf = 1; // real 386 when src=0 (captured in tests)
+            core.flags.f.of = core.flags.f.sf = core.flags.f.af = core.flags.f.cf = 0;
+            unpredictable_flags = OF_MASK | SF_MASK | AF_MASK | CF_MASK; // PF not unpredictable
             // dest undefined when src=0
         } else {
             int i = nbits - 1;
@@ -3763,13 +3736,9 @@ void Intel386::exe_one()
                 Word quo      = dividend / divb;
                 Byte rem      = dividend % divb;
                 if (quo > 0xFF) {
-                    auto save_cf = core.flags.f.cf;
-                    auto save_pf = core.flags.f.pf;
-                    auto save_af = core.flags.f.af;
-                    sub(B, dividend >> 8, divb);
-                    core.flags.f.cf = save_cf;
-                    core.flags.f.pf = save_pf;
-                    core.flags.f.af = save_af;
+                    // Real 386 clears CF and ZF before pushing FLAGS on #DE (captured in tests).
+                    core.flags.f.cf = 0;
+                    core.flags.f.zf = 0;
                     last_unpredictable_flags = unpredictable_flags;
                     unpredictable_flags = 0;
                     core.eip = fault_eip;
@@ -3791,6 +3760,7 @@ void Intel386::exe_one()
                 uint64_t quo  = ldst / divd;
                 uint32_t rem  = ldst % divd;
                 if (quo > 0xFFFFFFFFu) {
+                    // Real 386 modifies flags before #DE; match hardware (sub shapes FLAGS).
                     sub(D, static_cast<int>(core.edx), static_cast<int>(divd));
                     last_unpredictable_flags = unpredictable_flags;
                     unpredictable_flags = 0;
@@ -3813,10 +3783,11 @@ void Intel386::exe_one()
                 unsigned quo  = ldst / divw;
                 unsigned rem  = ldst % divw;
                 if (quo > 0xFFFF) {
+                    // Real 386 modifies flags before #DE; match hardware (sub shapes FLAGS, preserve CF/PF/AF).
                     auto save_cf = core.flags.f.cf;
                     auto save_pf = core.flags.f.pf;
                     auto save_af = core.flags.f.af;
-                    sub(W, core.edx & 0xFFFF, divw);
+                    sub(W, static_cast<int>(core.edx & 0xFFFF), static_cast<int>(divw));
                     core.flags.f.cf = save_cf;
                     core.flags.f.pf = save_pf;
                     core.flags.f.af = save_af;
