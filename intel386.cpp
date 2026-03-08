@@ -757,7 +757,7 @@ void Intel386::decode()
         ensure_opcode_bytes(3);
         core.eip += 2;
     } else if ((mod == 0b00 && rm == 0b110) || mod == 0b10) {
-        ensure_opcode_bytes(5); // ModR/M + disp16 (need plen+1..plen+4)
+        ensure_opcode_bytes(4); // ModR/M + disp16 (need plen+1..plen+3)
         core.eip += 3;
     } else {
         core.eip += 1;
@@ -831,7 +831,6 @@ void Intel386::push32(Dword val)
 //
 void Intel386::call_int(int type)
 {
-    core.flags.w &= ~unpredictable_flags;
     if (machine.is_syscall(type)) {
         // Intercept syscalls.
         machine.process_syscall(type);
@@ -1272,11 +1271,19 @@ void Intel386::step()
         } else {
             exe_one();
         }
+        // Real mode: if EIP advanced past 64K CS limit, #GP before next fetch.
+        if (!(core.cr0 & 1) && core.eip > 0xFFFF) {
+            call_int(13);
+            throw SegmentFault{};
+        }
         core.flags.w &= ~unpredictable_flags;
         if (unpredictable_flags)
             last_unpredictable_flags = unpredictable_flags;
     } catch (SegmentFault &) {
-        // Exception already handled (call_int done); nothing more to do
+        // Exception already handled (call_int done). Clear unpredictable flags for test comparison.
+        core.flags.w &= ~unpredictable_flags;
+        if (unpredictable_flags)
+            last_unpredictable_flags = unpredictable_flags;
     }
 
     // Show changed registers.
@@ -3793,6 +3800,11 @@ void Intel386::exe_one()
                 bool byte_overflow = ((int16_t)res != (int8_t)(res & 0xFF));
                 core.flags.f.cf    = byte_overflow;
                 core.flags.f.of    = byte_overflow;
+                // Real 386 sets undefined flags from result: SF/PF/ZF from AX, AF=0.
+                core.flags.f.sf = (int16_t)(res & 0xFFFF) < 0;
+                core.flags.f.zf = ((res >> 8) == 0);
+                core.flags.f.pf = PARITY[res >> 8];
+                core.flags.f.af = 0;
             } else if (eff_w == D) {
                 int64_t prod = static_cast<int64_t>(static_cast<int32_t>(core.eax)) *
                                static_cast<int64_t>(static_cast<int32_t>(src));
