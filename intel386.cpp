@@ -1271,8 +1271,8 @@ void Intel386::step()
         } else {
             exe_one();
         }
-        // Real mode: if EIP advanced past 64K CS limit, #GP before next fetch.
-        if (!(core.cr0 & 1) && core.eip > 0xFFFF) {
+        // Real mode: if EIP advanced past 64K CS limit, #GP before next fetch (except when halted).
+        if (!(core.cr0 & 1) && core.eip > 0xFFFF && !is_halted()) {
             call_int(13);
             throw SegmentFault{};
         }
