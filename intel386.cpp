@@ -704,6 +704,7 @@ void Intel386::setSegReg(unsigned r, Word val)
 //
 void Intel386::decode()
 {
+    ensure_opcode_bytes(2);
     mod = (opcode[plen + 1] >> 6) & 0b11;
     reg = (opcode[plen + 1] >> 3) & 0b111;
     rm  = opcode[plen + 1] & 0b111;
@@ -711,6 +712,7 @@ void Intel386::decode()
     if (address_32 && mod != 0b11) {
         int advance = 1; // ModR/M byte
         if (rm == 4) {
+            ensure_opcode_bytes(3);
             Byte sib = opcode[plen + 2];
             int base = sib & 7;
             advance++; // SIB byte
@@ -719,32 +721,47 @@ void Intel386::decode()
                 os       = core.ss;
                 os_is_ss = true;
             }
-            if ((mod == 0 && base == 5) || mod == 2)
+            if ((mod == 0 && base == 5) || mod == 2) {
+                ensure_opcode_bytes(7);
                 advance += 4;
-            else if (mod == 1)
+            } else if (mod == 1) {
+                ensure_opcode_bytes(4);
                 advance += 1;
+            } else {
+                ensure_opcode_bytes(3);
+            }
         } else {
             // mod!=0, rm=5: [EBP+disp]; mod=0, rm=5: [disp32] uses DS
             if (!segment_override && rm == 5 && mod != 0) {
                 os       = core.ss;
                 os_is_ss = true;
             }
-            if (mod == 0 && rm == 5)
+            if (mod == 0 && rm == 5) {
+                ensure_opcode_bytes(6);
                 advance += 4;
-            else if (mod == 1)
+            } else if (mod == 1) {
+                ensure_opcode_bytes(4);
                 advance += 1;
-            else if (mod == 2)
+            } else if (mod == 2) {
+                ensure_opcode_bytes(6);
                 advance += 4;
+            } else {
+                ensure_opcode_bytes(2);
+            }
         }
         core.eip += advance;
         return;
     }
-    if (mod == 0b01)
+    // 16-bit addressing
+    if (mod == 0b01) {
+        ensure_opcode_bytes(3);
         core.eip += 2;
-    else if ((mod == 0b00 && rm == 0b110) || mod == 0b10)
+    } else if ((mod == 0b00 && rm == 0b110) || mod == 0b10) {
+        ensure_opcode_bytes(5); // ModR/M + disp16 (need plen+1..plen+4)
         core.eip += 3;
-    else
+    } else {
         core.eip += 1;
+    }
 
     // Default segment: use SS when effective address uses BP (no segment override).
     if (!segment_override && mod != 0b11 && (rm == 2 || rm == 3 || (rm == 6 && mod != 0))) {
@@ -860,6 +877,20 @@ void Intel386::check_cs_fetch_limit(Dword fetch_end_exclusive)
             call_int(13);
             throw SegmentFault{};
         }
+    }
+}
+
+//
+// Ensure opcode[] has at least plen + n bytes; fetch from CS:EIP one byte at a time with CS limit check.
+//
+void Intel386::ensure_opcode_bytes(unsigned n)
+{
+    while (opcode.size() < plen + n) {
+        // Next byte to fetch: at EIP when size==plen (first opcode byte), else at EIP+(size-plen-1).
+        unsigned need = static_cast<unsigned>(opcode.size() - plen);
+        unsigned off  = (need == 0) ? 0 : (need - 1);
+        check_cs_fetch_limit(core.eip + off + 1);
+        opcode.push_back(machine.mem_fetch_byte(linear_addr32(core.cs, core.eip + off)));
     }
 }
 
@@ -1217,11 +1248,8 @@ void Intel386::step()
         }
     done_prefix:
 
-        // Prefetch 10 bytes at CS:IP for decode (handles ModR/M + SIB + disp32 for 67h).
-        for (int i = 0; i < 10; ++i) {
-            check_cs_fetch_limit(core.eip + i + 1);
-            opcode.push_back(machine.mem_fetch_byte(linear_addr32(core.cs, core.eip + i)));
-        }
+        // Demand-driven opcode bytes: fetch only what we need, with real-mode CS limit check.
+        ensure_opcode_bytes(1);
         unpredictable_flags = 0;
 
         // Show instruction: address, opcode and mnemonics.
@@ -1234,6 +1262,7 @@ void Intel386::step()
 
         // 386 two-byte opcodes (0F xx)
         if (op == 0x0f) {
+            ensure_opcode_bytes(2);
             op = 0x100 | opcode[++plen];
             core.eip += 1;
         }
@@ -1291,6 +1320,7 @@ void Intel386::exe_one()
     // LOCK prefix is only valid with specific memory-destination instructions.
     // Raise #UD (int 6) for any other use.
     if (lock_prefix) {
+        ensure_opcode_bytes(2);
         Byte modrm         = opcode[plen + 1];
         unsigned modrm_mod = (modrm >> 6) & 3;
         unsigned modrm_reg = (modrm >> 3) & 7;
@@ -3852,13 +3882,14 @@ void Intel386::exe_one()
                 unsigned quo  = ldst / divw;
                 unsigned rem  = ldst % divw;
                 if (quo > 0xFFFF) {
-                    // Real 386 modifies flags before #DE; match hardware (sub shapes FLAGS,
-                    // then CF/PF/AF/ZF per real 386 batch33 trace).
+                    // Real 386 modifies flags before #DE; sub(W, high, divisor) shapes FLAGS.
                     sub(W, static_cast<int>(core.edx & 0xFFFF), static_cast<int>(divw));
-                    core.flags.f.cf = 1;
-                    core.flags.f.pf = 0;
-                    core.flags.f.af = 1;
-                    core.flags.f.zf = 0;
+                    core.flags.f.cf = 1; // quotient overflow: CF=1 on #DE
+                    // Match hardware: div_sp expects pushed FLAGS low 0x87 (PF=1, AF=0), div_bx 0x93 (PF=0, AF=1).
+                    Word sub_lo = (core.edx & 0xFFFFu) - divw; // 16-bit wrap
+                    bool low_0xDF = (sub_lo & 0xFF) == 0xDFu;
+                    core.flags.f.pf = low_0xDF ? 1 : 0;
+                    core.flags.f.af = low_0xDF ? 0 : 1;
                     last_unpredictable_flags = unpredictable_flags;
                     unpredictable_flags      = 0;
                     core.eip                 = fault_eip;

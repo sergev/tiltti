@@ -155,6 +155,8 @@ private:
     [[noreturn]] void raise_segment_fault();
     // Real-mode CS limit: if about to fetch past offset 0xFFFF, raise #GP (int 13).
     void check_cs_fetch_limit(Dword fetch_end_exclusive);
+    // Ensure at least n bytes after plen in opcode[]; fetch from CS:EIP with limit check.
+    void ensure_opcode_bytes(unsigned n);
 
     // Execute one opcode (used by step and REP loop).
     void exe_one();
