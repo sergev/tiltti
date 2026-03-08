@@ -3078,7 +3078,7 @@ void Intel386::exe_one()
             if (core.ecx != 0)
                 core.eip += dst;
         } else {
-            core.ecx = (static_cast<Dword>(get_cx()) - 1) & 0xFFFFu;
+            set_cx(get_cx() - 1);
             if (get_cx() != 0) {
                 core.eip += dst;
                 core.eip &= 0xFFFFu;
@@ -3092,7 +3092,7 @@ void Intel386::exe_one()
             if (core.ecx != 0 && core.flags.f.zf)
                 core.eip += dst;
         } else {
-            core.ecx = (static_cast<Dword>(get_cx()) - 1) & 0xFFFFu;
+            set_cx(get_cx() - 1);
             if (get_cx() != 0 && core.flags.f.zf) {
                 core.eip += dst;
                 core.eip &= 0xFFFFu;
@@ -3106,7 +3106,7 @@ void Intel386::exe_one()
             if (core.ecx != 0 && !core.flags.f.zf)
                 core.eip += dst;
         } else {
-            core.ecx = (static_cast<Dword>(get_cx()) - 1) & 0xFFFFu;
+            set_cx(get_cx() - 1);
             if (get_cx() != 0 && !core.flags.f.zf) {
                 core.eip += dst;
                 core.eip &= 0xFFFFu;
@@ -3118,7 +3118,7 @@ void Intel386::exe_one()
         Dword cx_val = address_32 ? core.ecx : (core.ecx & 0xFFFF);
         if (cx_val == 0) {
             core.eip += dst;
-            if (!address_32)
+            if (!address_32) // 16-bit code segment: keep EIP in 16 bits
                 core.eip &= 0xFFFFu;
         }
         break;
