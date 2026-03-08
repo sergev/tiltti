@@ -85,6 +85,7 @@ set(TEST_SOURCES
     386/batch5.cpp
     386/string_test.cpp
     386/batch6.cpp
+    386/batch7.cpp
 )
 
 #
