@@ -940,10 +940,13 @@ void Intel386::do_bit_test(BitTestAction action)
         addr = getEA(mod, rm);
         int bytes = (eff_w == D) ? 4 : 2;
         if (address_32) {
+            // Real mode: fault if final BT-expanded offset is out of segment; then use 16-bit offset.
             Dword adj_offset = last_ea_offset + byte_offset;
-            if (adj_offset > 0x10000u - bytes)
+            if (static_cast<int32_t>(adj_offset) < 0 ||
+                adj_offset > 0x10000u - static_cast<unsigned>(bytes))
                 raise_segment_fault();
-            addr += byte_offset;
+            Word seg_off = static_cast<Word>(adj_offset);
+            addr = linear_addr21(os, seg_off);
             base = getMem(eff_w, addr);
         } else {
             // 8086-style address-size wrap: apply BT extension in 16-bit offset domain.
@@ -1723,9 +1726,14 @@ void Intel386::exe_one()
             push(core.flags.w);
         break;
     case 0x9d:
-        if (operand_32)
+        if (operand_32) {
+            Word sp = get_sp();
+            if (sp > 0x10000 - 4) {
+                os_is_ss = true;
+                raise_segment_fault();
+            }
             set_eflags(static_cast<Dword>(pop32()));
-        else
+        } else
             set_flags(pop());
         break;
 
@@ -1969,23 +1977,21 @@ void Intel386::exe_one()
         break;
     }
 
-    // DAS: Decimal adjust for subtraction
+    // DAS: Decimal adjust for subtraction (Intel: CF = old_CF or borrow from first/subtract; second uses old_AL/old_CF)
     case 0x2f: {
-        // Overflow is unpredictable
         unpredictable_flags = OF_MASK;
-
-        // First adjustment (low nibble).
-        Byte al = get_al();
+        Byte old_al        = get_al();
+        bool old_cf        = core.flags.f.cf;
+        core.flags.f.cf    = 0;
+        Byte al            = old_al;
         if (core.flags.f.af || (al & 0x0f) > 9) {
             al -= 6;
-            if (!core.flags.f.af && (al >> 4) >= 9) {
-                core.flags.f.cf = 1;
-            }
+            core.flags.f.cf = old_cf || (old_al < 6); // borrow from AL - 6
             core.flags.f.af = 1;
+        } else {
+            core.flags.f.af = 0;
         }
-        // Second adjustment (high nibble).
-        // Note: decision uses original AL but new CF.
-        if (core.flags.f.cf || (get_al() >> 4) > 9) {
+        if (old_al > 0x99 || old_cf) {
             al -= 0x60;
             core.flags.f.cf = 1;
         }
@@ -2465,6 +2471,11 @@ void Intel386::exe_one()
                 intercept_bios_call();
             }
         } else {
+            Word sp = get_sp();
+            if (sp > 0x10000 - 4) {
+                os_is_ss = true;
+                raise_segment_fault();
+            }
             core.eip = pop();
             core.cs  = pop();
             set_sp(static_cast<Word>((get_sp() + src) & 0xFFFF));
@@ -2560,11 +2571,15 @@ void Intel386::exe_one()
         break;
 
     case 0x62: { // BOUND (386): check array index against bounds, INT 5 if out of range (signed
-                 // comparison)
+                 // comparison). Real 386: mod=11 (invalid reg,reg form) also faults via INT 5.
         Dword bound_eip = core.eip; // save for fault address
         decode();
-        if (mod == 0b11) // register operand is undefined
+        if (mod == 0b11) {
+            // Real 386: BOUND with register as second operand triggers INT 6 (#UD), not INT 5.
+            core.eip = bound_eip - 1 - static_cast<Dword>(plen);
+            call_int(6);
             break;
+        }
         unsigned addr = getEA(mod, rm);
         unsigned bound_bytes = operand_32 ? 8u : 4u;
         if (last_ea_offset > 0x10000u - bound_bytes) {
@@ -3476,6 +3491,9 @@ void Intel386::exe_one()
             if ((op == 0xd2 || op == 0xd3) && (reg == 2 || reg == 3)
                     && (get_cl() & 0x1F) != 0)
                 unpredictable_flags |= OF_MASK;
+            // Real 386 ROL: when count % size == 0 but CL masked != 0, CF = MSB of operand
+            if ((op == 0xd2 || op == 0xd3) && reg == 0 && (get_cl() & 0x1F) != 0)
+                core.flags.f.cf = msb(eff_w, dst);
             break;
         }
         bool temp_cf;
