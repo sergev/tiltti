@@ -1136,10 +1136,12 @@ void Intel386::step()
         switch (prefix) {
         case 0x26: // ES:
             segment_override = true;
+            os_is_ss         = false;
             os               = core.es;
             break;
         case 0x2e: // CS:
             segment_override = true;
+            os_is_ss         = false;
             os               = core.cs;
             break;
         case 0x36: // SS:
@@ -1149,14 +1151,17 @@ void Intel386::step()
             break;
         case 0x3e: // DS:
             segment_override = true;
+            os_is_ss         = false;
             os               = core.ds;
             break;
         case 0x64: // FS:
             segment_override = true;
+            os_is_ss         = false;
             os               = core.fs;
             break;
         case 0x65: // GS:
             segment_override = true;
+            os_is_ss         = false;
             os               = core.gs;
             break;
         case 0x66: // Operand-size override
@@ -1240,8 +1245,8 @@ void Intel386::exe_rep()
                 break;
         }
 
-        core.ecx -= 1;
         exe_one();
+        core.ecx -= 1;
 
         if (check_zf && core.flags.f.zf != (rep & 1)) {
             break;
@@ -2561,7 +2566,8 @@ void Intel386::exe_one()
         if (mod == 0b11) // register operand is undefined
             break;
         unsigned addr = getEA(mod, rm);
-        if (address_32 && last_ea_offset > 0xFFFF) {
+        unsigned bound_bytes = operand_32 ? 8u : 4u;
+        if (last_ea_offset > 0x10000u - bound_bytes) {
             core.eip = bound_eip - 1 - plen;
             call_int(os_is_ss ? 12 : 13); // #SS for SS, #GP for others
             break;
@@ -2755,6 +2761,17 @@ void Intel386::exe_one()
         break;
 
     case 0x6e: { // OUTSB - Output string byte to port
+        const unsigned delta = 1;
+        if (address_32) {
+            if (static_cast<unsigned>(static_cast<Word>(core.esi)) > 0x10000 - delta) {
+                os_is_ss = (os == core.ss);
+                raise_segment_fault();
+            }
+        } else {
+            unsigned si_off = static_cast<Word>(core.esi);
+            if (si_off > 0x10000 - delta)
+                raise_segment_fault();
+        }
         Dword ptr         = address_32 ? core.esi : static_cast<Dword>(static_cast<Word>(core.esi));
         unsigned src_addr = linear_addr32(os, ptr);
         int val           = getMem(B, src_addr);
@@ -2770,6 +2787,17 @@ void Intel386::exe_one()
         int eff_w         = operand_32 ? D : W;
         int delta         = (eff_w == D) ? 4 : 2;
         int stride        = (core.flags.f.df ? -1 : 1) * delta;
+        const unsigned delta_u = static_cast<unsigned>(delta);
+        if (address_32) {
+            if (static_cast<unsigned>(static_cast<Word>(core.esi)) > 0x10000 - delta_u) {
+                os_is_ss = (os == core.ss);
+                raise_segment_fault();
+            }
+        } else {
+            unsigned si_off = static_cast<Word>(core.esi);
+            if (si_off > 0x10000 - delta_u)
+                raise_segment_fault();
+        }
         Dword ptr         = address_32 ? core.esi : static_cast<Dword>(static_cast<Word>(core.esi));
         unsigned src_addr = linear_addr32(os, ptr);
         int val           = getMem(eff_w, src_addr);
