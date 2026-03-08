@@ -107,11 +107,11 @@ private:
     int ea{ -1 };   // effective address cache
     unsigned rep{}; // 0=none, 1=REP/REPE/REPZ, 2=REPNE/REPNZ
     bool segment_override{};
-    Word os{};         // segment override (default DS)
-    bool os_is_ss{};   // true when effective segment is SS (for #SS vs #GP selection)
-    bool operand_32{}; // 66h operand-size override (16-bit default in real mode)
-    bool address_32{}; // 67h address-size override
-    bool lock_prefix{}; // F0h LOCK prefix
+    Word os{};              // segment override (default DS)
+    bool os_is_ss{};        // true when effective segment is SS (for #SS vs #GP selection)
+    bool operand_32{};      // 66h operand-size override (16-bit default in real mode)
+    bool address_32{};      // 67h address-size override
+    bool lock_prefix{};     // F0h LOCK prefix
     Dword last_ea_offset{}; // raw 32-bit offset from getEA (for segment limit check)
     Dword fault_eip{};      // instruction start EIP for segment fault reporting
 
@@ -211,22 +211,34 @@ public:
     Byte get_al() const override { return static_cast<Byte>(core.eax); }
     Byte get_ah() const override { return static_cast<Byte>(core.eax >> 8); }
     void set_al(Byte val) override { core.eax = (core.eax & 0xFFFFFF00u) | val; }
-    void set_ah(Byte val) override { core.eax = (core.eax & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8); }
+    void set_ah(Byte val) override
+    {
+        core.eax = (core.eax & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8);
+    }
 
     Byte get_bl() const override { return static_cast<Byte>(core.ebx); }
     Byte get_bh() const override { return static_cast<Byte>(core.ebx >> 8); }
     void set_bl(Byte val) override { core.ebx = (core.ebx & 0xFFFFFF00u) | val; }
-    void set_bh(Byte val) override { core.ebx = (core.ebx & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8); }
+    void set_bh(Byte val) override
+    {
+        core.ebx = (core.ebx & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8);
+    }
 
     Byte get_cl() const override { return static_cast<Byte>(core.ecx); }
     Byte get_ch() const override { return static_cast<Byte>(core.ecx >> 8); }
     void set_cl(Byte val) override { core.ecx = (core.ecx & 0xFFFFFF00u) | val; }
-    void set_ch(Byte val) override { core.ecx = (core.ecx & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8); }
+    void set_ch(Byte val) override
+    {
+        core.ecx = (core.ecx & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8);
+    }
 
     Byte get_dl() const override { return static_cast<Byte>(core.edx); }
     Byte get_dh() const override { return static_cast<Byte>(core.edx >> 8); }
     void set_dl(Byte val) override { core.edx = (core.edx & 0xFFFFFF00u) | val; }
-    void set_dh(Byte val) override { core.edx = (core.edx & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8); }
+    void set_dh(Byte val) override
+    {
+        core.edx = (core.edx & 0xFFFF00FFu) | (static_cast<Dword>(val) << 8);
+    }
 
     // Pointer/index registers (32-bit)
     Dword get_esp() const { return core.esp; }

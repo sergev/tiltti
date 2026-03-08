@@ -24,6 +24,7 @@
 #include "intel386.h"
 
 #include <capstone.h>
+
 #include <iomanip>
 #include <iostream>
 
@@ -251,22 +252,23 @@ unsigned Intel386::getEA(unsigned mod_val, unsigned rm_val)
             int index = (sib >> 3) & 7;
             int base  = sib & 7;
             off++;
-            // base=4 (ESP) with mod=00: [ESP+index*scale], no disp. base=5 (EBP) with mod=00: no base, disp32.
+            // base=4 (ESP) with mod=00: [ESP+index*scale], no disp. base=5 (EBP) with mod=00: no
+            // base, disp32.
             Dword base_val = (base == 5 && mod_val == 0) ? 0 : static_cast<Dword>(getReg(D, base));
             if (base == 5 && mod_val == 0) {
-                disp = static_cast<int32_t>(static_cast<Dword>(opcode[plen + off] |
-                       (opcode[plen + off + 1] << 8) | (opcode[plen + off + 2] << 16) |
-                       (opcode[plen + off + 3] << 24)));
+                disp = static_cast<int32_t>(static_cast<Dword>(
+                    opcode[plen + off] | (opcode[plen + off + 1] << 8) |
+                    (opcode[plen + off + 2] << 16) | (opcode[plen + off + 3] << 24)));
             } else if (mod_val == 1) {
                 disp = (int8_t)opcode[plen + off];
             } else if (mod_val == 2) {
-                disp = static_cast<int32_t>(static_cast<Dword>(opcode[plen + off] |
-                       (opcode[plen + off + 1] << 8) | (opcode[plen + off + 2] << 16) |
-                       (opcode[plen + off + 3] << 24)));
+                disp = static_cast<int32_t>(static_cast<Dword>(
+                    opcode[plen + off] | (opcode[plen + off + 1] << 8) |
+                    (opcode[plen + off + 2] << 16) | (opcode[plen + off + 3] << 24)));
             }
-            // 386 quirk: when index=4 (none) and base is not ESP/EBP (or EBP with mod!=0), use [base*scale+disp]
-            // (real 386 encodes [ESI*8+disp] as SIB 0xE6)
-            // 386 quirk: when index=4 (none) and base=4 (ESP), scale applies to base: [ESP*scale+disp]
+            // 386 quirk: when index=4 (none) and base is not ESP/EBP (or EBP with mod!=0), use
+            // [base*scale+disp] (real 386 encodes [ESI*8+disp] as SIB 0xE6) 386 quirk: when index=4
+            // (none) and base=4 (ESP), scale applies to base: [ESP*scale+disp]
             Dword index_val;
             if (index == 4 && base != 4 && (base != 5 || mod_val != 0)) {
                 index_val = static_cast<Dword>(getReg(D, base));
@@ -278,26 +280,29 @@ unsigned Intel386::getEA(unsigned mod_val, unsigned rm_val)
             if (index == 4 && base == 4) {
                 addr_signed = static_cast<int32_t>(base_val * scale + disp);
             } else {
-                addr_signed = static_cast<int32_t>(base_val) + static_cast<int32_t>(index_val) * scale + disp;
+                addr_signed =
+                    static_cast<int32_t>(base_val) + static_cast<int32_t>(index_val) * scale + disp;
             }
-            // Real-mode segment limit: store signed offset so limit check can fault on negative or >= 64K
+            // Real-mode segment limit: store signed offset so limit check can fault on negative or
+            // >= 64K
             last_ea_offset = static_cast<Dword>(addr_signed);
             return linear_addr21(os, static_cast<Word>(last_ea_offset));
         }
         // mod=0, r/m=5: [disp32] only, no base register (not [EBP])
         Dword rv = (rm_val == 5 && mod_val == 0) ? 0 : static_cast<Dword>(getReg(D, rm_val));
         if (rm_val == 5 && mod_val == 0) {
-            disp = static_cast<int32_t>(static_cast<Dword>(opcode[plen + off] |
-                   (opcode[plen + off + 1] << 8) | (opcode[plen + off + 2] << 16) |
-                   (opcode[plen + off + 3] << 24)));
+            disp = static_cast<int32_t>(static_cast<Dword>(
+                opcode[plen + off] | (opcode[plen + off + 1] << 8) |
+                (opcode[plen + off + 2] << 16) | (opcode[plen + off + 3] << 24)));
         } else if (mod_val == 1) {
             disp = (int8_t)opcode[plen + off];
         } else if (mod_val == 2) {
-            disp = static_cast<int32_t>(static_cast<Dword>(opcode[plen + off] |
-                   (opcode[plen + off + 1] << 8) | (opcode[plen + off + 2] << 16) |
-                   (opcode[plen + off + 3] << 24)));
+            disp = static_cast<int32_t>(static_cast<Dword>(
+                opcode[plen + off] | (opcode[plen + off + 1] << 8) |
+                (opcode[plen + off + 2] << 16) | (opcode[plen + off + 3] << 24)));
         }
-        // Real-mode segment limit: store signed offset so limit check can fault on negative or >= 64K
+        // Real-mode segment limit: store signed offset so limit check can fault on negative or >=
+        // 64K
         last_ea_offset = static_cast<Dword>(static_cast<int32_t>(rv) + disp);
         return linear_addr21(os, static_cast<Word>(last_ea_offset));
     }
@@ -616,7 +621,7 @@ int Intel386::getRM(int width, unsigned mod_val, unsigned rm_val)
 {
     if (mod_val == 0b11)
         return getReg(width, rm_val);
-    unsigned addr = getEA_cached(mod_val, rm_val);
+    unsigned addr  = getEA_cached(mod_val, rm_val);
     unsigned bytes = (width == D) ? 4 : (width == W) ? 2 : 1;
     if (last_ea_offset > 0x10000 - bytes && !(os_is_ss && core.ss == 0))
         raise_segment_fault();
@@ -632,7 +637,7 @@ void Intel386::setRM(int width, unsigned mod_val, unsigned rm_val, int val)
     if (mod_val == 0b11)
         setReg(width, rm_val, val);
     else {
-        unsigned addr = getEA_cached(mod_val, rm_val);
+        unsigned addr  = getEA_cached(mod_val, rm_val);
         unsigned bytes = (width == D) ? 4 : (width == W) ? 2 : 1;
         if (last_ea_offset > 0x10000 - bytes && !(os_is_ss && core.ss == 0))
             raise_segment_fault();
@@ -751,7 +756,7 @@ void Intel386::decode()
 //
 int Intel386::pop()
 {
-    int val  = getMemAtSegOff(W, core.ss, static_cast<Word>(core.esp));
+    int val = getMemAtSegOff(W, core.ss, static_cast<Word>(core.esp));
     set_sp(get_sp() + 2);
     return val;
 }
@@ -769,12 +774,14 @@ int Intel386::pop32()
 {
     Word sp = static_cast<Word>(core.esp);
     int val;
-    // Real-mode wrap: pop at top of segment wraps within the first 64K (matches pop_esp, o32_pop_ds).
+    // Real-mode wrap: pop at top of segment wraps within the first 64K (matches pop_esp,
+    // o32_pop_ds).
     if (sp > 0x10000 - 4) {
         val = 0;
         for (int i = 0; i < 4; i++)
-            val |= static_cast<int>(machine.mem_load_byte(
-                linear_addr21(core.ss, static_cast<Word>(sp + i)))) << (i * 8);
+            val |= static_cast<int>(
+                       machine.mem_load_byte(linear_addr21(core.ss, static_cast<Word>(sp + i))))
+                   << (i * 8);
     } else {
         val = getMem(D, linear_addr21(core.ss, sp));
     }
@@ -789,9 +796,8 @@ void Intel386::push32(Dword val)
     if (sp > 0x10000 - 4) {
         // Wrap when crossing segment boundary (match pop32 behavior)
         for (int i = 0; i < 4; i++)
-            machine.mem_store_byte(
-                linear_addr21(core.ss, static_cast<Word>(sp + i)),
-                static_cast<Byte>(val >> (i * 8)));
+            machine.mem_store_byte(linear_addr21(core.ss, static_cast<Word>(sp + i)),
+                                   static_cast<Byte>(val >> (i * 8)));
     } else {
         unsigned addr = linear_addr21(core.ss, sp);
         machine.mem_store_byte(addr, val);
@@ -885,12 +891,13 @@ int Intel386::sub(int width, int dst, int src)
 
 int Intel386::sbb(int width, int dst, int src)
 {
-    int carry       = core.flags.f.cf;
-    int res         = (dst - src - carry) & MASK[width];
-    Dword udst      = dst & MASK[width];
-    Dword usrc      = src & MASK[width];
+    int carry  = core.flags.f.cf;
+    int res    = (dst - src - carry) & MASK[width];
+    Dword udst = dst & MASK[width];
+    Dword usrc = src & MASK[width];
     // Compare in 64-bit so (usrc + carry) cannot overflow and produce wrong CF
-    core.flags.f.cf = (static_cast<uint64_t>(udst) < static_cast<uint64_t>(usrc) + (carry ? 1u : 0u));
+    core.flags.f.cf =
+        (static_cast<uint64_t>(udst) < static_cast<uint64_t>(usrc) + (carry ? 1u : 0u));
     core.flags.f.af = ((res ^ dst ^ src) & 0x10) != 0;
     core.flags.f.of = ((dst ^ src) & (dst ^ res) & SIGN[width]) != 0;
     update_flags_zsp(width, res);
@@ -937,22 +944,23 @@ void Intel386::do_bit_test(BitTestAction action)
     if (mod == 0b11) {
         base = getRM(eff_w, mod, rm);
     } else {
-        addr = getEA(mod, rm);
+        addr      = getEA(mod, rm);
         int bytes = (eff_w == D) ? 4 : 2;
         if (address_32) {
-            // Real mode: fault if final BT-expanded offset is out of segment; then use 16-bit offset.
+            // Real mode: fault if final BT-expanded offset is out of segment; then use 16-bit
+            // offset.
             Dword adj_offset = last_ea_offset + byte_offset;
             if (static_cast<int32_t>(adj_offset) < 0 ||
                 adj_offset > 0x10000u - static_cast<unsigned>(bytes))
                 raise_segment_fault();
             Word seg_off = static_cast<Word>(adj_offset);
-            addr = linear_addr21(os, seg_off);
-            base = getMem(eff_w, addr);
+            addr         = linear_addr21(os, seg_off);
+            base         = getMem(eff_w, addr);
         } else {
             // 8086-style address-size wrap: apply BT extension in 16-bit offset domain.
             // Truncate to Word first so large byte_offset wraps; then check segment limit.
             use_seg_off = true;
-            off = static_cast<Word>(addr - static_cast<unsigned>(os << 4) + byte_offset);
+            off         = static_cast<Word>(addr - static_cast<unsigned>(os << 4) + byte_offset);
             if (off > 0x10000 - bytes)
                 raise_segment_fault();
             base = getMemAtSegOff(eff_w, os, off);
@@ -1005,8 +1013,8 @@ void Intel386::do_bit_test_imm()
     default:
         return;
     }
-    int eff_w   = operand_32 ? D : W;
-    int shift   = bit_off & (operand_32 ? 31 : 15);
+    int eff_w = operand_32 ? D : W;
+    int shift = bit_off & (operand_32 ? 31 : 15);
     int base;
     unsigned addr = 0;
     if (mod == 0b11) {
@@ -1220,7 +1228,7 @@ done_prefix:
         core.flags.w &= ~unpredictable_flags;
         if (unpredictable_flags)
             last_unpredictable_flags = unpredictable_flags;
-    } catch (SegmentFault&) {
+    } catch (SegmentFault &) {
         // Exception already handled (call_int done); nothing more to do
     }
 
@@ -1265,31 +1273,46 @@ void Intel386::exe_one()
     // LOCK prefix is only valid with specific memory-destination instructions.
     // Raise #UD (int 6) for any other use.
     if (lock_prefix) {
-        Byte modrm      = opcode[plen + 1];
+        Byte modrm         = opcode[plen + 1];
         unsigned modrm_mod = (modrm >> 6) & 3;
         unsigned modrm_reg = (modrm >> 3) & 7;
-        bool valid = false;
+        bool valid         = false;
         switch (op) {
-        case 0x00: case 0x01: // ADD r/m, r
-        case 0x08: case 0x09: // OR r/m, r
-        case 0x10: case 0x11: // ADC r/m, r
-        case 0x18: case 0x19: // SBB r/m, r
-        case 0x20: case 0x21: // AND r/m, r
-        case 0x28: case 0x29: // SUB r/m, r
-        case 0x30: case 0x31: // XOR r/m, r
-        case 0x86: case 0x87: // XCHG r/m, r
+        case 0x00:
+        case 0x01: // ADD r/m, r
+        case 0x08:
+        case 0x09: // OR r/m, r
+        case 0x10:
+        case 0x11: // ADC r/m, r
+        case 0x18:
+        case 0x19: // SBB r/m, r
+        case 0x20:
+        case 0x21: // AND r/m, r
+        case 0x28:
+        case 0x29: // SUB r/m, r
+        case 0x30:
+        case 0x31: // XOR r/m, r
+        case 0x86:
+        case 0x87: // XCHG r/m, r
             valid = (modrm_mod != 0b11);
             break;
-        case 0x80: case 0x81: case 0x82: case 0x83:
+        case 0x80:
+        case 0x81:
+        case 0x82:
+        case 0x83:
             valid = (modrm_reg != 7) && (modrm_mod != 0b11);
             break;
-        case 0xf6: case 0xf7:
+        case 0xf6:
+        case 0xf7:
             valid = (modrm_reg == 2 || modrm_reg == 3) && (modrm_mod != 0b11);
             break;
-        case 0xfe: case 0xff:
+        case 0xfe:
+        case 0xff:
             valid = (modrm_reg <= 1) && (modrm_mod != 0b11);
             break;
-        case 0x1ab: case 0x1b3: case 0x1bb: // BTS/BTR/BTC r/m, r
+        case 0x1ab:
+        case 0x1b3:
+        case 0x1bb: // BTS/BTR/BTC r/m, r
             valid = (modrm_mod != 0b11);
             break;
         case 0x1ba: // BT group: BTS(/5), BTR(/6), BTC(/7) only
@@ -1340,7 +1363,7 @@ void Intel386::exe_one()
             src = eff_w == D ? fetch(D) : (eff_w == W ? fetch(W) : fetch(B));
             setReg(eff_w, rm, src);
         } else {
-            unsigned addr = getEA(mod, rm);
+            unsigned addr  = getEA(mod, rm);
             unsigned bytes = (eff_w == D) ? 4 : (eff_w == W) ? 2 : 1;
             if (last_ea_offset > 0x10000 - bytes) {
                 // Intel: #GP when memory operand EA outside segment limit (0x10000 in real mode).
@@ -1410,6 +1433,12 @@ void Intel386::exe_one()
             int eff_w = (mod == 0b11 && operand_32) ? D : W;
             setRM(eff_w, mod, rm, getSegReg(reg));
         } else {
+            // 8E: MOV Sreg, r/m16 — CS (reg==1) and encodings 6/7 are invalid; raise #UD
+            if (op == 0x8e && (reg == 1 || reg > 5)) {
+                core.eip = fault_eip;
+                call_int(6);
+                break;
+            }
             setSegReg(reg, getRM(W, mod, rm));
         }
         break;
@@ -1491,7 +1520,7 @@ void Intel386::exe_one()
             setReg(eff_w, reg, src);
             setRM(eff_w, mod, rm, dst);
         } else {
-            unsigned addr = getEA(mod, rm);
+            unsigned addr  = getEA(mod, rm);
             unsigned bytes = (eff_w == D) ? 4 : (eff_w == W) ? 2 : 1;
             if (last_ea_offset > 0x10000 - bytes)
                 raise_segment_fault();
@@ -1606,7 +1635,7 @@ void Intel386::exe_one()
     case 0xc5: {
         decode();
         unsigned addr = getEA(mod, rm);
-        int far_size = operand_32 ? 6 : 4;
+        int far_size  = operand_32 ? 6 : 4;
         if (last_ea_offset > 0x10000u - far_size)
             raise_segment_fault();
         if (operand_32) {
@@ -1627,7 +1656,7 @@ void Intel386::exe_one()
     case 0xc4: {
         decode();
         unsigned addr = getEA(mod, rm);
-        int far_size = operand_32 ? 6 : 4;
+        int far_size  = operand_32 ? 6 : 4;
         if (last_ea_offset > 0x10000u - far_size)
             raise_segment_fault();
         if (operand_32) {
@@ -1655,7 +1684,7 @@ void Intel386::exe_one()
             break;
         }
         unsigned addr = getEA(mod, rm);
-        int far_size = operand_32 ? 6 : 4;
+        int far_size  = operand_32 ? 6 : 4;
         if (last_ea_offset > 0x10000u - far_size)
             raise_segment_fault();
         Word seg;
@@ -1788,16 +1817,16 @@ void Intel386::exe_one()
 
         Word ax = get_ax();
         if (core.flags.f.af || (get_al() & 0xf) > 9) {
-            ax += 0x106;  // 6 in low byte, 1 in high (carry into AH)
+            ax += 0x106; // 6 in low byte, 1 in high (carry into AH)
             core.flags.f.cf = 1;
             core.flags.f.af = 1;
         } else {
             core.flags.f.cf = 0;
             core.flags.f.af = 0;
         }
-        ax &= 0xff0f;  // AL high nibble cleared per Intel
+        ax &= 0xff0f; // AL high nibble cleared per Intel
         set_ax(ax);
-        Byte al = get_al();
+        Byte al         = get_al();
         core.flags.f.zf = (al == 0);
         core.flags.f.pf = PARITY[al];
         break;
@@ -1946,13 +1975,14 @@ void Intel386::exe_one()
         break;
     }
 
-    // DAS: Decimal adjust for subtraction (Intel: CF = old_CF or borrow from first/subtract; second uses old_AL/old_CF)
+    // DAS: Decimal adjust for subtraction (Intel: CF = old_CF or borrow from first/subtract; second
+    // uses old_AL/old_CF)
     case 0x2f: {
         unpredictable_flags = OF_MASK;
-        Byte old_al        = get_al();
-        bool old_cf        = core.flags.f.cf;
-        core.flags.f.cf    = 0;
-        Byte al            = old_al;
+        Byte old_al         = get_al();
+        bool old_cf         = core.flags.f.cf;
+        core.flags.f.cf     = 0;
+        Byte al             = old_al;
         if (core.flags.f.af || (al & 0x0f) > 9) {
             al -= 6;
             core.flags.f.cf = old_cf || (old_al < 6); // borrow from AL - 6
@@ -2014,7 +2044,7 @@ void Intel386::exe_one()
                 static_cast<Dword>(static_cast<int32_t>(static_cast<int16_t>(core.eax & 0xFFFF)));
         } else {
             // CBW: sign-extend AL to AX, preserve upper 16 bits of EAX
-            Word ax  = (get_al() & 0x80) ? (get_al() | 0xff00) : static_cast<Word>(get_al());
+            Word ax = (get_al() & 0x80) ? (get_al() | 0xff00) : static_cast<Word>(get_al());
             set_ax(ax);
         }
         break;
@@ -2029,7 +2059,7 @@ void Intel386::exe_one()
                 core.edx = 0;
         } else {
             // CWD: Convert Word to Doubleword
-            Word dx  = (core.eax & 0x8000) ? 0xffff : 0;
+            Word dx = (core.eax & 0x8000) ? 0xffff : 0;
             set_dx(dx);
         }
         break;
@@ -2180,8 +2210,8 @@ void Intel386::exe_one()
     case 0xa6:
     case 0xa7: {
         // CMPS: temp = SRC1 - SRC2, SRC1=[DS:SI/override], SRC2=[ES:DI]
-        int eff_w = (w && operand_32) ? D : (w ? W : B);
-        int delta = (eff_w == B) ? 1 : (eff_w == W ? 2 : 4);
+        int eff_w  = (w && operand_32) ? D : (w ? W : B);
+        int delta  = (eff_w == B) ? 1 : (eff_w == W ? 2 : 4);
         int stride = (core.flags.f.df ? -1 : 1) * delta;
         int src1, src2;
         if (address_32) {
@@ -2215,8 +2245,8 @@ void Intel386::exe_one()
     }
     case 0xae:
     case 0xaf: {
-        int eff_w = (w && operand_32) ? D : (w ? W : B);
-        int delta = (eff_w == B) ? 1 : (eff_w == W ? 2 : 4);
+        int eff_w  = (w && operand_32) ? D : (w ? W : B);
+        int delta  = (eff_w == B) ? 1 : (eff_w == W ? 2 : 4);
         int stride = (core.flags.f.df ? -1 : 1) * delta;
         if (address_32) {
             Word di_off = static_cast<Word>(core.edi);
@@ -2232,7 +2262,7 @@ void Intel386::exe_one()
             }
         }
         dst = address_32 ? getMem(eff_w, linear_addr32(core.es, core.edi))
-                        : getMemAtSegOff(eff_w, core.es, static_cast<Word>(core.edi));
+                         : getMemAtSegOff(eff_w, core.es, static_cast<Word>(core.edi));
         src = getReg(eff_w, AX);
         sub(eff_w, src, dst);
         if (address_32)
@@ -2243,8 +2273,8 @@ void Intel386::exe_one()
     }
     case 0xac:
     case 0xad: {
-        int eff_w  = (w && operand_32) ? D : (w ? W : B);
-        int delta  = (eff_w == B) ? 1 : (eff_w == W ? 2 : 4);
+        int eff_w = (w && operand_32) ? D : (w ? W : B);
+        int delta = (eff_w == B) ? 1 : (eff_w == W ? 2 : 4);
         if (address_32) {
             if (static_cast<Word>(core.esi) > 0x10000 - delta) {
                 os_is_ss = (os == core.ss);
@@ -2256,8 +2286,8 @@ void Intel386::exe_one()
             Word si_off = static_cast<Word>(core.esi);
             if (si_off > 0x10000 - delta)
                 raise_segment_fault();
-            src = getMemAtSegOff(eff_w, os, si_off);
-            Word si = static_cast<Word>(core.esi + (core.flags.f.df ? -1 : 1) * delta);
+            src      = getMemAtSegOff(eff_w, os, si_off);
+            Word si  = static_cast<Word>(core.esi + (core.flags.f.df ? -1 : 1) * delta);
             core.esi = (core.esi & 0xFFFF0000u) | si;
         }
         setReg(eff_w, AX, src);
@@ -2265,8 +2295,8 @@ void Intel386::exe_one()
     }
     case 0xaa:
     case 0xab: {
-        int eff_w = (w && operand_32) ? D : (w ? W : B);
-        int delta = (eff_w == B) ? 1 : (eff_w == W ? 2 : 4);
+        int eff_w  = (w && operand_32) ? D : (w ? W : B);
+        int delta  = (eff_w == B) ? 1 : (eff_w == W ? 2 : 4);
         int stride = (core.flags.f.df ? -1 : 1) * delta;
         if (address_32) {
             Word di_off = static_cast<Word>(core.edi);
@@ -2277,7 +2307,12 @@ void Intel386::exe_one()
             setMem(eff_w, linear_addr32(core.es, core.edi), getReg(eff_w, AX));
             core.edi += stride;
         } else {
-            setMemAtSegOff(eff_w, core.es, static_cast<Word>(core.edi), getReg(eff_w, AX));
+            Word di_off = static_cast<Word>(core.edi);
+            if (di_off > 0x10000 - delta) {
+                os_is_ss = (core.es == core.ss);
+                raise_segment_fault();
+            }
+            setMemAtSegOff(eff_w, core.es, di_off, getReg(eff_w, AX));
             set_di(get_di() + stride);
         }
         break;
@@ -2298,10 +2333,10 @@ void Intel386::exe_one()
         break;
     case 0x9a: {
         if (operand_32) {
-            dst = fetch(D);     // 32-bit offset
-            src = fetch(W);     // segment is always 16-bit
-            push32(core.cs);    // push CS as dword (zero-extended)
-            push32(core.eip);   // push 32-bit return address
+            dst = fetch(D);   // 32-bit offset
+            src = fetch(W);   // segment is always 16-bit
+            push32(core.cs);  // push CS as dword (zero-extended)
+            push32(core.eip); // push 32-bit return address
         } else {
             dst = fetch(W);
             src = fetch(W);
@@ -2318,7 +2353,7 @@ void Intel386::exe_one()
         if (operand_32) {
             Dword ret_eip = static_cast<Dword>(pop32());
             if (ret_eip > 0xFFFF) {
-                set_sp(get_sp() - 4);   // undo the pop
+                set_sp(get_sp() - 4); // undo the pop
                 os_is_ss = false;
                 raise_segment_fault();
             }
@@ -2334,7 +2369,7 @@ void Intel386::exe_one()
         if (operand_32) {
             Dword ret_eip = pop32();
             if (ret_eip > 0xFFFF) {
-                set_sp(get_sp() - 4);   // undo the pop
+                set_sp(get_sp() - 4); // undo the pop
                 os_is_ss = false;
                 raise_segment_fault();
             }
@@ -2376,6 +2411,12 @@ void Intel386::exe_one()
                 intercept_bios_call();
             }
         } else {
+            // 16-bit stack: fault #SS when first word pop would cross segment (SP > 0xFFFE)
+            Word sp = get_sp();
+            if (sp > 0xFFFE) {
+                os_is_ss = true;
+                raise_segment_fault();
+            }
             core.eip = pop();
             core.cs  = pop();
             intercept_bios_call();
@@ -2411,7 +2452,7 @@ void Intel386::exe_one()
         if (operand_32) {
             core.ebp = frame_temp;
             core.esp -= alloc;
-            core.esp &= 0xFFFFu;   // real mode: stack pointer is 16-bit
+            core.esp &= 0xFFFFu; // real mode: stack pointer is 16-bit
         } else {
             set_bp(static_cast<Word>(frame_temp & 0xFFFF));
             set_sp(static_cast<Word>((core.esp - alloc) & 0xFFFF));
@@ -2440,7 +2481,8 @@ void Intel386::exe_one()
                 intercept_bios_call();
             }
         } else {
-            // 16-bit stack: fault #SS only when first word crosses segment (SP==0xFFFF); second word may wrap.
+            // 16-bit stack: fault #SS only when first word crosses segment (SP==0xFFFF); second
+            // word may wrap.
             Word sp = get_sp();
             if (sp > 0xFFFE) {
                 os_is_ss = true;
@@ -2555,7 +2597,7 @@ void Intel386::exe_one()
             call_int(6);
             break;
         }
-        unsigned addr = getEA(mod, rm);
+        unsigned addr        = getEA(mod, rm);
         unsigned bound_bytes = operand_32 ? 8u : 4u;
         if (last_ea_offset > 0x10000u - bound_bytes) {
             core.eip = bound_eip - 1 - plen;
@@ -2651,10 +2693,10 @@ void Intel386::exe_one()
         }
         res = static_cast<int>(prod & MASK[eff_w]);
         setReg(eff_w, reg, res);
-        int64_t sext    = (eff_w == D)
-                              ? static_cast<int64_t>(static_cast<int32_t>(res))
-                              : static_cast<int64_t>(static_cast<int32_t>(static_cast<int16_t>(res)));
-        bool overflow   = (prod != sext);
+        int64_t sext  = (eff_w == D)
+                            ? static_cast<int64_t>(static_cast<int32_t>(res))
+                            : static_cast<int64_t>(static_cast<int32_t>(static_cast<int16_t>(res)));
+        bool overflow = (prod != sext);
         core.flags.f.cf = overflow;
         core.flags.f.of = overflow;
         // AF, SF, ZF, PF undefined per Intel
@@ -2694,10 +2736,10 @@ void Intel386::exe_one()
         }
         res = static_cast<int>(prod & MASK[eff_w]);
         setReg(eff_w, reg, res);
-        int64_t sext    = (eff_w == D)
-                              ? static_cast<int64_t>(static_cast<int32_t>(res))
-                              : static_cast<int64_t>(static_cast<int32_t>(static_cast<int16_t>(res)));
-        bool overflow   = (prod != sext);
+        int64_t sext  = (eff_w == D)
+                            ? static_cast<int64_t>(static_cast<int32_t>(res))
+                            : static_cast<int64_t>(static_cast<int32_t>(static_cast<int16_t>(res)));
+        bool overflow = (prod != sext);
         core.flags.f.cf = overflow;
         core.flags.f.of = overflow;
         // AF, SF, ZF, PF undefined per Intel
@@ -2774,9 +2816,9 @@ void Intel386::exe_one()
         break;
     }
     case 0x6f: { // OUTSW/OUTSD - Output string to port
-        int eff_w         = operand_32 ? D : W;
-        int delta         = (eff_w == D) ? 4 : 2;
-        int stride        = (core.flags.f.df ? -1 : 1) * delta;
+        int eff_w              = operand_32 ? D : W;
+        int delta              = (eff_w == D) ? 4 : 2;
+        int stride             = (core.flags.f.df ? -1 : 1) * delta;
         const unsigned delta_u = static_cast<unsigned>(delta);
         if (address_32) {
             if (static_cast<unsigned>(static_cast<Word>(core.esi)) > 0x10000 - delta_u) {
@@ -2831,8 +2873,8 @@ void Intel386::exe_one()
                             ? static_cast<int64_t>(static_cast<int32_t>(res))
                             : static_cast<int64_t>(static_cast<int32_t>(static_cast<int16_t>(res)));
         bool overflow = (prod != sext);
-        core.flags.f.cf = overflow;
-        core.flags.f.of = overflow;
+        core.flags.f.cf     = overflow;
+        core.flags.f.of     = overflow;
         unpredictable_flags = AF_MASK | SF_MASK | ZF_MASK | PF_MASK;
         break;
     }
@@ -2878,9 +2920,9 @@ void Intel386::exe_one()
         int result;
         if (eff_w == W) {
             unsigned udst = dst & MASK[eff_w], usrc = src & MASK[eff_w];
-            dbl     = (static_cast<uint64_t>(udst) << 32) | (static_cast<uint64_t>(usrc) << 16) | usrc;
-            shifted = dbl << count;
-            result  = static_cast<int>((shifted >> 32) & 0xFFFF);
+            dbl = (static_cast<uint64_t>(udst) << 32) | (static_cast<uint64_t>(usrc) << 16) | usrc;
+            shifted         = dbl << count;
+            result          = static_cast<int>((shifted >> 32) & 0xFFFF);
             core.flags.f.cf = ((shifted >> 48) & 1) != 0;
         } else {
             dbl     = (static_cast<uint64_t>(dst & MASK[eff_w]) << nbits) | (src & MASK[eff_w]);
@@ -2903,9 +2945,9 @@ void Intel386::exe_one()
     case 0x1ac:
     case 0x1ad: {
         decode();
-        int eff_w  = operand_32 ? D : W;
-        int count  = (op == 0x1ad) ? (get_cl() & 0x1F) : (fetch(B) & 0x1F);
-        int nbits  = (eff_w == D) ? 32 : 16;
+        int eff_w = operand_32 ? D : W;
+        int count = (op == 0x1ad) ? (get_cl() & 0x1F) : (fetch(B) & 0x1F);
+        int nbits = (eff_w == D) ? 32 : 16;
 
         if (count == 0)
             break;
@@ -2919,16 +2961,17 @@ void Intel386::exe_one()
         uint64_t dbl;
         int result;
         if (eff_w == W) {
-            dbl   = (static_cast<uint64_t>(usrc) << 32) | (static_cast<uint64_t>(usrc) << 16) | udst;
-            result = static_cast<int>((dbl >> count) & 0xFFFF);
+            dbl = (static_cast<uint64_t>(usrc) << 32) | (static_cast<uint64_t>(usrc) << 16) | udst;
+            result          = static_cast<int>((dbl >> count) & 0xFFFF);
             core.flags.f.cf = ((dbl >> (count - 1)) & 1) != 0;
         } else {
-            dbl   = (static_cast<uint64_t>(usrc) << nbits) | udst;
-            result = static_cast<int>((dbl >> count) & MASK[eff_w]);
+            dbl             = (static_cast<uint64_t>(usrc) << nbits) | udst;
+            result          = static_cast<int>((dbl >> count) & MASK[eff_w]);
             core.flags.f.cf = (count > 0) ? ((udst >> (count - 1)) & 1) != 0 : core.flags.f.cf;
         }
         setRM(eff_w, mod, rm, result);
-        core.flags.f.of = (count == 1) ? (msb(eff_w, static_cast<int>(udst)) != msb(eff_w, result)) : 0;
+        core.flags.f.of =
+            (count == 1) ? (msb(eff_w, static_cast<int>(udst)) != msb(eff_w, result)) : 0;
         if (count > 1)
             unpredictable_flags = OF_MASK;
         core.flags.f.zf = (result == 0);
@@ -3138,9 +3181,10 @@ void Intel386::exe_one()
     case 0x18d:
     case 0x18e:
     case 0x18f: {
-        int disp      = operand_32 ? static_cast<int>(fetch(D)) : signconv(W, fetch(W));
-        Dword jccbase = operand_32 ? ((disp >= -255 && disp <= 255) ? core.eip - 1 : core.eip) : core.eip;
-        bool take     = false;
+        int disp = operand_32 ? static_cast<int>(fetch(D)) : signconv(W, fetch(W));
+        Dword jccbase =
+            operand_32 ? ((disp >= -255 && disp <= 255) ? core.eip - 1 : core.eip) : core.eip;
+        bool take = false;
         switch (op) {
         case 0x180:
             take = core.flags.f.of;
@@ -3244,7 +3288,7 @@ void Intel386::exe_one()
         }
         break;
     case 0xe3: {
-        dst = signconv(B, fetch(B));
+        dst          = signconv(B, fetch(B));
         Dword cx_val = address_32 ? core.ecx : (core.ecx & 0xFFFF);
         if (cx_val == 0) {
             core.eip += dst;
@@ -3270,9 +3314,9 @@ void Intel386::exe_one()
     // IRET / IRETD: pop IP/EIP, CS, FLAGS/EFLAGS
     case 0xcf:
         if (operand_32) {
-            // IRETD: pop EIP(4), CS(4), EFLAGS(4). In real mode validate return EIP before committing.
-            // Stack read may wrap within 64K segment; only fault if return EIP invalid.
-            Word sp = get_sp();
+            // IRETD: pop EIP(4), CS(4), EFLAGS(4). In real mode validate return EIP before
+            // committing. Stack read may wrap within 64K segment; only fault if return EIP invalid.
+            Word sp         = get_sp();
             Dword ret_eip   = getMem(D, linear_addr21(core.ss, sp));
             Dword ret_cs    = getMem(D, linear_addr21(core.ss, static_cast<Word>(sp + 4)));
             Dword ret_flags = getMem(D, linear_addr21(core.ss, static_cast<Word>(sp + 8)));
@@ -3286,7 +3330,7 @@ void Intel386::exe_one()
             set_eflags(ret_flags);
         } else {
             set_ip(pop());
-            core.cs  = pop();
+            core.cs = pop();
             set_flags(static_cast<Word>(pop()));
         }
         intercept_bios_call();
@@ -3461,12 +3505,11 @@ void Intel386::exe_one()
                 src = cnt;
         }
         if (src == 0) {
-            if ((op == 0xd2 || op == 0xd3) && (reg == 2 || reg == 3)
-                    && (get_cl() & 0x1F) != 0)
+            if ((op == 0xd2 || op == 0xd3) && (reg == 2 || reg == 3) && (get_cl() & 0x1F) != 0)
                 unpredictable_flags |= OF_MASK;
-            // Real 386 ROL: when count % size == 0 but CL masked != 0, CF = MSB of operand
+            // Real 386 ROL: when count % size == 0 but CL masked != 0, CF = LSB of result
             if ((op == 0xd2 || op == 0xd3) && reg == 0 && (get_cl() & 0x1F) != 0)
-                core.flags.f.cf = msb(eff_w, dst);
+                core.flags.f.cf = (dst & 1) != 0;
             break;
         }
         bool temp_cf;
@@ -3492,7 +3535,8 @@ void Intel386::exe_one()
                 core.flags.f.cf = msb(eff_w, dst);
                 core.flags.f.of = msb(eff_w, dst) != msb(eff_w, (dst << 1) & MASK[eff_w]);
             } else {
-                // eff_cnt == 0: value unchanged; CF = MSB(result), OF = MSB XOR MSB(result<<1) per real 386
+                // eff_cnt == 0: value unchanged; CF = MSB(result), OF = MSB XOR MSB(result<<1) per
+                // real 386
                 core.flags.f.cf = msb(eff_w, dst);
                 core.flags.f.of = msb(eff_w, dst) != msb(eff_w, (dst << 1) & MASK[eff_w]);
             }
@@ -3506,7 +3550,7 @@ void Intel386::exe_one()
             }
             core.flags.f.of = msb(eff_w, dst) != core.flags.f.cf;
             break;
-        case 3: // RCR
+        case 3:                 // RCR
             dst &= MASK[eff_w]; // mask before rotate (getReg sign-extends byte/word)
             if (src == 1)
                 core.flags.f.of = msb(eff_w, dst) != core.flags.f.cf;
@@ -3552,7 +3596,7 @@ void Intel386::exe_one()
             }
             break;
         }
-        case 5: { // SHR
+        case 5: {               // SHR
             dst &= MASK[eff_w]; // mask (getReg sign-extends)
             int shr_thresh      = (eff_w == B) ? 8 : (eff_w == W ? 16 : 32);
             unpredictable_flags = AF_MASK; // AF undefined for SHR
@@ -3657,11 +3701,11 @@ void Intel386::exe_one()
                 if (rep != 0) {
                     lres = -lres;
                 }
-                core.eax        = lres;
-                core.edx        = lres >> 32;
-                core.flags.f.cf = core.edx != 0;
-                core.flags.f.of = core.edx != 0;
-                core.flags.f.sf = (static_cast<int32_t>(core.edx) < 0);
+                core.eax            = lres;
+                core.edx            = lres >> 32;
+                core.flags.f.cf     = core.edx != 0;
+                core.flags.f.of     = core.edx != 0;
+                core.flags.f.sf     = (static_cast<int32_t>(core.edx) < 0);
                 unpredictable_flags = PF_MASK | ZF_MASK | AF_MASK | SF_MASK;
             } else {
                 // Word MUL: AX * r/m16 -> DX:AX (preserve high 16 bits of EAX, EDX)
@@ -3713,9 +3757,10 @@ void Intel386::exe_one()
                 }
                 set_ax(lres & 0xFFFF);
                 set_dx((lres >> 16) & 0xFFFF);
-                bool word_overflow = (static_cast<int32_t>(lres) != static_cast<int16_t>(lres & 0xFFFF));
-                core.flags.f.cf    = word_overflow;
-                core.flags.f.of    = word_overflow;
+                bool word_overflow =
+                    (static_cast<int32_t>(lres) != static_cast<int16_t>(lres & 0xFFFF));
+                core.flags.f.cf = word_overflow;
+                core.flags.f.of = word_overflow;
             }
             break;
         case 6: // DIV (unsigned)
@@ -3727,8 +3772,8 @@ void Intel386::exe_one()
                 Byte divb = src;
                 if (divb == 0) {
                     last_unpredictable_flags = unpredictable_flags;
-                    unpredictable_flags = 0;
-                    core.eip = fault_eip;
+                    unpredictable_flags      = 0;
+                    core.eip                 = fault_eip;
                     call_int(0);
                     break;
                 }
@@ -3737,11 +3782,11 @@ void Intel386::exe_one()
                 Byte rem      = dividend % divb;
                 if (quo > 0xFF) {
                     // Real 386 clears CF and ZF before pushing FLAGS on #DE (captured in tests).
-                    core.flags.f.cf = 0;
-                    core.flags.f.zf = 0;
+                    core.flags.f.cf          = 0;
+                    core.flags.f.zf          = 0;
                     last_unpredictable_flags = unpredictable_flags;
-                    unpredictable_flags = 0;
-                    core.eip = fault_eip;
+                    unpredictable_flags      = 0;
+                    core.eip                 = fault_eip;
                     call_int(0);
                     break;
                 }
@@ -3751,8 +3796,8 @@ void Intel386::exe_one()
                 uint32_t divd = static_cast<uint32_t>(src);
                 if (divd == 0) {
                     last_unpredictable_flags = unpredictable_flags;
-                    unpredictable_flags = 0;
-                    core.eip = fault_eip;
+                    unpredictable_flags      = 0;
+                    core.eip                 = fault_eip;
                     call_int(0);
                     break;
                 }
@@ -3763,8 +3808,8 @@ void Intel386::exe_one()
                     // Real 386 modifies flags before #DE; match hardware (sub shapes FLAGS).
                     sub(D, static_cast<int>(core.edx), static_cast<int>(divd));
                     last_unpredictable_flags = unpredictable_flags;
-                    unpredictable_flags = 0;
-                    core.eip = fault_eip;
+                    unpredictable_flags      = 0;
+                    core.eip                 = fault_eip;
                     call_int(0);
                     break;
                 }
@@ -3774,8 +3819,8 @@ void Intel386::exe_one()
                 Word divw = src;
                 if (divw == 0) {
                     last_unpredictable_flags = unpredictable_flags;
-                    unpredictable_flags = 0;
-                    core.eip = fault_eip;
+                    unpredictable_flags      = 0;
+                    core.eip                 = fault_eip;
                     call_int(0);
                     break;
                 }
@@ -3783,17 +3828,18 @@ void Intel386::exe_one()
                 unsigned quo  = ldst / divw;
                 unsigned rem  = ldst % divw;
                 if (quo > 0xFFFF) {
-                    // Real 386 modifies flags before #DE; match hardware (sub shapes FLAGS, preserve CF/PF/AF).
+                    // Real 386 modifies flags before #DE; match hardware (sub shapes FLAGS,
+                    // preserve CF/PF/AF).
                     auto save_cf = core.flags.f.cf;
                     auto save_pf = core.flags.f.pf;
                     auto save_af = core.flags.f.af;
                     sub(W, static_cast<int>(core.edx & 0xFFFF), static_cast<int>(divw));
-                    core.flags.f.cf = save_cf;
-                    core.flags.f.pf = save_pf;
-                    core.flags.f.af = save_af;
+                    core.flags.f.cf          = save_cf;
+                    core.flags.f.pf          = save_pf;
+                    core.flags.f.af          = save_af;
                     last_unpredictable_flags = unpredictable_flags;
-                    unpredictable_flags = 0;
-                    core.eip = fault_eip;
+                    unpredictable_flags      = 0;
+                    core.eip                 = fault_eip;
                     call_int(0);
                     break;
                 }
@@ -3811,22 +3857,24 @@ void Intel386::exe_one()
                 int32_t divs = static_cast<int32_t>(src);
                 if (divs == 0) {
                     last_unpredictable_flags = unpredictable_flags;
-                    unpredictable_flags = 0;
-                    core.eip = fault_eip;
+                    unpredictable_flags      = 0;
+                    core.eip                 = fault_eip;
                     call_int(0);
                     break;
                 }
                 int64_t dividend = (static_cast<int64_t>(static_cast<int32_t>(core.edx)) << 32) |
                                    (core.eax & 0xFFFFFFFFu);
-                int64_t quo = dividend / divs;
-                int64_t rem = dividend % divs;
+                int64_t quo      = dividend / divs;
+                int64_t rem      = dividend % divs;
                 if (quo > 0x7FFFFFFF || quo < -2147483648LL) {
                     last_unpredictable_flags = unpredictable_flags | 0xFF00; // high byte undefined
-                    unpredictable_flags = 0;
-                    // Real 386 modifies flags before #DE; match hardware: clear arithmetic flags, set PF
-                    core.flags.w = (core.flags.w & ~(CF_MASK | PF_MASK | AF_MASK | ZF_MASK | SF_MASK | OF_MASK)) |
+                    unpredictable_flags      = 0;
+                    // Real 386 modifies flags before #DE; match hardware: clear arithmetic flags,
+                    // set PF
+                    core.flags.w = (core.flags.w &
+                                    ~(CF_MASK | PF_MASK | AF_MASK | ZF_MASK | SF_MASK | OF_MASK)) |
                                    PF_MASK | 0x02; // reserved bit 1
-                    core.eip = fault_eip;
+                    core.eip     = fault_eip;
                     call_int(0);
                     break;
                 }
@@ -3838,8 +3886,8 @@ void Intel386::exe_one()
                 src = (int8_t)src;
                 if (src == 0) {
                     last_unpredictable_flags = unpredictable_flags;
-                    unpredictable_flags = 0;
-                    core.eip = fault_eip;
+                    unpredictable_flags      = 0;
+                    core.eip                 = fault_eip;
                     call_int(0);
                     break;
                 }
@@ -3848,8 +3896,8 @@ void Intel386::exe_one()
                 // 8086/8088: min negative quotient is -127, not -128 (Q68599); -128 triggers INT 0.
                 if (res > 0x7f || res < -0x7f) {
                     last_unpredictable_flags = unpredictable_flags | 0xFF00; // high byte undefined
-                    unpredictable_flags = 0;
-                    core.eip = fault_eip;
+                    unpredictable_flags      = 0;
+                    core.eip                 = fault_eip;
                     call_int(0);
                     break;
                 }
@@ -3865,8 +3913,8 @@ void Intel386::exe_one()
                 src = (int16_t)src;
                 if (src == 0) {
                     last_unpredictable_flags = unpredictable_flags;
-                    unpredictable_flags = 0;
-                    core.eip = fault_eip;
+                    unpredictable_flags      = 0;
+                    core.eip                 = fault_eip;
                     call_int(0);
                     break;
                 }
@@ -3876,11 +3924,13 @@ void Intel386::exe_one()
                 // INT 0.
                 if (lres > 0x7fff || lres < -0x7fff) {
                     last_unpredictable_flags = unpredictable_flags | 0xFF00; // high byte undefined
-                    unpredictable_flags = 0;
-                    // Real 386 modifies flags before #DE; match hardware: clear arithmetic flags, set CF
-                    core.flags.w = (core.flags.w & ~(CF_MASK | PF_MASK | AF_MASK | ZF_MASK | SF_MASK | OF_MASK)) |
+                    unpredictable_flags      = 0;
+                    // Real 386 modifies flags before #DE; match hardware: clear arithmetic flags,
+                    // set CF
+                    core.flags.w = (core.flags.w &
+                                    ~(CF_MASK | PF_MASK | AF_MASK | ZF_MASK | SF_MASK | OF_MASK)) |
                                    CF_MASK | 0x02; // reserved bit 1
-                    core.eip = fault_eip;
+                    core.eip     = fault_eip;
                     call_int(0);
                     break;
                 }

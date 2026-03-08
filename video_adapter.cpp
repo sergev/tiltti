@@ -231,9 +231,9 @@ void Video_Adapter::refresh(const uint8_t *text_buf, unsigned cursor_col, unsign
 
     for (unsigned row = 0; row < TEXT_ROWS; row++) {
         for (unsigned col = 0; col < TEXT_COLS; col++) {
-            unsigned off = (row * TEXT_COLS + col) * 2;
-            bool changed = (text_buf[off] != text_snapshot_[off]) ||
-                           (text_buf[off + 1] != text_snapshot_[off + 1]);
+            unsigned off   = (row * TEXT_COLS + col) * 2;
+            bool changed   = (text_buf[off] != text_snapshot_[off]) ||
+                             (text_buf[off + 1] != text_snapshot_[off + 1]);
             bool is_cursor = (cursor_type > 0) && (col == cursor_col) && (row == cursor_row);
 
             if (changed || is_cursor) {

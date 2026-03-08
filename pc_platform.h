@@ -38,7 +38,6 @@ static const unsigned SECTOR_NBYTES = 512;
 //
 static const unsigned MEMORY_NBYTES = 16 * 1024 * 1024;
 
-
 //
 // Total 4 hard+floppy disks.
 //

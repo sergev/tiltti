@@ -44,63 +44,63 @@ public:
 
     // Instruction pointer
     virtual void set_ip(unsigned val) = 0;
-    virtual unsigned get_ip() const = 0;
+    virtual unsigned get_ip() const   = 0;
 
     // First byte of current opcode
     virtual unsigned get_op() const = 0;
 
     // General registers
-    virtual Word get_ax() const = 0;
+    virtual Word get_ax() const   = 0;
     virtual void set_ax(Word val) = 0;
-    virtual Word get_bx() const = 0;
+    virtual Word get_bx() const   = 0;
     virtual void set_bx(Word val) = 0;
-    virtual Word get_cx() const = 0;
+    virtual Word get_cx() const   = 0;
     virtual void set_cx(Word val) = 0;
-    virtual Word get_dx() const = 0;
+    virtual Word get_dx() const   = 0;
     virtual void set_dx(Word val) = 0;
 
     // Byte halves of general registers
-    virtual Byte get_al() const = 0;
-    virtual Byte get_ah() const = 0;
+    virtual Byte get_al() const   = 0;
+    virtual Byte get_ah() const   = 0;
     virtual void set_al(Byte val) = 0;
     virtual void set_ah(Byte val) = 0;
-    virtual Byte get_bl() const = 0;
-    virtual Byte get_bh() const = 0;
+    virtual Byte get_bl() const   = 0;
+    virtual Byte get_bh() const   = 0;
     virtual void set_bl(Byte val) = 0;
     virtual void set_bh(Byte val) = 0;
-    virtual Byte get_cl() const = 0;
-    virtual Byte get_ch() const = 0;
+    virtual Byte get_cl() const   = 0;
+    virtual Byte get_ch() const   = 0;
     virtual void set_cl(Byte val) = 0;
     virtual void set_ch(Byte val) = 0;
-    virtual Byte get_dl() const = 0;
-    virtual Byte get_dh() const = 0;
+    virtual Byte get_dl() const   = 0;
+    virtual Byte get_dh() const   = 0;
     virtual void set_dl(Byte val) = 0;
     virtual void set_dh(Byte val) = 0;
 
     // Pointer/index registers
-    virtual Word get_sp() const = 0;
+    virtual Word get_sp() const   = 0;
     virtual void set_sp(Word val) = 0;
-    virtual Word get_bp() const = 0;
+    virtual Word get_bp() const   = 0;
     virtual void set_bp(Word val) = 0;
-    virtual Word get_si() const = 0;
+    virtual Word get_si() const   = 0;
     virtual void set_si(Word val) = 0;
-    virtual Word get_di() const = 0;
+    virtual Word get_di() const   = 0;
     virtual void set_di(Word val) = 0;
 
     // Segment registers
-    virtual Word get_cs() const = 0;
+    virtual Word get_cs() const   = 0;
     virtual void set_cs(Word val) = 0;
-    virtual Word get_ds() const = 0;
+    virtual Word get_ds() const   = 0;
     virtual void set_ds(Word val) = 0;
-    virtual Word get_ss() const = 0;
+    virtual Word get_ss() const   = 0;
     virtual void set_ss(Word val) = 0;
-    virtual Word get_es() const = 0;
+    virtual Word get_es() const   = 0;
     virtual void set_es(Word val) = 0;
 
     // Flags
-    virtual Word get_flags() const = 0;
+    virtual Word get_flags() const   = 0;
     virtual void set_flags(Word val) = 0;
-    virtual Word u_flags() = 0;
+    virtual Word u_flags()           = 0;
 
     virtual void set_cf(bool bit) = 0;
     virtual void set_pf(bool bit) = 0;
@@ -114,7 +114,7 @@ public:
 
     // Print trace info
     virtual void print_instruction() = 0;
-    virtual void print_registers() = 0;
+    virtual void print_registers()   = 0;
 
 protected:
     Processor() = default;

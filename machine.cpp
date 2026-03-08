@@ -23,9 +23,6 @@
 //
 #include "machine.h"
 
-#include "intel8086.h"
-#include "intel386.h"
-
 #include <sys/time.h>
 #include <unistd.h>
 
@@ -40,6 +37,9 @@
 #include <regex>
 #include <sstream>
 
+#include "intel386.h"
+#include "intel8086.h"
+
 // Static fields.
 uint64_t Machine::simulated_instructions = 0;
 
@@ -47,8 +47,9 @@ uint64_t Machine::simulated_instructions = 0;
 // Initialize the machine (SDL-free; main() owns display and input).
 //
 Machine::Machine(Memory &m, const std::string &cpu_model)
-    : memory(m), cpu_ptr(cpu_model == "8086" ? std::unique_ptr<Processor>(std::make_unique<Intel8086>(*this))
-                                             : std::unique_ptr<Processor>(std::make_unique<Intel386>(*this))),
+    : memory(m),
+      cpu_ptr(cpu_model == "8086" ? std::unique_ptr<Processor>(std::make_unique<Intel8086>(*this))
+                                  : std::unique_ptr<Processor>(std::make_unique<Intel386>(*this))),
       cpu(*cpu_ptr), ivt(*reinterpret_cast<Interrupt_Vector_Table *>(memory.get_ptr(0x0))),
       bda(*reinterpret_cast<Bios_Data_Area *>(memory.get_ptr(0x400))),
       ebda(*reinterpret_cast<Extended_Bios_Data_Area *>(memory.get_ptr(0x9fc00))),

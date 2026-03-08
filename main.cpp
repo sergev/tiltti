@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
     std::string disk_file_c;
     std::string disk_file_d;
     std::string boot_drive;
-    std::string cpu_variant;  // empty = not yet specified
+    std::string cpu_variant; // empty = not yet specified
 
     // Parse command line options.
     for (;;) {
