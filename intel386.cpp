@@ -1791,23 +1791,23 @@ void Intel386::exe_one()
         break;
     }
 
-    // AAA: ASCII adjust for addition
+    // AAA: ASCII adjust for addition (real 386: 16-bit AX adjust, then clear AL high nibble)
     case 0x37: {
         // OF, SF, ZF, PF undefined per Intel; mask for test comparison
         unpredictable_flags = OF_MASK | SF_MASK | ZF_MASK | PF_MASK;
 
-        Byte al = get_al();
-        if (core.flags.f.af || (al & 0xf) > 9) {
-            al += 6;
-            set_ah(get_ah() + 1);
+        Word ax = get_ax();
+        if (core.flags.f.af || (get_al() & 0xf) > 9) {
+            ax += 0x106;  // 6 in low byte, 1 in high (carry into AH)
             core.flags.f.cf = 1;
             core.flags.f.af = 1;
         } else {
             core.flags.f.cf = 0;
             core.flags.f.af = 0;
         }
-        al &= 0xf;
-        set_al(al);
+        ax &= 0xff0f;  // AL high nibble cleared per Intel
+        set_ax(ax);
+        Byte al = get_al();
         core.flags.f.zf = (al == 0);
         core.flags.f.pf = PARITY[al];
         break;
@@ -2158,13 +2158,32 @@ void Intel386::exe_one()
         int delta  = (eff_w == B) ? 1 : (eff_w == W ? 2 : 4);
         int stride = (core.flags.f.df ? -1 : 1) * delta;
         if (address_32) {
+            // Real-mode segment limit: fault before any access or register update
+            Word si_off = static_cast<Word>(core.esi), di_off = static_cast<Word>(core.edi);
+            if (si_off > 0x10000 - delta) {
+                os_is_ss = (os == core.ss);
+                raise_segment_fault();
+            }
+            if (di_off > 0x10000 - delta) {
+                os_is_ss = (core.es == core.ss);
+                raise_segment_fault();
+            }
             src = getMem(eff_w, linear_addr32(os, core.esi));
             setMem(eff_w, linear_addr32(core.es, core.edi), src);
             core.esi += stride;
             core.edi += stride;
         } else {
-            src = getMemAtSegOff(eff_w, os, static_cast<Word>(core.esi));
-            setMemAtSegOff(eff_w, core.es, static_cast<Word>(core.edi), src);
+            Word si_off = static_cast<Word>(core.esi), di_off = static_cast<Word>(core.edi);
+            if (si_off > 0x10000 - delta) {
+                os_is_ss = (os == core.ss);
+                raise_segment_fault();
+            }
+            if (di_off > 0x10000 - delta) {
+                os_is_ss = (core.es == core.ss);
+                raise_segment_fault();
+            }
+            src = getMemAtSegOff(eff_w, os, si_off);
+            setMemAtSegOff(eff_w, core.es, di_off, src);
             set_si(get_si() + stride);
             set_di(get_di() + stride);
         }
@@ -2178,6 +2197,15 @@ void Intel386::exe_one()
         int stride = (core.flags.f.df ? -1 : 1) * delta;
         int src1, src2;
         if (address_32) {
+            Word si_off = static_cast<Word>(core.esi), di_off = static_cast<Word>(core.edi);
+            if (si_off > 0x10000 - delta) {
+                os_is_ss = (os == core.ss);
+                raise_segment_fault();
+            }
+            if (di_off > 0x10000 - delta) {
+                os_is_ss = (core.es == core.ss);
+                raise_segment_fault();
+            }
             src1 = getMem(eff_w, linear_addr32(os, core.esi));
             src2 = getMem(eff_w, linear_addr32(core.es, core.edi));
         } else {
@@ -2202,6 +2230,19 @@ void Intel386::exe_one()
         int eff_w = (w && operand_32) ? D : (w ? W : B);
         int delta = (eff_w == B) ? 1 : (eff_w == W ? 2 : 4);
         int stride = (core.flags.f.df ? -1 : 1) * delta;
+        if (address_32) {
+            Word di_off = static_cast<Word>(core.edi);
+            if (di_off > 0x10000 - delta) {
+                os_is_ss = (core.es == core.ss);
+                raise_segment_fault();
+            }
+        } else {
+            Word di_off = static_cast<Word>(core.edi);
+            if (di_off > 0x10000 - delta) {
+                os_is_ss = (core.es == core.ss);
+                raise_segment_fault();
+            }
+        }
         dst = address_32 ? getMem(eff_w, linear_addr32(core.es, core.edi))
                         : getMemAtSegOff(eff_w, core.es, static_cast<Word>(core.edi));
         src = getReg(eff_w, AX);
@@ -2217,8 +2258,10 @@ void Intel386::exe_one()
         int eff_w  = (w && operand_32) ? D : (w ? W : B);
         int delta  = (eff_w == B) ? 1 : (eff_w == W ? 2 : 4);
         if (address_32) {
-            if (core.esi > 0x10000 - delta)
+            if (static_cast<Word>(core.esi) > 0x10000 - delta) {
+                os_is_ss = (os == core.ss);
                 raise_segment_fault();
+            }
             src = getMem(eff_w, linear_addr32(os, core.esi));
             core.esi += (core.flags.f.df ? -1 : 1) * delta;
         } else {
@@ -2238,6 +2281,11 @@ void Intel386::exe_one()
         int delta = (eff_w == B) ? 1 : (eff_w == W ? 2 : 4);
         int stride = (core.flags.f.df ? -1 : 1) * delta;
         if (address_32) {
+            Word di_off = static_cast<Word>(core.edi);
+            if (di_off > 0x10000 - delta) {
+                os_is_ss = (core.es == core.ss);
+                raise_segment_fault();
+            }
             setMem(eff_w, linear_addr32(core.es, core.edi), getReg(eff_w, AX));
             core.edi += stride;
         } else {
@@ -3198,10 +3246,20 @@ void Intel386::exe_one()
     // IRET / IRETD: pop IP/EIP, CS, FLAGS/EFLAGS
     case 0xcf:
         if (operand_32) {
-            // IRETD: pop EIP(4), CS(4), EFLAGS(4). 32-bit stack frame.
-            core.eip = pop32();
-            core.cs  = pop32() & 0xFFFF;
-            set_eflags(static_cast<Dword>(pop32()));
+            // IRETD: pop EIP(4), CS(4), EFLAGS(4). In real mode validate return EIP before committing.
+            // Stack read may wrap within 64K segment; only fault if return EIP invalid.
+            Word sp = get_sp();
+            Dword ret_eip   = getMem(D, linear_addr21(core.ss, sp));
+            Dword ret_cs    = getMem(D, linear_addr21(core.ss, static_cast<Word>(sp + 4)));
+            Dword ret_flags = getMem(D, linear_addr21(core.ss, static_cast<Word>(sp + 8)));
+            if (ret_eip > 0xFFFF) {
+                os_is_ss = false;
+                raise_segment_fault();
+            }
+            set_sp(sp + 12);
+            core.eip = ret_eip;
+            core.cs  = ret_cs & 0xFFFF;
+            set_eflags(ret_flags);
         } else {
             set_ip(pop());
             core.cs  = pop();
@@ -3335,8 +3393,19 @@ void Intel386::exe_one()
                 os_is_ss = true;
                 raise_segment_fault();
             }
+            // Validate destination EA before consuming stack (fault order per real 386).
+            (void)getEA_cached(mod, rm);
+            if (mod != 0b11) {
+                if (last_ea_offset > 0x10000 - 4 && !(os_is_ss && core.ss == 0))
+                    raise_segment_fault();
+            }
             setRM(D, mod, rm, pop32());
         } else {
+            (void)getEA_cached(mod, rm);
+            if (mod != 0b11) {
+                if (last_ea_offset > 0x10000 - 2 && !(os_is_ss && core.ss == 0))
+                    raise_segment_fault();
+            }
             setRM(W, mod, rm, pop());
         }
         break;
