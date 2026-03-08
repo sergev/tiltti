@@ -254,13 +254,15 @@ unsigned Intel386::getEA(unsigned mod_val, unsigned rm_val)
             // base=4 (ESP) with mod=00: [ESP+index*scale], no disp. base=5 (EBP) with mod=00: no base, disp32.
             Dword base_val = (base == 5 && mod_val == 0) ? 0 : static_cast<Dword>(getReg(D, base));
             if (base == 5 && mod_val == 0) {
-                disp = opcode[plen + off] | (opcode[plen + off + 1] << 8) |
-                       (opcode[plen + off + 2] << 16) | (opcode[plen + off + 3] << 24);
+                disp = static_cast<int32_t>(static_cast<Dword>(opcode[plen + off] |
+                       (opcode[plen + off + 1] << 8) | (opcode[plen + off + 2] << 16) |
+                       (opcode[plen + off + 3] << 24)));
             } else if (mod_val == 1) {
                 disp = (int8_t)opcode[plen + off];
             } else if (mod_val == 2) {
-                disp = opcode[plen + off] | (opcode[plen + off + 1] << 8) |
-                       (opcode[plen + off + 2] << 16) | (opcode[plen + off + 3] << 24);
+                disp = static_cast<int32_t>(static_cast<Dword>(opcode[plen + off] |
+                       (opcode[plen + off + 1] << 8) | (opcode[plen + off + 2] << 16) |
+                       (opcode[plen + off + 3] << 24)));
             }
             // 386 quirk: when index=4 (none) and base is not ESP/EBP (or EBP with mod!=0), use [base*scale+disp]
             // (real 386 encodes [ESI*8+disp] as SIB 0xE6)
@@ -272,29 +274,32 @@ unsigned Intel386::getEA(unsigned mod_val, unsigned rm_val)
             } else {
                 index_val = (index == 4) ? 0 : static_cast<Dword>(getReg(D, index));
             }
-            Dword addr;
+            int32_t addr_signed;
             if (index == 4 && base == 4) {
-                addr = base_val * scale + disp;
+                addr_signed = static_cast<int32_t>(base_val * scale + disp);
             } else {
-                addr = base_val + index_val * scale + disp;
+                addr_signed = static_cast<int32_t>(base_val) + static_cast<int32_t>(index_val) * scale + disp;
             }
-            // Raw offset for fault checks (last_ea_offset); real mode access uses wrapped offset
-            last_ea_offset = addr;
-            return linear_addr21(os, addr);
+            // Real-mode segment limit: store signed offset so limit check can fault on negative or >= 64K
+            last_ea_offset = static_cast<Dword>(addr_signed);
+            return linear_addr21(os, static_cast<Word>(last_ea_offset));
         }
         // mod=0, r/m=5: [disp32] only, no base register (not [EBP])
         Dword rv = (rm_val == 5 && mod_val == 0) ? 0 : static_cast<Dword>(getReg(D, rm_val));
         if (rm_val == 5 && mod_val == 0) {
-            disp = opcode[plen + off] | (opcode[plen + off + 1] << 8) |
-                   (opcode[plen + off + 2] << 16) | (opcode[plen + off + 3] << 24);
+            disp = static_cast<int32_t>(static_cast<Dword>(opcode[plen + off] |
+                   (opcode[plen + off + 1] << 8) | (opcode[plen + off + 2] << 16) |
+                   (opcode[plen + off + 3] << 24)));
         } else if (mod_val == 1) {
             disp = (int8_t)opcode[plen + off];
         } else if (mod_val == 2) {
-            disp = opcode[plen + off] | (opcode[plen + off + 1] << 8) |
-                   (opcode[plen + off + 2] << 16) | (opcode[plen + off + 3] << 24);
+            disp = static_cast<int32_t>(static_cast<Dword>(opcode[plen + off] |
+                   (opcode[plen + off + 1] << 8) | (opcode[plen + off + 2] << 16) |
+                   (opcode[plen + off + 3] << 24)));
         }
-        last_ea_offset = rv + disp;
-        return linear_addr21(os, last_ea_offset);
+        // Real-mode segment limit: store signed offset so limit check can fault on negative or >= 64K
+        last_ea_offset = static_cast<Dword>(static_cast<int32_t>(rv) + disp);
+        return linear_addr21(os, static_cast<Word>(last_ea_offset));
     }
 
     // 16-bit addressing modes (8086)
@@ -314,41 +319,40 @@ unsigned Intel386::getEA(unsigned mod_val, unsigned rm_val)
     // 16-bit addressing: use low 16 bits of 32-bit base/index registers
     Word bx = static_cast<Word>(core.ebx), bp = static_cast<Word>(core.ebp);
     Word si = static_cast<Word>(core.esi), di = static_cast<Word>(core.edi);
-    Word offset;
+    Dword full_sum = 0;
     switch (rm_val) {
     case 0b000:
-        offset = static_cast<Word>(bx + si + disp);
+        full_sum = bx + si + disp;
         break;
     case 0b001:
-        offset = static_cast<Word>(bx + di + disp);
+        full_sum = bx + di + disp;
         break;
     case 0b010:
-        offset = static_cast<Word>(bp + si + disp);
+        full_sum = bp + si + disp;
         break;
     case 0b011:
-        offset = static_cast<Word>(bp + di + disp);
+        full_sum = bp + di + disp;
         break;
     case 0b100:
-        offset = static_cast<Word>(si + disp);
+        full_sum = si + disp;
         break;
     case 0b101:
-        offset = static_cast<Word>(di + disp);
+        full_sum = di + disp;
         break;
     case 0b110:
         if (mod_val == 0)
-            offset = static_cast<Word>(opcode[plen + 2] | (opcode[plen + 3] << 8));
+            full_sum = opcode[plen + 2] | (opcode[plen + 3] << 8);
         else
-            offset = static_cast<Word>(bp + disp);
+            full_sum = bp + disp;
         break;
     case 0b111:
-        offset = static_cast<Word>(bx + disp);
+        full_sum = bx + disp;
         break;
     default:
-        offset = 0;
         break;
     }
-    last_ea_offset = offset;
-    return linear_addr21(os, offset);
+    last_ea_offset = static_cast<Word>(full_sum);
+    return linear_addr21(os, static_cast<Word>(full_sum));
 }
 
 //
@@ -1006,7 +1010,11 @@ void Intel386::do_bit_test_imm()
         base = getRM(eff_w, mod, rm);
     } else {
         addr = getEA(mod, rm);
-        // Immediate form: bit offset is 8-bit, always used mod 32/16 within the operand
+        // Real-mode segment limit: fault before any access. 32-bit uses signed offset;
+        // 16-bit uses wrapped offset (8086-style) so [bx+si] etc. do not fault on wrap.
+        int bytes = (eff_w == D) ? 4 : 2;
+        if (last_ea_offset > 0x10000u - bytes && !(os_is_ss && core.ss == 0))
+            raise_segment_fault();
         base = getMem(eff_w, addr);
     }
     core.flags.f.cf     = (base >> shift) & 1;
@@ -3464,9 +3472,10 @@ void Intel386::exe_one()
             if (eff_cnt != 0) {
                 core.flags.f.cf = msb(eff_w, dst);
                 core.flags.f.of = msb(eff_w, dst) != msb(eff_w, (dst << 1) & MASK[eff_w]);
-            } else if (src != 0) {
-                // Count is multiple of operand size: value unchanged, CF = last bit (LSB)
-                core.flags.f.cf = (dst & 1) != 0;
+            } else {
+                // eff_cnt == 0: value unchanged; CF = MSB(result), OF = MSB XOR MSB(result<<1) per real 386
+                core.flags.f.cf = msb(eff_w, dst);
+                core.flags.f.of = msb(eff_w, dst) != msb(eff_w, (dst << 1) & MASK[eff_w]);
             }
             break;
         }

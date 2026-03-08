@@ -112,8 +112,8 @@ private:
     bool operand_32{}; // 66h operand-size override (16-bit default in real mode)
     bool address_32{}; // 67h address-size override
     bool lock_prefix{}; // F0h LOCK prefix
-    Dword last_ea_offset{}; // raw 32-bit offset from getEA (for BOUND segment limit check)
-    Dword fault_eip{};     // instruction start EIP for segment fault reporting
+    Dword last_ea_offset{}; // raw 32-bit offset from getEA (for segment limit check)
+    Dword fault_eip{};      // instruction start EIP for segment fault reporting
 
     // Bitmask of unpredictable flags for the current/last instruction.
     Dword unpredictable_flags{};
