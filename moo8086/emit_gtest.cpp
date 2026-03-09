@@ -123,7 +123,7 @@ void TestCase::emit_gtest() const
 }
 
 //
-// Is this index in final_ram correspond to FLAGS register, saved in memory?
+// Does this index in final_ram correspond to FLAGS register, saved in memory?
 //
 bool TestCase::is_flags_in_mem(size_t index) const
 {
