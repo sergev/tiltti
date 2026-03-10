@@ -94,6 +94,7 @@ set(TEST_SOURCES
     386/batch30.cpp
     386/batch33.cpp
     386/batch34.cpp
+    386/batch40.cpp
 )
 
 #
