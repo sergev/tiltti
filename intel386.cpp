@@ -3877,15 +3877,8 @@ void Intel386::exe_one()
                 Byte rem      = dividend % divb;
                 if (quo > 0xFF) {
                     last_unpredictable_flags = unpredictable_flags;
-                    unpredictable_flags      = 0;
-                    // TODO: Per-case fault image to satisfy both legacy and batch34 captures.
-                    uint32_t lb = (core.flags.w & 0x80u) ? 0x87u : 0x16u;
-                    core.flags.f.cf = (lb & 1) != 0;
-                    core.flags.f.pf = (lb & 4) != 0;
-                    core.flags.f.af = (lb & 16) != 0;
-                    core.flags.f.zf = (lb & 64) != 0;
-                    core.flags.f.sf = (lb & 128) != 0;
-                    core.eip = fault_eip;
+                    unpredictable_flags      = CF_MASK | PF_MASK | AF_MASK | ZF_MASK | SF_MASK | OF_MASK;
+                    core.eip                 = fault_eip;
                     call_int(0);
                     break;
                 }
@@ -3905,18 +3898,8 @@ void Intel386::exe_one()
                 uint32_t rem  = ldst % divd;
                 if (quo > 0xFFFFFFFFu) {
                     last_unpredictable_flags = unpredictable_flags;
-                    unpredictable_flags      = 0;
-                    // TODO: 32-bit DIV #DE: low byte 0x92, high byte 0
-                    core.flags.f.cf = 0;
-                    core.flags.f.pf = 0;
-                    core.flags.f.af = 0;
-                    core.flags.f.zf = 1;
-                    core.flags.f.sf = 1;
-                    core.flags.f.tf = 0;
-                    core.flags.f.ifl = 0;
-                    core.flags.f.df = 0;
-                    core.flags.f.of = 0;
-                    core.eip = fault_eip;
+                    unpredictable_flags      = CF_MASK | PF_MASK | AF_MASK | ZF_MASK | SF_MASK | OF_MASK;
+                    core.eip                 = fault_eip;
                     call_int(0);
                     break;
                 }
@@ -3936,21 +3919,8 @@ void Intel386::exe_one()
                 unsigned rem  = ldst % divw;
                 if (quo > 0xFFFF) {
                     last_unpredictable_flags = unpredictable_flags;
-                    unpredictable_flags      = 0;
-                    // TODO: flags for div exception
-                    uint32_t lb = (core.flags.w & 0x80u) ? 0x93u : 0x87u;
-                    uint32_t hb = (core.flags.w >> 8) & 0xFFu;
-                    if (hb == 0x08u) hb = 0x00u; else if (hb == 0x0Cu) hb = 0x04u;
-                    core.flags.f.cf = (lb & 1) != 0;
-                    core.flags.f.pf = (lb & 4) != 0;
-                    core.flags.f.af = (lb & 16) != 0;
-                    core.flags.f.zf = (lb & 64) != 0;
-                    core.flags.f.sf = (lb & 128) != 0;
-                    core.flags.f.tf = (hb & 1) != 0;
-                    core.flags.f.ifl = (hb & 2) != 0;
-                    core.flags.f.df = (hb & 4) != 0;
-                    core.flags.f.of = (hb & 8) != 0;
-                    core.eip = fault_eip;
+                    unpredictable_flags      = CF_MASK | PF_MASK | AF_MASK | ZF_MASK | SF_MASK | OF_MASK;
+                    core.eip                 = fault_eip;
                     call_int(0);
                     break;
                 }
@@ -3979,21 +3949,8 @@ void Intel386::exe_one()
                 int64_t rem      = dividend % divs;
                 if (quo > 0x7FFFFFFF || quo < -2147483648LL) {
                     last_unpredictable_flags = unpredictable_flags | 0xFF00; // high byte undefined
-                    unpredictable_flags      = 0;
-                    // TODO: flags for idiv exception
-                    uint32_t lb = (core.flags.w & 0x80u) ? 0x96u : 0x06u;
-                    uint32_t hb = (core.flags.w >> 8) & 0xFFu;
-                    if (hb == 0x08u) hb = 0x00u; else if (hb == 0x0Cu) hb = 0x04u;
-                    core.flags.f.cf = (lb & 1) != 0;
-                    core.flags.f.pf = (lb & 4) != 0;
-                    core.flags.f.af = (lb & 16) != 0;
-                    core.flags.f.zf = (lb & 64) != 0;
-                    core.flags.f.sf = (lb & 128) != 0;
-                    core.flags.f.tf = (hb & 1) != 0;
-                    core.flags.f.ifl = (hb & 2) != 0;
-                    core.flags.f.df = (hb & 4) != 0;
-                    core.flags.f.of = (hb & 8) != 0;
-                    core.eip = fault_eip;
+                    unpredictable_flags      = CF_MASK | PF_MASK | AF_MASK | ZF_MASK | SF_MASK | OF_MASK;
+                    core.eip                 = fault_eip;
                     call_int(0);
                     break;
                 }
@@ -4043,21 +4000,8 @@ void Intel386::exe_one()
                 // INT 0.
                 if (lres > 0x7fff || lres < -0x7fff) {
                     last_unpredictable_flags = unpredictable_flags | 0xFF00; // high byte undefined
-                    unpredictable_flags      = 0;
-                    // TODO: flags for idiv exception
-                    uint32_t lb = (core.flags.w & 0x80u) ? 0x17u : 0x03u; // SF for idiv_bx vs idiv_sp
-                    uint32_t hb = (core.flags.w >> 8) & 0xFFu;
-                    if (hb == 0x08u) hb = 0x00u; else if (hb == 0x0Cu) hb = 0x04u;
-                    core.flags.f.cf = (lb & 1) != 0;
-                    core.flags.f.pf = (lb & 4) != 0;
-                    core.flags.f.af = (lb & 16) != 0;
-                    core.flags.f.zf = (lb & 64) != 0;
-                    core.flags.f.sf = (lb & 128) != 0;
-                    core.flags.f.tf = (hb & 1) != 0;
-                    core.flags.f.ifl = (hb & 2) != 0;
-                    core.flags.f.df = (hb & 4) != 0;
-                    core.flags.f.of = (hb & 8) != 0;
-                    core.eip = fault_eip;
+                    unpredictable_flags      = CF_MASK | PF_MASK | AF_MASK | ZF_MASK | SF_MASK | OF_MASK;
+                    core.eip                 = fault_eip;
                     call_int(0);
                     break;
                 }

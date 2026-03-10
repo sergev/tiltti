@@ -894,8 +894,8 @@ TEST_F(Test386, idiv_esp_batch2)
     EXPECT_FLAGS(0xFFFC0006);
 
     // Final RAM entries
-    EXPECT_EQ(memory.load8(0xB85B0), 0x06);
-    EXPECT_EQ(memory.load8(0xB85B1), 0x00);
+    EXPECT_FLAGS_LO(0xB85B0, 0x06);
+    EXPECT_FLAGS_HI(0xB85B1, 0x00);
     EXPECT_EQ(memory.load8(0xB85AE), 0x33);
     EXPECT_EQ(memory.load8(0xB85AF), 0x58);
     EXPECT_EQ(memory.load8(0xB85AC), 0x30);
@@ -986,8 +986,8 @@ TEST_F(Test386, idiv_sp_batch2)
     EXPECT_FLAGS(0xFFFC0003);
 
     // Final RAM entries
-    EXPECT_EQ(memory.load8(0xB85B0), 0x03);
-    EXPECT_EQ(memory.load8(0xB85B1), 0x00);
+    EXPECT_FLAGS_LO(0xB85B0, 0x03);
+    EXPECT_FLAGS_HI(0xB85B1, 0x00);
     EXPECT_EQ(memory.load8(0xB85AE), 0x33);
     EXPECT_EQ(memory.load8(0xB85AF), 0x58);
     EXPECT_EQ(memory.load8(0xB85AC), 0x30);

@@ -579,8 +579,8 @@ TEST_F(Test386, div_sp)
     EXPECT_FLAGS(0xFFFC0087);
 
     // Final RAM entries
-    EXPECT_EQ(memory.load8(0xB85B0), 0x87);
-    EXPECT_EQ(memory.load8(0xB85B1), 0x00);
+    EXPECT_FLAGS_LO(0xB85B0, 0x87);
+    EXPECT_FLAGS_HI(0xB85B1, 0x00);
     EXPECT_EQ(memory.load8(0xB85AE), 0x33);
     EXPECT_EQ(memory.load8(0xB85AF), 0x58);
     EXPECT_EQ(memory.load8(0xB85AC), 0x30);
