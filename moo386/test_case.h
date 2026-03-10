@@ -60,8 +60,8 @@ public:
     bool has_initial_reg(REG r) const { return get_initial_reg(r).has_value(); }
     bool has_final_reg(REG r) const { return get_final_reg(r).has_value(); }
 
-    // TODO: Is this index in final_ram correspond to FLAGS register, saved in memory?
-    static bool is_flags_in_mem(size_t index) { return false; }
+    // Does this index in final_ram correspond to FLAGS register, saved in memory?
+    bool is_flags_in_mem(size_t index) const;
 
     // Is this test bad and should be skipped?
     static bool invalid() { return false; }
