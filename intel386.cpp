@@ -1428,8 +1428,7 @@ void Intel386::exe_one()
             unsigned addr  = getEA(mod, rm);
             unsigned bytes = (eff_w == D) ? 4 : (eff_w == W) ? 2 : 1;
             if (last_ea_offset > 0x10000 - bytes) {
-                // Intel: #GP when memory operand EA outside segment limit (0x10000 in real mode).
-                os_is_ss = false;
+                // Intel: #GP/#SS when memory operand EA outside segment limit (0x10000 in real mode).
                 raise_segment_fault();
             }
             src = eff_w == D ? fetch(D) : (eff_w == W ? fetch(W) : fetch(B));
@@ -1615,10 +1614,11 @@ void Intel386::exe_one()
         set_al(core.flags.f.cf ? 0xff : 0);
         break;
 
-    // XLAT
+    // XLAT: 16-bit address mode uses BX+AL with 16-bit segment offset wrap.
     case 0xd7: {
-        Dword base = address_32 ? core.ebx : static_cast<Dword>(core.ebx & 0xFFFF);
-        set_al(getMem(B, linear_addr32(os, base + get_al())));
+        Dword base  = address_32 ? core.ebx : static_cast<Dword>(core.ebx & 0xFFFF);
+        Word offset = static_cast<Word>(base + get_al());
+        set_al(getMem(B, linear_addr21(os, offset)));
         break;
     }
 
@@ -2413,6 +2413,10 @@ void Intel386::exe_one()
     case 0xc2: {
         src = fetch(W);
         if (operand_32) {
+            if (get_sp() > 0x10000 - 4) {
+                os_is_ss = true;
+                raise_segment_fault();
+            }
             Dword ret_eip = static_cast<Dword>(pop32());
             if (ret_eip > 0xFFFF) {
                 set_sp(get_sp() - 4); // undo the pop
@@ -2421,6 +2425,10 @@ void Intel386::exe_one()
             }
             core.eip = ret_eip;
         } else {
+            if (get_sp() > 0xFFFE) {
+                os_is_ss = true;
+                raise_segment_fault();
+            }
             core.eip = pop();
         }
         // 16-bit stack: add imm16 to SP with wrap
@@ -2429,6 +2437,10 @@ void Intel386::exe_one()
     }
     case 0xc3: {
         if (operand_32) {
+            if (get_sp() > 0x10000 - 4) {
+                os_is_ss = true;
+                raise_segment_fault();
+            }
             Dword ret_eip = pop32();
             if (ret_eip > 0xFFFF) {
                 set_sp(get_sp() - 4); // undo the pop
@@ -2437,6 +2449,10 @@ void Intel386::exe_one()
             }
             core.eip = ret_eip;
         } else {
+            if (get_sp() > 0xFFFE) {
+                os_is_ss = true;
+                raise_segment_fault();
+            }
             core.eip = pop();
         }
         break;
@@ -2816,6 +2832,14 @@ void Intel386::exe_one()
 
     case 0x6c: { // INSB - Input string byte from port
         Dword ptr         = address_32 ? core.edi : static_cast<Dword>(static_cast<Word>(core.edi));
+        const unsigned delta = 1;
+        if (address_32) {
+            if (static_cast<int32_t>(ptr) < 0 ||
+                static_cast<unsigned>(static_cast<Word>(ptr)) > 0x10000 - delta) {
+                os_is_ss = (core.es == core.ss);
+                raise_segment_fault();
+            }
+        }
         unsigned dst_addr = linear_addr32(core.es, ptr);
         int val           = machine.port_in_byte(static_cast<unsigned>(core.edx & 0xFFFF));
         setMem(B, dst_addr, val);
@@ -2828,8 +2852,16 @@ void Intel386::exe_one()
     case 0x6d: { // INSW/INSD - Input string word/dword from port
         int eff_w         = operand_32 ? D : W;
         int delta         = (eff_w == D) ? 4 : 2;
+        const unsigned delta_u = static_cast<unsigned>(delta);
         int stride        = (core.flags.f.df ? -1 : 1) * delta;
         Dword ptr         = address_32 ? core.edi : static_cast<Dword>(static_cast<Word>(core.edi));
+        if (address_32) {
+            if (static_cast<int32_t>(ptr) < 0 ||
+                static_cast<unsigned>(static_cast<Word>(ptr)) > 0x10000 - delta_u) {
+                os_is_ss = (core.es == core.ss);
+                raise_segment_fault();
+            }
+        }
         unsigned dst_addr = linear_addr32(core.es, ptr);
         int val =
             (eff_w == D)
@@ -3529,20 +3561,50 @@ void Intel386::exe_one()
                 os_is_ss = true;
                 raise_segment_fault();
             }
-            // Validate destination EA before consuming stack (fault order per real 386).
+            // POP [mem]: destination uses post-pop SP only when base is ESP (Intel 386 behavior).
+            bool dest_uses_esp = (mod != 0b11 && rm == 4 && opcode.size() > plen + 2 &&
+                                 (opcode[plen + 2] & 7) == 4);
+            if (!dest_uses_esp) {
+                (void)getEA_cached(mod, rm);
+                if (mod != 0b11) {
+                    if (last_ea_offset > 0x10000 - 4)
+                        raise_segment_fault();
+                }
+            }
+            int val32 = pop32();
+            if (dest_uses_esp)
+                ea = -1;
             (void)getEA_cached(mod, rm);
             if (mod != 0b11) {
                 if (last_ea_offset > 0x10000 - 4)
                     raise_segment_fault();
             }
-            setRM(D, mod, rm, pop32());
+            setRM(D, mod, rm, val32);
         } else {
+            if (get_sp() > 0x10000 - 2) {
+                os_is_ss = true;
+                raise_segment_fault();
+            }
+            // POP word [mem]: destination uses post-pop SP when base is ESP (32-bit addr with SIB).
+            bool dest_uses_esp_w =
+                (address_32 && mod != 0b11 && rm == 4 && opcode.size() > plen + 2 &&
+                 (opcode[plen + 2] & 7) == 4);
+            if (!dest_uses_esp_w) {
+                (void)getEA_cached(mod, rm);
+                if (mod != 0b11) {
+                    if (last_ea_offset > 0x10000 - 2)
+                        raise_segment_fault();
+                }
+            }
+            int val16 = pop();
+            if (dest_uses_esp_w)
+                ea = -1;
             (void)getEA_cached(mod, rm);
             if (mod != 0b11) {
                 if (last_ea_offset > 0x10000 - 2)
                     raise_segment_fault();
             }
-            setRM(W, mod, rm, pop());
+            setRM(W, mod, rm, val16);
         }
         break;
 
@@ -3744,11 +3806,6 @@ void Intel386::exe_one()
             (void)getEA_cached(mod, rm);
             unsigned bytes = (eff_w == D) ? 4 : (eff_w == W) ? 2 : 1;
             if (last_ea_offset > 0x10000u - bytes) {
-                core.flags.f.cf = 1;
-                core.flags.f.pf = 1;
-                core.flags.f.af = 1;
-                core.flags.f.zf = 0;
-                core.flags.f.sf = 0;
                 unpredictable_flags      = AF_MASK | PF_MASK | ZF_MASK | SF_MASK;
                 last_unpredictable_flags = unpredictable_flags;
                 raise_segment_fault();
