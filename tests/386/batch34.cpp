@@ -1117,3 +1117,695 @@ TEST_F(Test386, sub_ss_ecx_2514h_dl_batch34)
     EXPECT_EQ(memory.load8(0x01A74), 0xC8);
     EXPECT_EQ(memory.load8(0x01A75), 0x96);
 }
+
+//
+// mul byte [ds:ebx+440Bh]
+//
+TEST_F(Test386, mul_byte_ds_ebx_440Bh_batch34)
+{
+    // Initial CPU State
+    cpu.set_cr0(0x7FFEFFF0);
+    cpu.set_cr3(0x00000000);
+    cpu.set_eax(0xD3EFB751);
+    cpu.set_ebx(0x0000DDBB);
+    cpu.set_ecx(0x7DFBCF9D);
+    cpu.set_edx(0xB2D74078);
+    cpu.set_esi(0x56BCCDE6);
+    cpu.set_edi(0x00008000);
+    cpu.set_ebp(0x01A043BB);
+    cpu.set_esp(0x0000561A);
+    cpu.set_cs(0x0000A6E9);
+    cpu.set_ds(0x0000199A);
+    cpu.set_es(0x0000FFFF);
+    cpu.set_fs(0x0000A7D4);
+    cpu.set_gs(0x0000FFFF);
+    cpu.set_ss(0x000004A5);
+    cpu.set_eip(0x0000A698);
+    cpu.set_eflags(0xFFFC0887);
+    cpu.set_dr6(0xFFFF0FF0);
+    cpu.set_dr7(0x00000000);
+    machine.trace_registers();
+
+    // Initial RAM entries
+    machine.mem_store_byte(0xB1528, 0x67);
+    machine.mem_store_byte(0xB1529, 0xF6);
+    machine.mem_store_byte(0xB152A, 0xA3);
+    machine.mem_store_byte(0xB152B, 0x0B);
+    machine.mem_store_byte(0xB152C, 0x44);
+    machine.mem_store_byte(0xB152D, 0x00);
+    machine.mem_store_byte(0xB152E, 0x00);
+    machine.mem_store_byte(0xB152F, 0xF4);
+    machine.mem_store_byte(0xB1530, 0x45);
+    machine.mem_store_byte(0xB1531, 0x88);
+    machine.mem_store_byte(0xB1532, 0xA6);
+    machine.mem_store_byte(0xB1533, 0x6C);
+    machine.mem_store_byte(0xB1534, 0x72);
+    machine.mem_store_byte(0xB1535, 0x29);
+    machine.mem_store_byte(0xB1536, 0x15);
+    machine.mem_store_byte(0xB1537, 0x86);
+    machine.mem_store_byte(0xB1538, 0xD6);
+    machine.mem_store_byte(0xB1539, 0x69);
+    machine.mem_store_byte(0xB153A, 0x56);
+    machine.mem_store_byte(0xB153B, 0x10);
+    machine.mem_store_byte(0x00034, 0x81);
+    machine.mem_store_byte(0x00035, 0x8E);
+    machine.mem_store_byte(0x00036, 0xD0);
+    machine.mem_store_byte(0x00037, 0x3C);
+    machine.mem_store_byte(0x45B80, 0xB1);
+    machine.mem_store_byte(0x45B81, 0xF4);
+    machine.mem_store_byte(0x45B82, 0x0F);
+    machine.mem_store_byte(0x45B83, 0xF4);
+    machine.mem_store_byte(0x45B84, 0x2A);
+    machine.mem_store_byte(0x45B85, 0xF4);
+    machine.mem_store_byte(0x45B86, 0x29);
+    machine.mem_store_byte(0x45B87, 0xF4);
+    machine.mem_store_byte(0x45B88, 0xEC);
+    machine.mem_store_byte(0x45B89, 0xF4);
+
+    // Single-step.
+    cpu.step();
+    if (!cpu.is_halted())
+        cpu.step(); // HLT
+
+    // Final CPU State
+    EXPECT_EQ(cpu.get_cr0(), 0x7FFEFFF0);
+    EXPECT_EQ(cpu.get_cr3(), 0x00000000);
+    EXPECT_EQ(cpu.get_eax(), 0xD3EFB751);
+    EXPECT_EQ(cpu.get_ebx(), 0x0000DDBB);
+    EXPECT_EQ(cpu.get_ecx(), 0x7DFBCF9D);
+    EXPECT_EQ(cpu.get_edx(), 0xB2D74078);
+    EXPECT_EQ(cpu.get_esi(), 0x56BCCDE6);
+    EXPECT_EQ(cpu.get_edi(), 0x00008000);
+    EXPECT_EQ(cpu.get_ebp(), 0x01A043BB);
+    EXPECT_EQ(cpu.get_esp(), 0x00005614);
+    EXPECT_EQ(cpu.get_cs(), 0x00003CD0);
+    EXPECT_EQ(cpu.get_ds(), 0x0000199A);
+    EXPECT_EQ(cpu.get_es(), 0x0000FFFF);
+    EXPECT_EQ(cpu.get_fs(), 0x0000A7D4);
+    EXPECT_EQ(cpu.get_gs(), 0x0000FFFF);
+    EXPECT_EQ(cpu.get_ss(), 0x000004A5);
+    EXPECT_EQ(cpu.get_eip(), 0x00008E82);
+    EXPECT_EQ(cpu.get_dr6(), 0xFFFF0FF0);
+    EXPECT_EQ(cpu.get_dr7(), 0x00000000);
+    EXPECT_FLAGS(0xFFFC0887);
+
+    // Final RAM entries
+    EXPECT_FLAGS_LO(0x0A068, 0x87);
+    EXPECT_FLAGS_HI(0x0A069, 0x08);
+    EXPECT_EQ(memory.load8(0x0A066), 0xE9);
+    EXPECT_EQ(memory.load8(0x0A067), 0xA6);
+    EXPECT_EQ(memory.load8(0x0A064), 0x98);
+    EXPECT_EQ(memory.load8(0x0A065), 0xA6);
+}
+
+//
+// mul byte [ss:ebp+EF6Bh]
+//
+TEST_F(Test386, mul_byte_ss_ebp_EF6Bh_batch34)
+{
+    // Initial CPU State
+    cpu.set_cr0(0x7FFEFFF0);
+    cpu.set_cr3(0x00000000);
+    cpu.set_eax(0x7FFFFFFF);
+    cpu.set_ebx(0x62703489);
+    cpu.set_ecx(0xDE2BB39F);
+    cpu.set_edx(0x6F877F5E);
+    cpu.set_esi(0xA4E7B044);
+    cpu.set_edi(0xFFFFFFFF);
+    cpu.set_ebp(0x0000CF44);
+    cpu.set_esp(0x00007A3A);
+    cpu.set_cs(0x0000436F);
+    cpu.set_ds(0x0000FFF4);
+    cpu.set_es(0x00000AED);
+    cpu.set_fs(0x0000B8BD);
+    cpu.set_gs(0x00008784);
+    cpu.set_ss(0x000012D7);
+    cpu.set_eip(0x000080D0);
+    cpu.set_eflags(0xFFFC0C57);
+    cpu.set_dr6(0xFFFF0FF0);
+    cpu.set_dr7(0x00000000);
+    machine.trace_registers();
+
+    // Initial RAM entries
+    machine.mem_store_byte(0x4B7C0, 0x67);
+    machine.mem_store_byte(0x4B7C1, 0xF6);
+    machine.mem_store_byte(0x4B7C2, 0xA5);
+    machine.mem_store_byte(0x4B7C3, 0x6B);
+    machine.mem_store_byte(0x4B7C4, 0xEF);
+    machine.mem_store_byte(0x4B7C5, 0x00);
+    machine.mem_store_byte(0x4B7C6, 0x00);
+    machine.mem_store_byte(0x4B7C7, 0xF4);
+    machine.mem_store_byte(0x4B7C8, 0x1C);
+    machine.mem_store_byte(0x4B7C9, 0x79);
+    machine.mem_store_byte(0x4B7CA, 0xFE);
+    machine.mem_store_byte(0x4B7CB, 0xEF);
+    machine.mem_store_byte(0x4B7CC, 0x4C);
+    machine.mem_store_byte(0x4B7CD, 0xBD);
+    machine.mem_store_byte(0x4B7CE, 0x56);
+    machine.mem_store_byte(0x4B7CF, 0x9F);
+    machine.mem_store_byte(0x4B7D0, 0x40);
+    machine.mem_store_byte(0x4B7D1, 0x83);
+    machine.mem_store_byte(0x4B7D2, 0x05);
+    machine.mem_store_byte(0x4B7D3, 0xF8);
+    machine.mem_store_byte(0x00030, 0x23);
+    machine.mem_store_byte(0x00031, 0x72);
+    machine.mem_store_byte(0x00032, 0xD3);
+    machine.mem_store_byte(0x00033, 0x33);
+    machine.mem_store_byte(0x3AF52, 0xED);
+    machine.mem_store_byte(0x3AF53, 0xF4);
+    machine.mem_store_byte(0x3AF54, 0xA4);
+    machine.mem_store_byte(0x3AF55, 0xF4);
+    machine.mem_store_byte(0x3AF56, 0x7E);
+    machine.mem_store_byte(0x3AF57, 0xF4);
+    machine.mem_store_byte(0x3AF58, 0x2E);
+    machine.mem_store_byte(0x3AF59, 0xF4);
+
+    // Single-step.
+    cpu.step();
+    if (!cpu.is_halted())
+        cpu.step(); // HLT
+
+    // Final CPU State
+    EXPECT_EQ(cpu.get_cr0(), 0x7FFEFFF0);
+    EXPECT_EQ(cpu.get_cr3(), 0x00000000);
+    EXPECT_EQ(cpu.get_eax(), 0x7FFFFFFF);
+    EXPECT_EQ(cpu.get_ebx(), 0x62703489);
+    EXPECT_EQ(cpu.get_ecx(), 0xDE2BB39F);
+    EXPECT_EQ(cpu.get_edx(), 0x6F877F5E);
+    EXPECT_EQ(cpu.get_esi(), 0xA4E7B044);
+    EXPECT_EQ(cpu.get_edi(), 0xFFFFFFFF);
+    EXPECT_EQ(cpu.get_ebp(), 0x0000CF44);
+    EXPECT_EQ(cpu.get_esp(), 0x00007A34);
+    EXPECT_EQ(cpu.get_cs(), 0x000033D3);
+    EXPECT_EQ(cpu.get_ds(), 0x0000FFF4);
+    EXPECT_EQ(cpu.get_es(), 0x00000AED);
+    EXPECT_EQ(cpu.get_fs(), 0x0000B8BD);
+    EXPECT_EQ(cpu.get_gs(), 0x00008784);
+    EXPECT_EQ(cpu.get_ss(), 0x000012D7);
+    EXPECT_EQ(cpu.get_eip(), 0x00007224);
+    EXPECT_EQ(cpu.get_dr6(), 0xFFFF0FF0);
+    EXPECT_EQ(cpu.get_dr7(), 0x00000000);
+    EXPECT_FLAGS(0xFFFC0C57);
+
+    // Final RAM entries
+    EXPECT_FLAGS_LO(0x1A7A8, 0x57);
+    EXPECT_FLAGS_HI(0x1A7A9, 0x0C);
+    EXPECT_EQ(memory.load8(0x1A7A6), 0x6F);
+    EXPECT_EQ(memory.load8(0x1A7A7), 0x43);
+    EXPECT_EQ(memory.load8(0x1A7A4), 0xD0);
+    EXPECT_EQ(memory.load8(0x1A7A5), 0x80);
+}
+
+//
+// mul byte [ss:ecx+7Bh]
+//
+TEST_F(Test386, mul_byte_ss_ecx_7Bh_batch34)
+{
+    // Initial CPU State
+    cpu.set_cr0(0x7FFEFFF0);
+    cpu.set_cr3(0x00000000);
+    cpu.set_eax(0x04A282C0);
+    cpu.set_ebx(0xFFC2176C);
+    cpu.set_ecx(0x0000FFFF);
+    cpu.set_edx(0x332AA710);
+    cpu.set_esi(0xFB23C29B);
+    cpu.set_edi(0xFFFFFFFF);
+    cpu.set_ebp(0xF4F51C91);
+    cpu.set_esp(0x0000FFFC);
+    cpu.set_cs(0x00002026);
+    cpu.set_ds(0x00005995);
+    cpu.set_es(0x00009995);
+    cpu.set_fs(0x0000FFFF);
+    cpu.set_gs(0x00001D47);
+    cpu.set_ss(0x0000CD91);
+    cpu.set_eip(0x000046B8);
+    cpu.set_eflags(0xFFFC0807);
+    cpu.set_dr6(0xFFFF0FF0);
+    cpu.set_dr7(0x00000000);
+    machine.trace_registers();
+
+    // Initial RAM entries
+    machine.mem_store_byte(0x24918, 0x36);
+    machine.mem_store_byte(0x24919, 0x36);
+    machine.mem_store_byte(0x2491A, 0x67);
+    machine.mem_store_byte(0x2491B, 0xF6);
+    machine.mem_store_byte(0x2491C, 0x61);
+    machine.mem_store_byte(0x2491D, 0x7B);
+    machine.mem_store_byte(0x2491E, 0xF4);
+    machine.mem_store_byte(0x2491F, 0xA5);
+    machine.mem_store_byte(0x24920, 0xBA);
+    machine.mem_store_byte(0x24921, 0x7E);
+    machine.mem_store_byte(0x24922, 0x34);
+    machine.mem_store_byte(0x24923, 0xAF);
+    machine.mem_store_byte(0x24924, 0x4F);
+    machine.mem_store_byte(0x24925, 0x0F);
+    machine.mem_store_byte(0x24926, 0xDD);
+    machine.mem_store_byte(0x24927, 0x03);
+    machine.mem_store_byte(0x24928, 0x8F);
+    machine.mem_store_byte(0x24929, 0xDA);
+    machine.mem_store_byte(0x2492A, 0x5F);
+    machine.mem_store_byte(0x2492B, 0x1B);
+    machine.mem_store_byte(0x00030, 0x67);
+    machine.mem_store_byte(0x00031, 0x0A);
+    machine.mem_store_byte(0x00032, 0xEB);
+    machine.mem_store_byte(0x00033, 0xF5);
+    machine.mem_store_byte(0xF6916, 0x30);
+    machine.mem_store_byte(0xF6917, 0xF4);
+    machine.mem_store_byte(0xF6918, 0xED);
+    machine.mem_store_byte(0xF6919, 0xF4);
+    machine.mem_store_byte(0xF691A, 0xD6);
+    machine.mem_store_byte(0xF691B, 0xF4);
+    machine.mem_store_byte(0xF691C, 0xE6);
+    machine.mem_store_byte(0xF691D, 0xF4);
+
+    // Single-step.
+    cpu.step();
+    if (!cpu.is_halted())
+        cpu.step(); // HLT
+
+    // Final CPU State
+    EXPECT_EQ(cpu.get_cr0(), 0x7FFEFFF0);
+    EXPECT_EQ(cpu.get_cr3(), 0x00000000);
+    EXPECT_EQ(cpu.get_eax(), 0x04A282C0);
+    EXPECT_EQ(cpu.get_ebx(), 0xFFC2176C);
+    EXPECT_EQ(cpu.get_ecx(), 0x0000FFFF);
+    EXPECT_EQ(cpu.get_edx(), 0x332AA710);
+    EXPECT_EQ(cpu.get_esi(), 0xFB23C29B);
+    EXPECT_EQ(cpu.get_edi(), 0xFFFFFFFF);
+    EXPECT_EQ(cpu.get_ebp(), 0xF4F51C91);
+    EXPECT_EQ(cpu.get_esp(), 0x0000FFF6);
+    EXPECT_EQ(cpu.get_cs(), 0x0000F5EB);
+    EXPECT_EQ(cpu.get_ds(), 0x00005995);
+    EXPECT_EQ(cpu.get_es(), 0x00009995);
+    EXPECT_EQ(cpu.get_fs(), 0x0000FFFF);
+    EXPECT_EQ(cpu.get_gs(), 0x00001D47);
+    EXPECT_EQ(cpu.get_ss(), 0x0000CD91);
+    EXPECT_EQ(cpu.get_eip(), 0x00000A68);
+    EXPECT_EQ(cpu.get_dr6(), 0xFFFF0FF0);
+    EXPECT_EQ(cpu.get_dr7(), 0x00000000);
+    EXPECT_FLAGS(0xFFFC0807);
+
+    // Final RAM entries
+    EXPECT_FLAGS_LO(0xDD90A, 0x07);
+    EXPECT_FLAGS_HI(0xDD90B, 0x08);
+    EXPECT_EQ(memory.load8(0xDD908), 0x26);
+    EXPECT_EQ(memory.load8(0xDD909), 0x20);
+    EXPECT_EQ(memory.load8(0xDD906), 0xB8);
+    EXPECT_EQ(memory.load8(0xDD907), 0x46);
+}
+
+//
+// mul dword [ds:ebx+440Bh]
+//
+TEST_F(Test386, mul_dword_ds_ebx_440Bh_batch34)
+{
+    // Initial CPU State
+    cpu.set_cr0(0x7FFEFFF0);
+    cpu.set_cr3(0x00000000);
+    cpu.set_eax(0xD3EFB751);
+    cpu.set_ebx(0x0000DDBB);
+    cpu.set_ecx(0x7DFBCF9D);
+    cpu.set_edx(0xB2D74078);
+    cpu.set_esi(0x56BCCDE6);
+    cpu.set_edi(0x00008000);
+    cpu.set_ebp(0x01A043BB);
+    cpu.set_esp(0x0000561A);
+    cpu.set_cs(0x0000A6E9);
+    cpu.set_ds(0x0000199A);
+    cpu.set_es(0x0000FFFF);
+    cpu.set_fs(0x0000A7D4);
+    cpu.set_gs(0x0000FFFF);
+    cpu.set_ss(0x000004A5);
+    cpu.set_eip(0x0000A698);
+    cpu.set_eflags(0xFFFC0887);
+    cpu.set_dr6(0xFFFF0FF0);
+    cpu.set_dr7(0x00000000);
+    machine.trace_registers();
+
+    // Initial RAM entries
+    machine.mem_store_byte(0xB1528, 0x66);
+    machine.mem_store_byte(0xB1529, 0x67);
+    machine.mem_store_byte(0xB152A, 0xF7);
+    machine.mem_store_byte(0xB152B, 0xA3);
+    machine.mem_store_byte(0xB152C, 0x0B);
+    machine.mem_store_byte(0xB152D, 0x44);
+    machine.mem_store_byte(0xB152E, 0x00);
+    machine.mem_store_byte(0xB152F, 0x00);
+    machine.mem_store_byte(0xB1530, 0xF4);
+    machine.mem_store_byte(0xB1531, 0xB9);
+    machine.mem_store_byte(0xB1532, 0x71);
+    machine.mem_store_byte(0xB1533, 0x90);
+    machine.mem_store_byte(0xB1534, 0xB0);
+    machine.mem_store_byte(0xB1535, 0x10);
+    machine.mem_store_byte(0xB1536, 0x35);
+    machine.mem_store_byte(0xB1537, 0x64);
+    machine.mem_store_byte(0xB1538, 0x6F);
+    machine.mem_store_byte(0xB1539, 0x72);
+    machine.mem_store_byte(0xB153A, 0xD5);
+    machine.mem_store_byte(0xB153B, 0x3B);
+    machine.mem_store_byte(0xB153C, 0x5A);
+    machine.mem_store_byte(0xB153D, 0xE1);
+    machine.mem_store_byte(0xB153E, 0x75);
+    machine.mem_store_byte(0xB153F, 0x8B);
+    machine.mem_store_byte(0x00034, 0xC0);
+    machine.mem_store_byte(0x00035, 0x1E);
+    machine.mem_store_byte(0x00036, 0x69);
+    machine.mem_store_byte(0x00037, 0x2B);
+    machine.mem_store_byte(0x2D550, 0xF4);
+    machine.mem_store_byte(0x2D551, 0xF1);
+    machine.mem_store_byte(0x2D552, 0xF4);
+    machine.mem_store_byte(0x2D553, 0xEE);
+    machine.mem_store_byte(0x2D554, 0xF4);
+    machine.mem_store_byte(0x2D555, 0x0A);
+    machine.mem_store_byte(0x2D556, 0xF4);
+    machine.mem_store_byte(0x2D557, 0xF7);
+
+    // Single-step.
+    cpu.step();
+    if (!cpu.is_halted())
+        cpu.step(); // HLT
+
+    // Final CPU State
+    EXPECT_EQ(cpu.get_cr0(), 0x7FFEFFF0);
+    EXPECT_EQ(cpu.get_cr3(), 0x00000000);
+    EXPECT_EQ(cpu.get_eax(), 0xD3EFB751);
+    EXPECT_EQ(cpu.get_ebx(), 0x0000DDBB);
+    EXPECT_EQ(cpu.get_ecx(), 0x7DFBCF9D);
+    EXPECT_EQ(cpu.get_edx(), 0xB2D74078);
+    EXPECT_EQ(cpu.get_esi(), 0x56BCCDE6);
+    EXPECT_EQ(cpu.get_edi(), 0x00008000);
+    EXPECT_EQ(cpu.get_ebp(), 0x01A043BB);
+    EXPECT_EQ(cpu.get_esp(), 0x00005614);
+    EXPECT_EQ(cpu.get_cs(), 0x00002B69);
+    EXPECT_EQ(cpu.get_ds(), 0x0000199A);
+    EXPECT_EQ(cpu.get_es(), 0x0000FFFF);
+    EXPECT_EQ(cpu.get_fs(), 0x0000A7D4);
+    EXPECT_EQ(cpu.get_gs(), 0x0000FFFF);
+    EXPECT_EQ(cpu.get_ss(), 0x000004A5);
+    EXPECT_EQ(cpu.get_eip(), 0x00001EC1);
+    EXPECT_EQ(cpu.get_dr6(), 0xFFFF0FF0);
+    EXPECT_EQ(cpu.get_dr7(), 0x00000000);
+    EXPECT_FLAGS(0xFFFC0887);
+
+    // Final RAM entries
+    EXPECT_FLAGS_LO(0x0A068, 0x87);
+    EXPECT_FLAGS_HI(0x0A069, 0x08);
+    EXPECT_EQ(memory.load8(0x0A066), 0xE9);
+    EXPECT_EQ(memory.load8(0x0A067), 0xA6);
+    EXPECT_EQ(memory.load8(0x0A064), 0x98);
+    EXPECT_EQ(memory.load8(0x0A065), 0xA6);
+}
+
+//
+// mul dword [ss:ebp+EF6Bh]
+//
+TEST_F(Test386, mul_dword_ss_ebp_EF6Bh_batch34)
+{
+    // Initial CPU State
+    cpu.set_cr0(0x7FFEFFF0);
+    cpu.set_cr3(0x00000000);
+    cpu.set_eax(0x7FFFFFFF);
+    cpu.set_ebx(0x62703489);
+    cpu.set_ecx(0xDE2BB39F);
+    cpu.set_edx(0x6F877F5E);
+    cpu.set_esi(0xA4E7B044);
+    cpu.set_edi(0xFFFFFFFF);
+    cpu.set_ebp(0x0000CF44);
+    cpu.set_esp(0x00007A3A);
+    cpu.set_cs(0x0000436F);
+    cpu.set_ds(0x0000FFF4);
+    cpu.set_es(0x00000AED);
+    cpu.set_fs(0x0000B8BD);
+    cpu.set_gs(0x00008784);
+    cpu.set_ss(0x000012D7);
+    cpu.set_eip(0x000080D0);
+    cpu.set_eflags(0xFFFC0C57);
+    cpu.set_dr6(0xFFFF0FF0);
+    cpu.set_dr7(0x00000000);
+    machine.trace_registers();
+
+    // Initial RAM entries
+    machine.mem_store_byte(0x4B7C0, 0x66);
+    machine.mem_store_byte(0x4B7C1, 0x67);
+    machine.mem_store_byte(0x4B7C2, 0xF7);
+    machine.mem_store_byte(0x4B7C3, 0xA5);
+    machine.mem_store_byte(0x4B7C4, 0x6B);
+    machine.mem_store_byte(0x4B7C5, 0xEF);
+    machine.mem_store_byte(0x4B7C6, 0x00);
+    machine.mem_store_byte(0x4B7C7, 0x00);
+    machine.mem_store_byte(0x4B7C8, 0xF4);
+    machine.mem_store_byte(0x4B7C9, 0x3E);
+    machine.mem_store_byte(0x4B7CA, 0xD1);
+    machine.mem_store_byte(0x4B7CB, 0x02);
+    machine.mem_store_byte(0x4B7CC, 0x97);
+    machine.mem_store_byte(0x4B7CD, 0xE8);
+    machine.mem_store_byte(0x4B7CE, 0x21);
+    machine.mem_store_byte(0x4B7CF, 0x7A);
+    machine.mem_store_byte(0x4B7D0, 0x1C);
+    machine.mem_store_byte(0x4B7D1, 0x93);
+    machine.mem_store_byte(0x4B7D2, 0x26);
+    machine.mem_store_byte(0x4B7D3, 0xA9);
+    machine.mem_store_byte(0x4B7D4, 0xDE);
+    machine.mem_store_byte(0x4B7D5, 0x26);
+    machine.mem_store_byte(0x4B7D6, 0x2A);
+    machine.mem_store_byte(0x4B7D7, 0xBE);
+    machine.mem_store_byte(0x00030, 0x93);
+    machine.mem_store_byte(0x00031, 0xE7);
+    machine.mem_store_byte(0x00032, 0xEA);
+    machine.mem_store_byte(0x00033, 0x09);
+    machine.mem_store_byte(0x18632, 0x38);
+    machine.mem_store_byte(0x18633, 0xF4);
+    machine.mem_store_byte(0x18634, 0xE3);
+    machine.mem_store_byte(0x18635, 0xF4);
+    machine.mem_store_byte(0x18636, 0x99);
+    machine.mem_store_byte(0x18637, 0xF4);
+    machine.mem_store_byte(0x18638, 0xF4);
+    machine.mem_store_byte(0x18639, 0xF4);
+
+    // Single-step.
+    cpu.step();
+    if (!cpu.is_halted())
+        cpu.step(); // HLT
+
+    // Final CPU State
+    EXPECT_EQ(cpu.get_cr0(), 0x7FFEFFF0);
+    EXPECT_EQ(cpu.get_cr3(), 0x00000000);
+    EXPECT_EQ(cpu.get_eax(), 0x7FFFFFFF);
+    EXPECT_EQ(cpu.get_ebx(), 0x62703489);
+    EXPECT_EQ(cpu.get_ecx(), 0xDE2BB39F);
+    EXPECT_EQ(cpu.get_edx(), 0x6F877F5E);
+    EXPECT_EQ(cpu.get_esi(), 0xA4E7B044);
+    EXPECT_EQ(cpu.get_edi(), 0xFFFFFFFF);
+    EXPECT_EQ(cpu.get_ebp(), 0x0000CF44);
+    EXPECT_EQ(cpu.get_esp(), 0x00007A34);
+    EXPECT_EQ(cpu.get_cs(), 0x000009EA);
+    EXPECT_EQ(cpu.get_ds(), 0x0000FFF4);
+    EXPECT_EQ(cpu.get_es(), 0x00000AED);
+    EXPECT_EQ(cpu.get_fs(), 0x0000B8BD);
+    EXPECT_EQ(cpu.get_gs(), 0x00008784);
+    EXPECT_EQ(cpu.get_ss(), 0x000012D7);
+    EXPECT_EQ(cpu.get_eip(), 0x0000E794);
+    EXPECT_EQ(cpu.get_dr6(), 0xFFFF0FF0);
+    EXPECT_EQ(cpu.get_dr7(), 0x00000000);
+    EXPECT_FLAGS(0xFFFC0C57);
+
+    // Final RAM entries
+    EXPECT_FLAGS_LO(0x1A7A8, 0x57);
+    EXPECT_FLAGS_HI(0x1A7A9, 0x0C);
+    EXPECT_EQ(memory.load8(0x1A7A6), 0x6F);
+    EXPECT_EQ(memory.load8(0x1A7A7), 0x43);
+    EXPECT_EQ(memory.load8(0x1A7A4), 0xD0);
+    EXPECT_EQ(memory.load8(0x1A7A5), 0x80);
+}
+
+//
+// mul word [ds:ebx+440Bh]
+//
+TEST_F(Test386, mul_word_ds_ebx_440Bh_batch34)
+{
+    // Initial CPU State
+    cpu.set_cr0(0x7FFEFFF0);
+    cpu.set_cr3(0x00000000);
+    cpu.set_eax(0xD3EFB751);
+    cpu.set_ebx(0x0000DDBB);
+    cpu.set_ecx(0x7DFBCF9D);
+    cpu.set_edx(0xB2D74078);
+    cpu.set_esi(0x56BCCDE6);
+    cpu.set_edi(0x00008000);
+    cpu.set_ebp(0x01A043BB);
+    cpu.set_esp(0x0000561A);
+    cpu.set_cs(0x0000A6E9);
+    cpu.set_ds(0x0000199A);
+    cpu.set_es(0x0000FFFF);
+    cpu.set_fs(0x0000A7D4);
+    cpu.set_gs(0x0000FFFF);
+    cpu.set_ss(0x000004A5);
+    cpu.set_eip(0x0000A698);
+    cpu.set_eflags(0xFFFC0887);
+    cpu.set_dr6(0xFFFF0FF0);
+    cpu.set_dr7(0x00000000);
+    machine.trace_registers();
+
+    // Initial RAM entries
+    machine.mem_store_byte(0xB1528, 0x67);
+    machine.mem_store_byte(0xB1529, 0xF7);
+    machine.mem_store_byte(0xB152A, 0xA3);
+    machine.mem_store_byte(0xB152B, 0x0B);
+    machine.mem_store_byte(0xB152C, 0x44);
+    machine.mem_store_byte(0xB152D, 0x00);
+    machine.mem_store_byte(0xB152E, 0x00);
+    machine.mem_store_byte(0xB152F, 0xF4);
+    machine.mem_store_byte(0xB1530, 0xCB);
+    machine.mem_store_byte(0xB1531, 0xB9);
+    machine.mem_store_byte(0xB1532, 0x71);
+    machine.mem_store_byte(0xB1533, 0x90);
+    machine.mem_store_byte(0x00034, 0xC0);
+    machine.mem_store_byte(0x00035, 0x1E);
+    machine.mem_store_byte(0x00036, 0x69);
+    machine.mem_store_byte(0x00037, 0x2B);
+    machine.mem_store_byte(0x2D550, 0xF4);
+    machine.mem_store_byte(0x2D551, 0xF1);
+    machine.mem_store_byte(0x2D552, 0xF4);
+    machine.mem_store_byte(0x2D553, 0xEE);
+    machine.mem_store_byte(0x2D554, 0xF4);
+    machine.mem_store_byte(0x2D555, 0x0A);
+    machine.mem_store_byte(0x2D556, 0xF4);
+    machine.mem_store_byte(0x2D557, 0xF7);
+
+    // Single-step.
+    cpu.step();
+    if (!cpu.is_halted())
+        cpu.step(); // HLT
+
+    // Final CPU State
+    EXPECT_EQ(cpu.get_cr0(), 0x7FFEFFF0);
+    EXPECT_EQ(cpu.get_cr3(), 0x00000000);
+    EXPECT_EQ(cpu.get_eax(), 0xD3EFB751);
+    EXPECT_EQ(cpu.get_ebx(), 0x0000DDBB);
+    EXPECT_EQ(cpu.get_ecx(), 0x7DFBCF9D);
+    EXPECT_EQ(cpu.get_edx(), 0xB2D74078);
+    EXPECT_EQ(cpu.get_esi(), 0x56BCCDE6);
+    EXPECT_EQ(cpu.get_edi(), 0x00008000);
+    EXPECT_EQ(cpu.get_ebp(), 0x01A043BB);
+    EXPECT_EQ(cpu.get_esp(), 0x00005614);
+    EXPECT_EQ(cpu.get_cs(), 0x00002B69);
+    EXPECT_EQ(cpu.get_ds(), 0x0000199A);
+    EXPECT_EQ(cpu.get_es(), 0x0000FFFF);
+    EXPECT_EQ(cpu.get_fs(), 0x0000A7D4);
+    EXPECT_EQ(cpu.get_gs(), 0x0000FFFF);
+    EXPECT_EQ(cpu.get_ss(), 0x000004A5);
+    EXPECT_EQ(cpu.get_eip(), 0x00001EC1);
+    EXPECT_EQ(cpu.get_dr6(), 0xFFFF0FF0);
+    EXPECT_EQ(cpu.get_dr7(), 0x00000000);
+    EXPECT_FLAGS(0xFFFC0887);
+
+    // Final RAM entries
+    EXPECT_FLAGS_LO(0x0A068, 0x87);
+    EXPECT_FLAGS_HI(0x0A069, 0x08);
+    EXPECT_EQ(memory.load8(0x0A066), 0xE9);
+    EXPECT_EQ(memory.load8(0x0A067), 0xA6);
+    EXPECT_EQ(memory.load8(0x0A064), 0x98);
+    EXPECT_EQ(memory.load8(0x0A065), 0xA6);
+}
+
+//
+// mul word [ss:ebp+EF6Bh]
+//
+TEST_F(Test386, mul_word_ss_ebp_EF6Bh_batch34)
+{
+    // Initial CPU State
+    cpu.set_cr0(0x7FFEFFF0);
+    cpu.set_cr3(0x00000000);
+    cpu.set_eax(0x7FFFFFFF);
+    cpu.set_ebx(0x62703489);
+    cpu.set_ecx(0xDE2BB39F);
+    cpu.set_edx(0x6F877F5E);
+    cpu.set_esi(0xA4E7B044);
+    cpu.set_edi(0xFFFFFFFF);
+    cpu.set_ebp(0x0000CF44);
+    cpu.set_esp(0x00007A3A);
+    cpu.set_cs(0x0000436F);
+    cpu.set_ds(0x0000FFF4);
+    cpu.set_es(0x00000AED);
+    cpu.set_fs(0x0000B8BD);
+    cpu.set_gs(0x00008784);
+    cpu.set_ss(0x000012D7);
+    cpu.set_eip(0x000080D0);
+    cpu.set_eflags(0xFFFC0C57);
+    cpu.set_dr6(0xFFFF0FF0);
+    cpu.set_dr7(0x00000000);
+    machine.trace_registers();
+
+    // Initial RAM entries
+    machine.mem_store_byte(0x4B7C0, 0x67);
+    machine.mem_store_byte(0x4B7C1, 0xF7);
+    machine.mem_store_byte(0x4B7C2, 0xA5);
+    machine.mem_store_byte(0x4B7C3, 0x6B);
+    machine.mem_store_byte(0x4B7C4, 0xEF);
+    machine.mem_store_byte(0x4B7C5, 0x00);
+    machine.mem_store_byte(0x4B7C6, 0x00);
+    machine.mem_store_byte(0x4B7C7, 0xF4);
+    machine.mem_store_byte(0x4B7C8, 0xBA);
+    machine.mem_store_byte(0x4B7C9, 0x3E);
+    machine.mem_store_byte(0x4B7CA, 0xD1);
+    machine.mem_store_byte(0x4B7CB, 0x02);
+    machine.mem_store_byte(0x4B7CC, 0x97);
+    machine.mem_store_byte(0x4B7CD, 0xE8);
+    machine.mem_store_byte(0x4B7CE, 0x21);
+    machine.mem_store_byte(0x4B7CF, 0x7A);
+    machine.mem_store_byte(0x4B7D0, 0x1C);
+    machine.mem_store_byte(0x4B7D1, 0x93);
+    machine.mem_store_byte(0x4B7D2, 0x26);
+    machine.mem_store_byte(0x4B7D3, 0xA9);
+    machine.mem_store_byte(0x4B7D4, 0xDE);
+    machine.mem_store_byte(0x4B7D5, 0x26);
+    machine.mem_store_byte(0x4B7D6, 0x2A);
+    machine.mem_store_byte(0x4B7D7, 0xBE);
+    machine.mem_store_byte(0x00030, 0x93);
+    machine.mem_store_byte(0x00031, 0xE7);
+    machine.mem_store_byte(0x00032, 0xEA);
+    machine.mem_store_byte(0x00033, 0x09);
+    machine.mem_store_byte(0x18632, 0x38);
+    machine.mem_store_byte(0x18633, 0xF4);
+    machine.mem_store_byte(0x18634, 0xE3);
+    machine.mem_store_byte(0x18635, 0xF4);
+    machine.mem_store_byte(0x18636, 0x99);
+    machine.mem_store_byte(0x18637, 0xF4);
+    machine.mem_store_byte(0x18638, 0xF4);
+    machine.mem_store_byte(0x18639, 0xF4);
+
+    // Single-step.
+    cpu.step();
+    if (!cpu.is_halted())
+        cpu.step(); // HLT
+
+    // Final CPU State
+    EXPECT_EQ(cpu.get_cr0(), 0x7FFEFFF0);
+    EXPECT_EQ(cpu.get_cr3(), 0x00000000);
+    EXPECT_EQ(cpu.get_eax(), 0x7FFFFFFF);
+    EXPECT_EQ(cpu.get_ebx(), 0x62703489);
+    EXPECT_EQ(cpu.get_ecx(), 0xDE2BB39F);
+    EXPECT_EQ(cpu.get_edx(), 0x6F877F5E);
+    EXPECT_EQ(cpu.get_esi(), 0xA4E7B044);
+    EXPECT_EQ(cpu.get_edi(), 0xFFFFFFFF);
+    EXPECT_EQ(cpu.get_ebp(), 0x0000CF44);
+    EXPECT_EQ(cpu.get_esp(), 0x00007A34);
+    EXPECT_EQ(cpu.get_cs(), 0x000009EA);
+    EXPECT_EQ(cpu.get_ds(), 0x0000FFF4);
+    EXPECT_EQ(cpu.get_es(), 0x00000AED);
+    EXPECT_EQ(cpu.get_fs(), 0x0000B8BD);
+    EXPECT_EQ(cpu.get_gs(), 0x00008784);
+    EXPECT_EQ(cpu.get_ss(), 0x000012D7);
+    EXPECT_EQ(cpu.get_eip(), 0x0000E794);
+    EXPECT_EQ(cpu.get_dr6(), 0xFFFF0FF0);
+    EXPECT_EQ(cpu.get_dr7(), 0x00000000);
+    EXPECT_FLAGS(0xFFFC0C57);
+
+    // Final RAM entries
+    EXPECT_FLAGS_LO(0x1A7A8, 0x57);
+    EXPECT_FLAGS_HI(0x1A7A9, 0x0C);
+    EXPECT_EQ(memory.load8(0x1A7A6), 0x6F);
+    EXPECT_EQ(memory.load8(0x1A7A7), 0x43);
+    EXPECT_EQ(memory.load8(0x1A7A4), 0xD0);
+    EXPECT_EQ(memory.load8(0x1A7A5), 0x80);
+}

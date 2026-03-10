@@ -3739,6 +3739,7 @@ void Intel386::exe_one()
         decode();
         int eff_w = (operand_32 && w) ? D : (w ? W : B);
         // Real 386: on segment fault reading MUL operand, pushed FLAGS low byte is 0x17.
+        // Mark AF, PF, ZF, SF unpredictable so tests mask them (same as normal MUL completion).
         if (reg == 4 && mod != 0b11) {
             (void)getEA_cached(mod, rm);
             unsigned bytes = (eff_w == D) ? 4 : (eff_w == W) ? 2 : 1;
@@ -3748,6 +3749,8 @@ void Intel386::exe_one()
                 core.flags.f.af = 1;
                 core.flags.f.zf = 0;
                 core.flags.f.sf = 0;
+                unpredictable_flags      = AF_MASK | PF_MASK | ZF_MASK | SF_MASK;
+                last_unpredictable_flags = unpredictable_flags;
                 raise_segment_fault();
             }
         }
