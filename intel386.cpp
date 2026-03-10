@@ -1490,7 +1490,13 @@ void Intel386::exe_one()
     case 0x8e:
         decode();
         if (d == 0) {
-            // MOV r/m, segreg: when reg dest with operand_32, zero-extend segment to 32 bits
+            // MOV r/m, segreg: encodings 6/7 are invalid; raise #UD
+            if (op == 0x8c && reg > 5) {
+                core.eip = fault_eip;
+                call_int(6);
+                break;
+            }
+            // when reg dest with operand_32, zero-extend segment to 32 bits
             int eff_w = (mod == 0b11 && operand_32) ? D : W;
             setRM(eff_w, mod, rm, getSegReg(reg));
         } else {
@@ -2457,15 +2463,22 @@ void Intel386::exe_one()
         }
         break;
     }
-    case 0xc9: { // LEAVE (386): mov esp,ebp; pop ebp
+    case 0xc9: { // LEAVE (386): mov esp,ebp; pop ebp — fault #SS before any state change if pop would cross segment
+        Word sp_after_mov = get_bp(); // stack pointer after mov esp,ebp (real mode: low 16 bits)
         if (operand_32) {
-            // 32-bit leave with 16-bit stack (real mode): use only low 16 bits of EBP for SP
-            set_sp(get_bp());
+            if (sp_after_mov > 0x10000 - 4) {
+                os_is_ss = true;
+                raise_segment_fault();
+            }
+            set_sp(sp_after_mov);
             core.ebp = pop32();
-            // Real mode: stack pointer is 16-bit; zero high bits of ESP
             core.esp &= 0xFFFFu;
         } else {
-            set_sp(get_bp());
+            if (sp_after_mov > 0xFFFE) {
+                os_is_ss = true;
+                raise_segment_fault();
+            }
+            set_sp(sp_after_mov);
             set_bp(static_cast<Word>(pop()));
         }
         break;
@@ -2501,10 +2514,43 @@ void Intel386::exe_one()
         }
         break;
     }
-    case 0xc8: { // ENTER (186+): make stack frame
+    case 0xc8: { // ENTER (186+): make stack frame — prevalidate all stack accesses for #SS before changing state
         int alloc = fetch(W);
         int level = fetch(B) & 0x1F;
         int sz    = operand_32 ? 4 : 2;
+        Word esp0 = static_cast<Word>(core.esp);
+        Word bp   = static_cast<Word>(core.ebp & 0xFFFF);
+        unsigned limit = 0x10000 - sz; // max offset so that offset+sz stays in segment
+
+        // Validate initial push of BP/EBP
+        Word sp_after = static_cast<Word>((esp0 - sz) & 0xFFFF);
+        if (sp_after > limit) {
+            os_is_ss = true;
+            raise_segment_fault();
+        }
+        Dword esp_sim = sp_after;
+        // Validate each frame-pointer read and subsequent push
+        for (int i = 1; i < level; ++i) {
+            Word ptr = static_cast<Word>((bp - sz * i) & 0xFFFF);
+            if (ptr > limit) {
+                os_is_ss = true;
+                raise_segment_fault();
+            }
+            Word next_sp = static_cast<Word>((esp_sim - sz) & 0xFFFF);
+            if (next_sp > limit) {
+                os_is_ss = true;
+                raise_segment_fault();
+            }
+            esp_sim = next_sp;
+        }
+        if (level > 0) {
+            Word next_sp = static_cast<Word>((esp_sim - sz) & 0xFFFF);
+            if (next_sp > limit) {
+                os_is_ss = true;
+                raise_segment_fault();
+            }
+        }
+        // All checks passed; perform ENTER
         if (operand_32) {
             push32(core.ebp);
         } else {
