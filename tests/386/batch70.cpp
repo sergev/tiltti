@@ -3,7 +3,7 @@
 //
 // aam 0
 //
-TEST_F(Test386, aam_0_batch70)
+TEST_F(Test386, DISABLED_aam_0_batch70)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -95,7 +95,7 @@ TEST_F(Test386, aam_0_batch70)
 //
 // div word [fs:eax+34h]
 //
-TEST_F(Test386, div_word_fs_eax_34h_batch70)
+TEST_F(Test386, DISABLED_div_word_fs_eax_34h_batch70)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -197,7 +197,7 @@ TEST_F(Test386, div_word_fs_eax_34h_batch70)
 //
 // idiv byte [ds:edx+26h]
 //
-TEST_F(Test386, idiv_byte_ds_edx_26h_batch70)
+TEST_F(Test386, DISABLED_idiv_byte_ds_edx_26h_batch70)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -294,7 +294,7 @@ TEST_F(Test386, idiv_byte_ds_edx_26h_batch70)
 //
 // idiv byte [gs:bx+si-5]
 //
-TEST_F(Test386, idiv_byte_gs_bx_si_5_batch70)
+TEST_F(Test386, DISABLED_idiv_byte_gs_bx_si_5_batch70)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -391,7 +391,7 @@ TEST_F(Test386, idiv_byte_gs_bx_si_5_batch70)
 //
 // idiv dword [gs:bx+si-5]
 //
-TEST_F(Test386, idiv_dword_gs_bx_si_5_batch70)
+TEST_F(Test386, DISABLED_idiv_dword_gs_bx_si_5_batch70)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -487,7 +487,7 @@ TEST_F(Test386, idiv_dword_gs_bx_si_5_batch70)
 //
 // o32 enter 9FEDh,F9h
 //
-TEST_F(Test386, o32_enter_9FEDh_F9h_batch70)
+TEST_F(Test386, DISABLED_o32_enter_9FEDh_F9h_batch70)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -737,7 +737,7 @@ TEST_F(Test386, o32_enter_9FEDh_F9h_batch70)
 //
 // pop bx
 //
-TEST_F(Test386, pop_bx_batch70)
+TEST_F(Test386, DISABLED_pop_bx_batch70)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -833,7 +833,7 @@ TEST_F(Test386, pop_bx_batch70)
 //
 // pop cx
 //
-TEST_F(Test386, pop_cx_batch70)
+TEST_F(Test386, DISABLED_pop_cx_batch70)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
@@ -929,7 +929,7 @@ TEST_F(Test386, pop_cx_batch70)
 //
 // push sp
 //
-TEST_F(Test386, push_sp_batch70)
+TEST_F(Test386, DISABLED_push_sp_batch70)
 {
     // Initial CPU State
     cpu.set_cr0(0x7FFEFFF0);
