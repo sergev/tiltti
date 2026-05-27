@@ -857,6 +857,20 @@ void Intel386::call_int(int type)
 }
 
 //
+// Prepare state and deliver divide exception (INT 0): fault EIP and FLAGS with undefined
+// arithmetic bits cleared so the pushed exception frame matches real 386 behavior.
+//
+void Intel386::deliver_divide_fault()
+{
+    core.eip = fault_eip;
+    //static const Dword DIVIDE_UNDEFINED_FLAGS = CF_MASK | OF_MASK | SF_MASK | ZF_MASK | PF_MASK | AF_MASK;
+    //set_eflags(get_eflags() & ~DIVIDE_UNDEFINED_FLAGS);
+    unpredictable_flags = CF_MASK | OF_MASK | SF_MASK | ZF_MASK | PF_MASK | AF_MASK;
+    call_int(0);
+    throw SegmentFault{};
+}
+
+//
 // Real-mode segment limit violation: set fault EIP and take #SS or #GP.
 //
 void Intel386::raise_segment_fault()
@@ -1563,6 +1577,11 @@ void Intel386::exe_one()
             }
             setReg(D, reg, pop32());
         } else {
+            // 386: 2-byte pop at SP=0xFFFF crosses segment boundary; #SS (per batch70).
+            if (get_sp() > 0x10000 - 2) {
+                os_is_ss = true;
+                raise_segment_fault();
+            }
             setReg(W, reg, pop());
         }
         break;
@@ -2076,7 +2095,9 @@ void Intel386::exe_one()
         core.flags.f.cf = 0;
         core.flags.f.af = 0;
         if (src == 0) {
-            update_flags_zsp(B, 0);
+            // Fault from instruction start; push FLAGS image 0x0006 (real 386 behavior).
+            core.eip = fault_eip;
+            set_flags(0x0006);
             call_int(0);
         } else {
             set_ah(get_al() / src);
@@ -2514,13 +2535,13 @@ void Intel386::exe_one()
         }
         break;
     }
-    case 0xc8: { // ENTER (186+): make stack frame — prevalidate all stack accesses for #SS before changing state
+    case 0xc8: { // ENTER (186+): make stack frame — prevalidate all stack accesses for #SS before changing state.
         int alloc = fetch(W);
         int level = fetch(B) & 0x1F;
         int sz    = operand_32 ? 4 : 2;
         Word esp0 = static_cast<Word>(core.esp);
         Word bp   = static_cast<Word>(core.ebp & 0xFFFF);
-        unsigned limit = 0x10000 - sz; // max offset so that offset+sz stays in segment
+        unsigned limit = 0x10000 - sz;
 
         // Validate initial push of BP/EBP
         Word sp_after = static_cast<Word>((esp0 - sz) & 0xFFFF);
@@ -2576,7 +2597,7 @@ void Intel386::exe_one()
         if (operand_32) {
             core.ebp = frame_temp;
             core.esp -= alloc;
-            core.esp &= 0xFFFFu; // real mode: stack pointer is 16-bit
+            core.esp &= 0xFFFFu;
         } else {
             set_bp(static_cast<Word>(frame_temp & 0xFFFF));
             set_sp(static_cast<Word>((core.esp - alloc) & 0xFFFF));
@@ -3974,9 +3995,7 @@ void Intel386::exe_one()
                 if (divb == 0) {
                     last_unpredictable_flags = unpredictable_flags;
                     unpredictable_flags      = 0;
-                    core.eip                 = fault_eip;
-                    call_int(0);
-                    break;
+                    deliver_divide_fault();
                 }
                 Word dividend = static_cast<Word>(core.eax); // AX for byte DIV
                 Word quo      = dividend / divb;
@@ -3984,9 +4003,7 @@ void Intel386::exe_one()
                 if (quo > 0xFF) {
                     last_unpredictable_flags = unpredictable_flags;
                     unpredictable_flags      = CF_MASK | PF_MASK | AF_MASK | ZF_MASK | SF_MASK | OF_MASK;
-                    core.eip                 = fault_eip;
-                    call_int(0);
-                    break;
+                    deliver_divide_fault();
                 }
                 set_al(quo);
                 set_ah(rem);
@@ -3995,9 +4012,7 @@ void Intel386::exe_one()
                 if (divd == 0) {
                     last_unpredictable_flags = unpredictable_flags;
                     unpredictable_flags      = 0;
-                    core.eip                 = fault_eip;
-                    call_int(0);
-                    break;
+                    deliver_divide_fault();
                 }
                 uint64_t ldst = (static_cast<uint64_t>(core.edx) << 32) | (core.eax & 0xFFFFFFFFu);
                 uint64_t quo  = ldst / divd;
@@ -4005,9 +4020,7 @@ void Intel386::exe_one()
                 if (quo > 0xFFFFFFFFu) {
                     last_unpredictable_flags = unpredictable_flags;
                     unpredictable_flags      = CF_MASK | PF_MASK | AF_MASK | ZF_MASK | SF_MASK | OF_MASK;
-                    core.eip                 = fault_eip;
-                    call_int(0);
-                    break;
+                    deliver_divide_fault();
                 }
                 core.eax = static_cast<uint32_t>(quo);
                 core.edx = rem;
@@ -4016,9 +4029,7 @@ void Intel386::exe_one()
                 if (divw == 0) {
                     last_unpredictable_flags = unpredictable_flags;
                     unpredictable_flags      = 0;
-                    core.eip                 = fault_eip;
-                    call_int(0);
-                    break;
+                    deliver_divide_fault();
                 }
                 unsigned ldst = ((core.edx & 0xFFFFu) << 16) | (core.eax & 0xFFFFu);
                 unsigned quo  = ldst / divw;
@@ -4026,9 +4037,7 @@ void Intel386::exe_one()
                 if (quo > 0xFFFF) {
                     last_unpredictable_flags = unpredictable_flags;
                     unpredictable_flags      = CF_MASK | PF_MASK | AF_MASK | ZF_MASK | SF_MASK | OF_MASK;
-                    core.eip                 = fault_eip;
-                    call_int(0);
-                    break;
+                    deliver_divide_fault();
                 }
                 set_ax(static_cast<Word>(quo));
                 set_dx(static_cast<Word>(rem));
@@ -4045,9 +4054,7 @@ void Intel386::exe_one()
                 if (divs == 0) {
                     last_unpredictable_flags = unpredictable_flags;
                     unpredictable_flags      = 0;
-                    core.eip                 = fault_eip;
-                    call_int(0);
-                    break;
+                    deliver_divide_fault();
                 }
                 int64_t dividend = (static_cast<int64_t>(static_cast<int32_t>(core.edx)) << 32) |
                                    (core.eax & 0xFFFFFFFFu);
@@ -4056,9 +4063,7 @@ void Intel386::exe_one()
                 if (quo > 0x7FFFFFFF || quo < -2147483648LL) {
                     last_unpredictable_flags = unpredictable_flags | 0xFF00; // high byte undefined
                     unpredictable_flags      = CF_MASK | PF_MASK | AF_MASK | ZF_MASK | SF_MASK | OF_MASK;
-                    core.eip                 = fault_eip;
-                    call_int(0);
-                    break;
+                    deliver_divide_fault();
                 }
                 core.eax = static_cast<uint32_t>(quo);
                 core.edx = static_cast<uint32_t>(rem);
@@ -4069,9 +4074,7 @@ void Intel386::exe_one()
                 if (src == 0) {
                     last_unpredictable_flags = unpredictable_flags;
                     unpredictable_flags      = 0;
-                    core.eip                 = fault_eip;
-                    call_int(0);
-                    break;
+                    deliver_divide_fault();
                 }
                 dst = (int16_t)core.eax;
                 res = dst / src;
@@ -4079,9 +4082,7 @@ void Intel386::exe_one()
                 if (res > 0x7f || res < -0x7f) {
                     last_unpredictable_flags = unpredictable_flags | 0xFF00; // high byte undefined
                     unpredictable_flags      = 0;
-                    core.eip                 = fault_eip;
-                    call_int(0);
-                    break;
+                    deliver_divide_fault();
                 }
                 if (rep != 0) {
                     // 8086 REP/REPNE with IDIV negates quotient
@@ -4096,9 +4097,7 @@ void Intel386::exe_one()
                 if (src == 0) {
                     last_unpredictable_flags = unpredictable_flags;
                     unpredictable_flags      = 0;
-                    core.eip                 = fault_eip;
-                    call_int(0);
-                    break;
+                    deliver_divide_fault();
                 }
                 dst          = (int32_t)(((core.edx & 0xFFFFu) << 16) | (core.eax & 0xFFFFu));
                 int64_t lres = (int64_t)dst / src;
@@ -4107,9 +4106,7 @@ void Intel386::exe_one()
                 if (lres > 0x7fff || lres < -0x7fff) {
                     last_unpredictable_flags = unpredictable_flags | 0xFF00; // high byte undefined
                     unpredictable_flags      = CF_MASK | PF_MASK | AF_MASK | ZF_MASK | SF_MASK | OF_MASK;
-                    core.eip                 = fault_eip;
-                    call_int(0);
-                    break;
+                    deliver_divide_fault();
                 }
                 if (rep != 0) {
                     // 8086 REP/REPNE with IDIV negates quotient
@@ -4181,9 +4178,7 @@ void Intel386::exe_one()
         }
         case 6:
         case 7:
-            // 8086 PUSH r/m (FF/6 and FF/7). PUSH SP (mod=11, rm=4) pushes SP-2, not SP.
-            if (mod == 0b11 && rm == 4)
-                src = core.esp - 2;
+            // 386 PUSH r/m (FF/6 and FF/7): PUSH SP pushes the value before the push (current SP).
             push(src);
             break;
         default:

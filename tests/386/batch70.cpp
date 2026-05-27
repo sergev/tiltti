@@ -186,8 +186,8 @@ TEST_F(Test386, div_word_fs_eax_34h_batch70)
     EXPECT_FLAGS(0xFFFC0012);
 
     // Final RAM entries
-    EXPECT_EQ(memory.load8(0x1BA88), 0x00);
-    EXPECT_EQ(memory.load8(0x1BA87), 0x12);
+    EXPECT_FLAGS_HI(0x1BA88, 0x00);
+    EXPECT_FLAGS_LO(0x1BA87, 0x12);
     EXPECT_EQ(memory.load8(0x1BA85), 0xBF);
     EXPECT_EQ(memory.load8(0x1BA86), 0xE2);
     EXPECT_EQ(memory.load8(0x1BA84), 0xFC);
